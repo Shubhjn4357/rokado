@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm check-types *)",
+      "Bash(pnpm dev *)",
+      "Bash(npx tsx *)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :3000)",
+      "Bash(taskkill *)",
+      "Bash(kill 3564 *)",
+      "Bash(Get-Process *)",
+      "Bash(npx kill-port *)",
+      "Bash(pnpm list *)",
+      "Bash(pnpm add *)",
+      "Bash(pnpm build *)",
+      "PowerShell(erp *)",
+      "PowerShell(npx tsc --noEmit --project apps/web/tsconfig.json \"apps/web/app/\\(erp\\)/inventory/actions.ts\")",
+      "PowerShell(npx tsc --noEmit \"apps/web/app/\\(erp\\)/inventory/actions.ts\")",
+      "Bash(perl *)",
+      "Bash(grep -n \"\\\\\\\\[ \\\\\\\\|– \\\\\\\\|🔲\\\\\\\\|⬜︎\\\\\\\\|⬚\\\\\\\\|☐\\\\\\\\|○\" \"D:/Code/account/Implementationplan.md\")",
+      "Bash(grep *)"
+    ]
+  }
+}

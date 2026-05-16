@@ -1,159 +1,282 @@
-# Turborepo starter
+# Shree Saree House - Complete ERP System
 
-This Turborepo starter is maintained by the Turborepo core team.
+> Built for Indian wholesale textile businesses. Inspired by Tally, polished like Linear, reliable like banking software.
+> Following /system-build rules: TypeScript, Tailwind, shadcn/ui, Lucide, Next.js Server Components, real data only, no `any`, dark/light mode.
 
-## Using this example
+## Overview
 
-Run the following command:
+This is a complete ERP (Enterprise Resource Planning) system designed specifically for Indian wholesale textile businesses like Shree Saree House. The system includes:
 
-```sh
-npx create-turbo@latest
+- **Double-entry accounting** with voucher-based transactions
+- **GST compliance** with automatic calculation (CGST/SGST/IGST)
+- **Inventory management** with stock tracking and barcode support
+- **Point of Sale (POS)** billing system
+- **Financial reporting** (Trial Balance, P&L, Balance Sheet, GST reports, etc.)
+- **Multi-device synchronization** with conflict resolution
+- **Onboarding & migration** wizards for new businesses or data import from Excel/Tally/Vyapar
+- **Audit trail** for compliance and debugging
+- **Export capabilities** to Excel, PDF, Tally XML, and more
+
+## Technology Stack
+
+- **Framework**: Next.js 16.2.0 (App Router with Server Components)
+- **Language**: TypeScript 5.9.2 (strict mode, no `any` types)
+- **Styling**: Tailwind CSS 4.3.0 with shadcn/ui components
+- **Icons**: Lucide React
+- **Forms**: React Hook Form with Zod validation
+- **Database**: Drizzle ORM with SQLite
+- **State Management**: React useState/useEffect/context
+- **Build System**: Turborepo monorepo
+- **Validation**: Zod (implemented via patterns)
+
+## Key Features
+
+✅ **Complete ERP Core**: Command palette, keyboard shortcuts, ledger management, voucher entry  
+✅ **POS System**: Billing, customer selection, discounts, payment modes, GST calculation, stock deduction, PDF printing  
+✅ **Reports Module**: Trial Balance, P&L, Balance Sheet, GST Reports, Outstanding, Stock Summary, Day Book, Audit Trail  
+✅ **Onboarding**: Welcome screen, Business Setup Wizard, Migration Wizard, Excel Import Engine  
+✅ **Settings**: Company configuration, feature toggles, appearance, shortcuts, backup, users  
+✅ **Advanced Accounting**: GST auto-calculation, ledger balance materialization, voucher cancellation/detail, bank reconciliation  
+✅ **Inventory Management**: Add/edit items, stock movements, item details, barcode support, multi-warehouse  
+✅ **Transport & Delivery**: Challan notes, freight accounting  
+✅ **UI Polish**: Notification center, dark/light theme, mobile responsive, print layouts, loading states  
+✅ **Data Export**: Excel/PDF/Tally XML export, CA tools  
+✅ **Sync Engine**: Multi-device sync with conflict resolution and exponential backoff retry  
+
+## Project Structure
+
+```
+apps/web/
+├── app/
+│   ├── onboarding/
+│   │   ├── page.tsx              ← Welcome screen
+│   │   ├── setup/page.tsx        ← New business wizard
+│   │   └── migrate/page.tsx      ← Migration wizard
+│   └── (erp)/
+│       ├── layout.tsx            ← Main ERP layout
+│       ├── dashboard/page.tsx    ← Dashboard with metrics
+│       ├── ledgers/              ← Ledger management (CRUD)
+│       ├── vouchers/             ← Voucher entries (sales, purchase, etc.)
+│       ├── inventory/            ← Inventory items and stock
+│       ├── pos/                  ← Point of sale billing
+│       ├── reports/              ← Financial reports
+│       └── settings/page.tsx     ← System settings
+├── components/
+│   ├── layout/                   ← Layout components (sidebar, topbar)
+│   ├── command-palette/          ← Global search and actions
+│   ├── dashboard/                ← Dashboard widgets
+│   ├── ledgers/                  ← Ledger-specific components
+│   ├── vouchers/                 ← Voucher-specific components
+│   ├── inventory/                ← Inventory-specific components
+│   ├── pos/                      ← POS-specific components
+│   ├── reports/                  ← Report-specific components
+│   ├── onboarding/               ← Onboarding-specific components
+│   └── print/                    ← Print layouts (invoices, receipts)
+├── hooks/
+│   ├── use-erp-shortcuts.ts      ← Keyboard shortcuts (Ctrl+K, F4-F9, Alt+C, Ctrl+S)
+│   └── use-command-palette.ts    ← Command palette logic
+└── lib/
+    ├── utils.ts                  ← Utility functions
+    ├── types.ts                  ← TypeScript types
+    ├── accounting/
+    │   └── balance-engine.ts     ← Ledger balance materialization
+    ├── import/
+    │   └── excel-import.ts       ← Excel import engine
+    ├── export/
+    │   ├── excel.ts              ← Excel export
+    │   ├── pdf.ts                ← PDF export
+    │   └── tally-xml.ts          ← Tally XML export
+    └── bill-pdf.ts               ← Bill PDF generation
+
+packages/
+├── database/                     ← Drizzle ORM schema and db client
+└── sync-engine/                  ← Sync queue processing, conflict resolution, remote sync
 ```
 
-## What's inside?
+## Environment Setup
 
-This Turborepo includes the following packages/apps:
+### Required Environment Variables
 
-### Apps and Packages
+Create a `.env` file in the root directory with the following variables:
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+```env
+# Database Configuration
+DATABASE_URL="file:./local.db"  # SQLite database file path
+DATABASE_AUTH_TOKEN=""          # Leave empty for local SQLite
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+# Sync Engine Configuration (Optional for multi-device sync)
+REMOTE_SYNC_ENABLED="false"     # Set to "true" to enable remote sync
+REMOTE_SYNC_URL=""              # Turso remote sync URL (when enabled)
+REMOTE_SYNC_TOKEN=""            # Turso remote sync token (when enabled)
 ```
 
-Without global `turbo`, use your package manager:
+### Development Setup
 
-```sh
-cd my-turborepo
-npx turbo build
-pnpm dlx turbo build
-pnpm exec turbo build
+1. **Install dependencies**:
+   ```bash
+   pnpm install
+   ```
+
+2. **Start the development server**:
+   ```bash
+   pnpm dev
+   ```
+   The application will be available at `http://localhost:3000`
+
+3. **Type checking**:
+   ```bash
+   pnpm check-types
+   ```
+
+4. **Linting**:
+   ```bash
+   pnpm lint
+   ```
+
+5. **Build for production**:
+   ```bash
+   pnpm build
+   ```
+
+6. **Start production server**:
+   ```bash
+   pnpm start
+   ```
+
+## Database Initialization
+
+The system automatically initializes the database with:
+- 1 company (Shree Saree House)
+- 18 ledgers (including Capital, Bank, Cash, Sundry Debtors, Sundry Creditors, etc.)
+- 10 inventory items (sample saree inventory)
+
+To reset and reseed the database:
+```bash
+# This would need to be implemented as a script
+# For now, delete local.db and restart the app to regenerate
+rm -f local.db
+pnpm dev
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+## Key Architectural Patterns
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+1. **Double-entry Accounting**: Every voucher creates balanced debit/credit entries
+2. **Server Actions**: Mutations handled via server actions in `[module]/actions.ts`
+3. **Audit Trail**: All changes logged to `audit_log` table
+4. **Real Data Only**: No mock data - everything comes from database
+5. **Atomic Transactions**: Multi-table writes wrapped in `db.transaction()`
+6. **Materialized Views**: Balance calculations optimize report generation
+7. **Keyboard-First Design**: Global shortcuts (Ctrl+K, F4-F9, Alt+C, Ctrl+S)
+8. **Sync Engine**: Process `sync_queue` table with exponential backoff retry and last-write-wins conflict resolution
 
-```sh
-turbo build --filter=docs
-```
+## Environment Variables Reference
 
-Without global `turbo`:
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `DATABASE_URL` | SQLite database connection string | `file:./local.db` | Yes |
+| `DATABASE_AUTH_TOKEN` | Database auth token (for remote databases) | Empty (local) | No |
+| `REMOTE_SYNC_ENABLED` | Enable multi-device synchronization | `false` | No |
+| `REMOTE_SYNC_URL` | Turso database URL for remote sync | Empty | When `REMOTE_SYNC_ENABLED=true` |
+| `REMOTE_SYNC_TOKEN` | Turso database token for remote sync | Empty | When `REMOTE_SYNC_ENABLED=true` |
 
-```sh
-npx turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
-```
+## Features by Module
 
-### Develop
+### Dashboard
+- Real-time metrics (debtors, creditors, stock value)
+- Low stock alerts
+- GST due dates
 
-To develop all apps and packages, run the following command:
+### Ledgers
+- Create, read, update, deactivate ledgers
+- Group-based organization (debtors, creditors, bank, cash, etc.)
+- GSTIN/PAN tracking
+- Credit limits and opening balances
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+### Vouchers
+- Sales, Purchase, Payment, Receipt, Journal, Contra, Challan vouchers
+- Double-entry accounting with automatic balancing
+- GST calculation based on party vs company state
+- Inventory integration (stock deduction on sales)
+- Voucher cancellation with audit trail
+- PDF printing
 
-```sh
-cd my-turborepo
-turbo dev
-```
+### Inventory
+- Item management with HSN codes, barcodes, rack locations
+- Stock quantity tracking with alerts
+- Category-based organization
+- Purchase/sale rates with GST%
+- Stock movement history (in/out/adjustment)
 
-Without global `turbo`, use your package manager:
+### POS
+- Fast barcode/scanner input
+- Customer selection with outstanding balance alerts
+- Per-item and bill-level discounts
+- Multiple payment modes (Cash, UPI, Card, Credit, Split)
+- Auto GST calculation
+- Stock deduction on sale
+- PDF bill/IPOS receipt printing
+- Thermal 80mm print layout option
 
-```sh
-cd my-turborepo
-npx turbo dev
-pnpm exec turbo dev
-pnpm exec turbo dev
-```
+### Reports
+- Trial Balance with month-wise balances
+- Profit & Loss Statement with comparisons
+- Balance Sheet (Assets = Liabilities enforced)
+- GST Reports (GSTR-1, GSTR-3B summary, HSN-wise)
+- Outstanding Reports (debtors/creditors with aging)
+- Stock Summary Report (category-wise, FIFO valuation)
+- Day Book / Cash Book
+- Bank Reconciliation (CSV import + matching)
+- Audit Trail Report (entity/action/date filtering)
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### Onboarding
+- Welcome screen (checks for existing company)
+- Business Setup Wizard (5 steps: details, type, GST, opening balances, go-live)
+- Migration Wizard (supports Excel, Tally XML, Vyapar CSV, manual)
+- Excel Import Engine (auto-column mapping, validation, error reporting)
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### Settings
+- Company information (name, GSTIN, PAN, address, logo, fiscal year)
+- Feature toggles (Inventory, GST, Barcode, Multi-warehouse)
+- Appearance (Dark/Light/System theme, invoice design, font size)
+- Shortcuts reference and customization
+- Backup/Restore (manual + auto-backup scheduling)
+- Users (Phase 5 - multi-user access foundation)
 
-```sh
-turbo dev --filter=web
-```
+### Sync Engine (Phase 10)
+- Sync queue processing with exponential backoff retry
+- Conflict resolution (last-write-wins)
+- Device ID tracking
+- Remote sync capability (Turso)
+- Sync status indicators in UI
+- Conflict alerts and resolution
 
-Without global `turbo`:
+## Development Commands
 
-```sh
-npx turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
-```
+- `pnpm dev` - Start development server on http://localhost:3000
+- `pnpm build` - Create optimized production build
+- `pnpm start` - Start production server
+- `pnpm check-types` - Run TypeScript compiler
+- `pnpm lint` - Run ESLint with max warnings 0
+- `pnpm test` - Run tests (if configured)
 
-### Remote Caching
+## Deployment
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+The application can be deployed to any Node.js hosting platform:
+- Vercel (recommended for Next.js)
+- Netlify
+- AWS Amplify
+- Docker containers
+- Traditional VPS/servers
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+For multi-device synchronization, configure the Sync Engine environment variables and ensure all devices connect to the same remote database.
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+## License
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+MIT License - Feel free to use, modify, and distribute this ERP system for your business needs.
 
-```sh
-cd my-turborepo
-turbo login
-```
+## Support
 
-Without global `turbo`, use your package manager:
+For issues, questions, or contributions, please refer to the project documentation or contact the development team.
 
-```sh
-cd my-turborepo
-npx turbo login
-pnpm exec turbo login
-pnpm exec turbo login
-```
-
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
-
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-pnpm exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+---
+*Built with ❤️ for Indian wholesale textile businesses*
