@@ -15,8 +15,8 @@ export function useERPShortcuts() {
         active instanceof HTMLSelectElement ||
         (active instanceof HTMLElement && active.isContentEditable);
 
-      // Ctrl+K — Command Palette
-      if (e.ctrlKey && e.key === "k") {
+      // Ctrl+K or Alt+G — Command Palette (Tally Go To)
+      if ((e.ctrlKey && e.key.toLowerCase() === "k") || (e.altKey && e.key.toLowerCase() === "g")) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("erp:command-palette"));
         return;

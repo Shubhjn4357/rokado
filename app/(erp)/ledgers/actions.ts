@@ -1,6 +1,6 @@
 "use server";
 
-import { db, ledgers } from "@/lib/database";
+import { db, ledgers, eq } from "@/lib/database";
 import { LedgerGroup, BalanceType } from "@/lib/types";
 import { revalidatePath } from "next/cache";
 
@@ -52,5 +52,21 @@ export async function createLedger(input: CreateLedgerInput): Promise<{ success:
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error creating ledger.";
     return { success: false, error: message };
+  }
+}
+
+export async function getLedgersOptions() {
+  try {
+    return await db.select({
+      id: ledgers.id,
+      name: ledgers.name,
+      group: ledgers.group as any,
+    })
+    .from(ledgers)
+    .where(eq(ledgers.isActive as any, true))
+    .orderBy(ledgers.name);
+  } catch (err) {
+    console.error("Failed to fetch ledgers options:", err);
+    return [];
   }
 }

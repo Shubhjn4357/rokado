@@ -1,6 +1,6 @@
 "use client";
 
-import { db, inventoryItems, stockMovements, vouchers, eq, sum, and, gte, lte, sql, lt } from "@/lib/database";
+import { getStockReportData } from "@/app/(erp)/reports/actions";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,108 +21,16 @@ export default function StockPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDate(today.toISOString().split("T")[0] ?? null);
-    fetchStockSummary();
+    const todayStr = today.toISOString().split("T")[0];
+    setDate(todayStr);
+    fetchStockSummary(todayStr);
   }, []);
 
-  const fetchStockSummary = async () => {
+  const fetchStockSummary = async (selectedDate = date) => {
     setLoading(true);
     try {
-      const dateParam = date ? new Date(date).getTime() : undefined;
-
-      // Get all inventory items
-      const items = await db
-        .select({
-          id: inventoryItems.id,
-          name: inventoryItems.name,
-          category: inventoryItems.category,
-          unit: inventoryItems.unit,
-          openingStock: inventoryItems.stockQuantity, // This should be opening stock, but we don't have it separately
-          // We'll calculate opening stock from movements before date
-        })
-        .from(inventoryItems)
-        .where(
-          eq(inventoryItems.companyId as any, "company_1")
-        )
-        .orderBy(inventoryItems.name);
-
-      // For each item, calculate stock movements
-      const stockSummary = await Promise.all(
-        items.map(async (item) => {
-          // Calculate opening stock (as of day before selected date)
-          let openingStock = 0;
-          if (dateParam) {
-            const openingResult = await db
-              .select({
-                total: sql<number>`
-                  COALESCE(SUM(
-                    CASE
-                      WHEN ${stockMovements.type} = 'in' THEN ${stockMovements.quantity}
-                      WHEN ${stockMovements.type} = 'out' THEN -${stockMovements.quantity}
-                      ELSE 0
-                    END
-                  ), 0)
-                `
-              })
-              .from(stockMovements)
-              .innerJoin(vouchers, eq(stockMovements.voucherId as any, vouchers.id as any))
-              .where(
-                and(
-                  eq(stockMovements.itemId, item.id),
-                  eq(vouchers.companyId, "company_1"),
-                  lt(vouchers.date, dateParam) // Before selected date
-                )
-              );
-
-            openingStock = Number(openingResult[0]?.total ?? 0);
-          }
-
-          // Calculate inward quantity (as of selected date)
-          const inwardResult = await db
-            .select({ total: sum(stockMovements.quantity) })
-            .from(stockMovements)
-            .innerJoin(vouchers, eq(stockMovements.voucherId, vouchers.id))
-            .where(
-              and(
-                eq(stockMovements.itemId, item.id),
-                eq(vouchers.companyId, "company_1"),
-                dateParam ? lte(vouchers.date, dateParam) : undefined,
-                eq(stockMovements.type, "in")
-              )
-            );
-
-          // Calculate outward quantity (as of selected date)
-          const outwardResult = await db
-            .select({ total: sum(stockMovements.quantity) })
-            .from(stockMovements)
-            .innerJoin(vouchers, eq(stockMovements.voucherId, vouchers.id))
-            .where(
-              and(
-                eq(stockMovements.itemId, item.id),
-                eq(vouchers.companyId, "company_1"),
-                dateParam ? lte(vouchers.date, dateParam) : undefined,
-                eq(stockMovements.type, "out")
-              )
-            );
-
-          const inwardTotal = Number(inwardResult[0]?.total ?? 0);
-          const outwardTotal = Number(outwardResult[0]?.total ?? 0);
-          const closingStock = openingStock + inwardTotal - outwardTotal;
-
-          return {
-            itemId: item.id,
-            name: item.name,
-            category: item.category,
-            unit: item.unit,
-            openingStock,
-            inwardTotal,
-            outwardTotal,
-            closingStock,
-          };
-        })
-      );
-
-      setStockData(stockSummary);
+      const data = await getStockReportData(selectedDate);
+      setStockData(data);
     } catch (err) {
       console.error("Failed to fetch stock summary:", err);
     } finally {
@@ -155,7 +63,7 @@ export default function StockPage() {
               />
             </div>
           </div>
-          <Button onClick={fetchStockSummary} className="h-10">
+          <Button onClick={() => fetchStockSummary()} className="h-10">
             Refresh
           </Button>
         </div>

@@ -16,7 +16,7 @@ export default function SalesVoucherPage() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto py-2">
       <VoucherForm initialType="sales" onSuccess={handleSuccess} />
     </div>
   );

@@ -15,7 +15,7 @@ export default function PaymentVoucherPage() {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-5xl mx-auto py-2">
       <VoucherForm initialType="payment" onSuccess={handleSuccess} />
     </div>
   );

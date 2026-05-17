@@ -84,7 +84,7 @@ export async function updateLedgerBalancesForVoucher(
         // Create new record
         const closingBalance = openingBalance + voucherDebit - voucherCredit;
         await tx.insert(ledgerBalances).values({
-          id: sql`randomuuid()`,
+          id: crypto.randomUUID(),
           ledgerId,
           fiscalYear,
           month,

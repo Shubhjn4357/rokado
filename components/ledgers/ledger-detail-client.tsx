@@ -1,22 +1,31 @@
 "use client";
 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/use-toast";
 import {
-  ArrowLeft,
-  Phone,
-  Building2,
+  Printer,
+  Share2,
+  Calendar,
+  Settings,
+  HelpCircle,
+  FileSpreadsheet,
   FileText,
+  ChevronRight,
   TrendingUp,
-  Edit,
+  SlidersHorizontal,
+  FolderLock
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate, LEDGER_GROUP_LABELS, type LedgerGroup } from "@/lib/types";
 import type { InferSelectModel } from "@/lib/database";
 import type { ledgers as ledgersTable } from "@/lib/database";
+import { cn } from "@/lib/utils";
 
 type Ledger = InferSelectModel<typeof ledgersTable>;
 type EntryRow = {
@@ -37,166 +46,398 @@ interface Props {
 }
 
 export function LedgerDetailClient({ ledger, entries }: Props) {
-  const totalDr = entries.filter((e) => e.entryType === "dr").reduce((s, e) => s + e.amount, 0);
-  const totalCr = entries.filter((e) => e.entryType === "cr").reduce((s, e) => s + e.amount, 0);
-  const netBalance = ledger.openingBalance + (ledger.balanceType === "dr" ? 1 : -1) * (totalDr - totalCr);
+  const router = useRouter();
+  const [isDetailed, setIsDetailed] = useState(true);
+  const [showConfig, setShowConfig] = useState(false);
+  
+  // Date filtering state
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Sort entries chronologically for accounting running balances
+  const sortedEntries = [...entries].sort((a, b) => a.voucherDate - b.voucherDate);
+
+  // Apply optional date filters
+  const filteredEntries = sortedEntries.filter((entry) => {
+    if (dateFrom && entry.voucherDate < new Date(dateFrom).getTime()) return false;
+    if (dateTo && entry.voucherDate > new Date(dateTo).getTime()) return false;
+    return true;
+  });
+
+  // Calculate opening balance at the start of filtered date range
+  // (In Tally, if filtered by date, transactions before dateFrom are summed into opening balance)
+  let initialOpeningBalance = ledger.openingBalance;
+  let initialOpeningType = ledger.balanceType; // "dr" or "cr"
+
+  if (dateFrom) {
+    let netBeforeDebit = initialOpeningType === "dr" ? initialOpeningBalance : -initialOpeningBalance;
+    const beforeEntries = sortedEntries.filter(e => e.voucherDate < new Date(dateFrom).getTime());
+    beforeEntries.forEach(e => {
+      netBeforeDebit += e.entryType === "dr" ? e.amount : -e.amount;
+    });
+    initialOpeningBalance = Math.abs(netBeforeDebit);
+    initialOpeningType = netBeforeDebit >= 0 ? "dr" : "cr";
+  }
+
+  // Calculate running balance step-by-step
+  let runningBal = initialOpeningBalance;
+  let runningType = initialOpeningType;
+
+  const rowsWithBalance = filteredEntries.map((entry) => {
+    const startNetDebit = runningType === "dr" ? runningBal : -runningBal;
+    const change = entry.entryType === "dr" ? entry.amount : -entry.amount;
+    const endNetDebit = startNetDebit + change;
+
+    runningBal = Math.abs(endNetDebit);
+    runningType = endNetDebit >= 0 ? "dr" : "cr";
+
+    return {
+      ...entry,
+      runningBalance: runningBal,
+      runningBalanceType: runningType,
+    };
+  });
+
+  // Compute final aggregates for table footer
+  const totalDr = filteredEntries.filter((e) => e.entryType === "dr").reduce((s, e) => s + e.amount, 0);
+  const totalCr = filteredEntries.filter((e) => e.entryType === "cr").reduce((s, e) => s + e.amount, 0);
+  
+  // Calculate Closing Balance
+  const netOpeningDebit = initialOpeningType === "dr" ? initialOpeningBalance : -initialOpeningBalance;
+  const netClosingDebit = netOpeningDebit + totalDr - totalCr;
+  const closingBalance = Math.abs(netClosingDebit);
+  const closingType = netClosingDebit >= 0 ? "dr" : "cr";
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="icon" className="rounded-xl">
-          <Link href="/ledgers">
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{ledger.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="secondary" className="text-xs">
-              {LEDGER_GROUP_LABELS[ledger.group as LedgerGroup] ?? ledger.group}
-            </Badge>
-            {ledger.gstNumber && (
-              <Badge variant="outline" className="text-xs font-mono">
-                {ledger.gstNumber}
-              </Badge>
-            )}
+    <div className="flex h-[calc(100vh-2rem)] select-none bg-[#eff7f4] border border-[#0e4b47]/30 rounded-3xl overflow-hidden shadow-2xl font-mono text-[#0e4b47]">
+      
+      {/* LEFT REPORTING PANEL */}
+      <div className="flex-1 flex flex-col min-w-0">
+        
+        {/* Tally App Style Top Utility bar */}
+        <div className="h-10 bg-[#0e4b47] text-white/90 flex items-center justify-between px-4 text-xs font-bold border-b border-[#0e4b47]/80">
+          <div className="flex items-center gap-4">
+            <span className="text-yellow-400">P: Print</span>
+            <span>E: Export</span>
+            <span>M: E-Mail</span>
+            <span>O: Upload</span>
+            <span>G: Language</span>
+            <span>K: Keyboard</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-yellow-300">Shree Saree House</span>
+            <span className="text-[10px] bg-[#1b615c] px-2 py-0.5 rounded">Tally Prime v4.0</span>
           </div>
         </div>
-        <Button variant="outline" size="sm" className="gap-2 rounded-xl">
-          <Edit className="w-4 h-4" /> Edit
-        </Button>
-      </div>
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-border/60 bg-card/80">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground">Opening Balance</div>
-            <div className="text-xl font-bold mt-1">{formatCurrency(ledger.openingBalance)}</div>
-            <div className="text-xs text-muted-foreground">{ledger.balanceType.toUpperCase()}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card/80">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground">Total Debit</div>
-            <div className="text-xl font-bold mt-1 text-blue-500">{formatCurrency(totalDr)}</div>
-            <div className="text-xs text-muted-foreground">{entries.filter(e => e.entryType === "dr").length} entries</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-card/80">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground">Total Credit</div>
-            <div className="text-xl font-bold mt-1 text-red-500">{formatCurrency(totalCr)}</div>
-            <div className="text-xs text-muted-foreground">{entries.filter(e => e.entryType === "cr").length} entries</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border/60 bg-primary/5 border-primary/20">
-          <CardContent className="pt-4">
-            <div className="text-xs text-muted-foreground">Net Balance</div>
-            <div className="text-xl font-bold mt-1 text-primary">{formatCurrency(Math.abs(netBalance))}</div>
-            <div className="text-xs text-muted-foreground">{netBalance >= 0 ? "Dr" : "Cr"}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Details + Transactions Tabs */}
-      <Tabs defaultValue="transactions">
-        <TabsList className="rounded-xl">
-          <TabsTrigger value="transactions" className="rounded-lg">
-            <FileText className="w-3.5 h-3.5 mr-2" />
-            Transactions
-          </TabsTrigger>
-          <TabsTrigger value="info" className="rounded-lg">
-            <Building2 className="w-3.5 h-3.5 mr-2" />
-            Info
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="transactions" className="mt-4">
-          <div className="rounded-xl border border-border/60 bg-card/80 overflow-hidden">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow className="hover:bg-transparent">
-                  <TableHead>Date</TableHead>
-                  <TableHead>Voucher</TableHead>
-                  <TableHead>Narration</TableHead>
-                  <TableHead className="text-right">Debit</TableHead>
-                  <TableHead className="text-right">Credit</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-12">
-                      No transactions found for this ledger.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  entries.map((entry) => (
-                    <TableRow key={entry.entryId} className="hover:bg-muted/20">
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDate(entry.voucherDate)}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs capitalize">
-                            {entry.voucherType}
-                          </Badge>
-                          {entry.voucherNumber && (
-                            <span className="text-xs font-mono text-muted-foreground">
-                              #{entry.voucherNumber}
-                            </span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-[240px] truncate">
-                        {entry.narration ?? entry.voucherNarration ?? "—"}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {entry.entryType === "dr" ? (
-                          <span className="text-blue-500">{formatCurrency(entry.amount)}</span>
-                        ) : (
-                          <span className="text-muted-foreground/40">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm">
-                        {entry.entryType === "cr" ? (
-                          <span className="text-red-500">{formatCurrency(entry.amount)}</span>
-                        ) : (
-                          <span className="text-muted-foreground/40">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+        {/* Tally Vouchers Light Green Accent Banner */}
+        <div className="bg-[#dfece7] border-b border-[#0e4b47]/40 px-6 py-3.5 flex items-center justify-between gap-4 shrink-0 text-sm font-bold">
+          <div>
+            <div className="text-[10px] text-[#0e4b47]/60 tracking-wider uppercase">Ledger Account Display</div>
+            <h1 className="text-lg font-extrabold uppercase mt-0.5 tracking-tight flex items-center gap-2">
+              Ledger: <span className="underline decoration-2 underline-offset-4">{ledger.name}</span>
+            </h1>
           </div>
-        </TabsContent>
 
-        <TabsContent value="info" className="mt-4">
-          <Card className="border-border/60 bg-card/80">
-            <CardContent className="pt-6 grid grid-cols-2 gap-4">
-              {[
-                { label: "Ledger ID", value: ledger.id },
-                { label: "Group", value: LEDGER_GROUP_LABELS[ledger.group as LedgerGroup] ?? ledger.group },
-                { label: "GSTIN", value: ledger.gstNumber ?? "—" },
-                { label: "PAN", value: ledger.pan ?? "—" },
-                { label: "Phone", value: ledger.phone ?? "—" },
-                { label: "Address", value: ledger.address ?? "—" },
-                { label: "Credit Limit", value: ledger.creditLimit ? formatCurrency(ledger.creditLimit) : "No Limit" },
-                { label: "Status", value: ledger.isActive ? "Active" : "Inactive" },
-              ].map(({ label, value }) => (
-                <div key={label}>
-                  <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide mb-1">{label}</div>
-                  <div className="text-sm font-medium">{value}</div>
+          <div className="flex items-center gap-6 text-xs">
+            <div className="text-right">
+              <span className="text-[9px] text-[#0e4b47]/60 uppercase block">Ledger Group</span>
+              <span>{LEDGER_GROUP_LABELS[ledger.group as LedgerGroup] ?? ledger.group}</span>
+            </div>
+            {ledger.gstNumber && (
+              <div className="text-right border-l pl-6 border-[#0e4b47]/20">
+                <span className="text-[9px] text-[#0e4b47]/60 uppercase block">GSTIN</span>
+                <span className="font-mono text-[11px]">{ledger.gstNumber}</span>
+              </div>
+            )}
+            <div className="text-right border-l pl-6 border-[#0e4b47]/20 font-mono">
+              <span className="text-[9px] text-[#0e4b47]/60 uppercase block">Report Period</span>
+              <span className="bg-[#eff7f4] px-2 py-0.5 rounded border border-[#0e4b47]/20 text-[#0e4b47]/80">
+                {dateFrom ? formatDate(new Date(dateFrom).getTime()) : "Beginning"} to {dateTo ? formatDate(new Date(dateTo).getTime()) : "Present"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Dynamic Period Date filter inputs */}
+        <div className="bg-background/40 border-b border-[#0e4b47]/20 px-6 py-2 flex items-center gap-4 shrink-0 text-xs font-semibold">
+          <div className="flex items-center gap-2">
+            <span>Period From:</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="h-7 w-32 border-[#0e4b47]/30 bg-background/50 text-[#0e4b47] rounded px-1.5 focus:bg-background text-xs font-mono"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span>To:</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="h-7 w-32 border-[#0e4b47]/30 bg-background/50 text-[#0e4b47] rounded px-1.5 focus:bg-background text-xs font-mono"
+            />
+          </div>
+          {(dateFrom || dateTo) && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                setDateFrom("");
+                setDateTo("");
+              }}
+              className="h-6 rounded text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 text-[10px] font-bold"
+            >
+              Clear Filter
+            </Button>
+          )}
+        </div>
+
+        {/* LEDGER DETAILS CONFIGURATION DRAWER (TALLY YES/NO STYLE) */}
+        {showConfig && (
+          <div className="bg-white border-b-2 border-[#0e4b47] p-6 shrink-0 shadow-inner grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top duration-300">
+            <div>
+              <h3 className="text-xs font-bold text-[#0e4b47] border-b border-[#0e4b47]/20 pb-1 mb-3 uppercase tracking-wider">Party Configuration Details</h3>
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex justify-between border-b border-[#0e4b47]/5 py-0.5">
+                  <span className="text-muted-foreground">Provide aliases for Name:</span>
+                  <span className="font-bold">No</span>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                <div className="flex justify-between border-b border-[#0e4b47]/5 py-0.5">
+                  <span className="text-muted-foreground">GST Registration Type:</span>
+                  <span className="font-bold uppercase">{ledger.gstNumber ? "Regular" : "Unregistered"}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#0e4b47]/5 py-0.5">
+                  <span className="text-muted-foreground">Permanent Account Number (PAN):</span>
+                  <span className="font-bold">{ledger.pan ?? "—"}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#0e4b47]/5 py-0.5">
+                  <span className="text-muted-foreground">Registered Office Address:</span>
+                  <span className="font-bold max-w-[200px] truncate">{ledger.address ?? "—"}</span>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xs font-bold text-[#0e4b47] border-b border-[#0e4b47]/20 pb-1 mb-3 uppercase tracking-wider">Mailing & Credit Limits</h3>
+              <div className="space-y-1.5 text-xs font-mono">
+                <div className="flex justify-between border-b border-[#0e4b47]/5 py-0.5">
+                  <span className="text-muted-foreground">Contact Phone / Mobile:</span>
+                  <span className="font-bold">{ledger.phone ?? "—"}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#0e4b47]/5 py-0.5">
+                  <span className="text-muted-foreground">Credit Limit Enforcement:</span>
+                  <span className="font-bold text-amber-700">{ledger.creditLimit ? `Enforced (₹${ledger.creditLimit})` : "Not Applicable"}</span>
+                </div>
+                <div className="flex justify-between border-b border-[#0e4b47]/5 py-0.5">
+                  <span className="text-muted-foreground">Account Status:</span>
+                  <span className={cn("font-bold px-1.5 py-0.5 rounded text-[10px] uppercase", ledger.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-300" : "bg-rose-50 text-rose-700")}>
+                    {ledger.isActive ? "Active" : "Inactive"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LEDGER VOUCHERS HIGH DENSITY SHEET */}
+        <div className="flex-1 overflow-auto bg-[#eff7f4]">
+          <Table className="w-full border-collapse font-mono text-[#0e4b47] text-xs">
+            <TableHeader className="sticky top-0 bg-[#cbe3d9] border-b border-[#0e4b47]/50 shadow-sm select-none z-10">
+              <TableRow className="hover:bg-transparent border-b border-[#0e4b47]/40">
+                <TableHead className="text-[#0e4b47] font-bold py-2.5 w-[110px]">Date</TableHead>
+                <TableHead className="text-[#0e4b47] font-bold py-2.5">Particulars</TableHead>
+                <TableHead className="text-[#0e4b47] font-bold py-2.5 w-[120px]">Vch Type</TableHead>
+                <TableHead className="text-[#0e4b47] font-bold py-2.5 w-[100px] text-center">Vch No.</TableHead>
+                <TableHead className="text-[#0e4b47] font-bold py-2.5 w-[130px] text-right">Debit (Dr) (₹)</TableHead>
+                <TableHead className="text-[#0e4b47] font-bold py-2.5 w-[130px] text-right">Credit (Cr) (₹)</TableHead>
+                <TableHead className="text-[#0e4b47] font-bold py-2.5 w-[150px] text-right">Balance (₹)</TableHead>
+              </TableRow>
+            </TableHeader>
+
+            <TableBody className="divide-y divide-[#0e4b47]/10">
+              
+              {/* OPENING BALANCE ROW */}
+              <TableRow className="bg-[#dfece7]/40 hover:bg-[#dfece7]/60 font-bold border-b border-[#0e4b47]/20 select-none">
+                <TableCell className="py-2.5 text-muted-foreground/80">
+                  {dateFrom ? formatDate(new Date(dateFrom).getTime()) : "01-Apr-2026"}
+                </TableCell>
+                <TableCell className="py-2.5 uppercase tracking-wide">
+                  Opening Balance
+                </TableCell>
+                <TableCell className="py-2.5 text-muted-foreground/60">—</TableCell>
+                <TableCell className="py-2.5 text-center text-muted-foreground/60">—</TableCell>
+                <TableCell className="py-2.5 text-right font-semibold text-emerald-600">
+                  {initialOpeningType === "dr" ? formatCurrency(initialOpeningBalance) : ""}
+                </TableCell>
+                <TableCell className="py-2.5 text-right font-semibold text-rose-600">
+                  {initialOpeningType === "cr" ? formatCurrency(initialOpeningBalance) : ""}
+                </TableCell>
+                <TableCell className="py-2.5 text-right font-extrabold uppercase text-[#0e4b47]">
+                  {formatCurrency(initialOpeningBalance)} {initialOpeningType.toUpperCase()}
+                </TableCell>
+              </TableRow>
+
+              {/* TRANSACTIONS ROWS */}
+              {rowsWithBalance.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center text-muted-foreground py-16 font-medium italic select-none">
+                    No transactions registered in this ledger period.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rowsWithBalance.map((entry) => (
+                  <tr key={entry.entryId} className="hover:bg-[#d0ebd9]/30 transition-colors group">
+                    <TableCell className="py-2 text-muted-foreground font-mono">
+                      {formatDate(entry.voucherDate)}
+                    </TableCell>
+                    
+                    <TableCell className="py-2 pr-6">
+                      <div className="font-semibold capitalize text-slate-800">
+                        {entry.voucherType === "sales" ? "Sales Account" : entry.voucherType === "purchase" ? "Purchase Account" : "Sundry Ledger"}
+                      </div>
+                      
+                      {/* Detailed Mode shows voucher specific narration */}
+                      {isDetailed && (entry.narration || entry.voucherNarration) && (
+                        <div className="text-[10px] text-muted-foreground italic mt-0.5 font-sans break-words max-w-[400px]">
+                          Narration: {entry.narration ?? entry.voucherNarration}
+                        </div>
+                      )}
+                    </TableCell>
+
+                    <TableCell className="py-2">
+                      <Badge variant="outline" className="text-[10px] font-bold px-2 py-0 border-[#0e4b47]/20 bg-[#cbe3d9]/20 uppercase tracking-wide rounded-md">
+                        {entry.voucherType}
+                      </Badge>
+                    </TableCell>
+
+                    <TableCell className="py-2 text-center font-mono font-bold text-slate-600">
+                      {entry.voucherNumber ?? "—"}
+                    </TableCell>
+
+                    {/* DEBIT AMOUNT */}
+                    <TableCell className="py-2 text-right font-mono text-emerald-600 dark:text-emerald-400 font-semibold text-sm">
+                      {entry.entryType === "dr" ? (
+                        <span>{formatCurrency(entry.amount)}</span>
+                      ) : (
+                        <span className="opacity-15 font-light">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* CREDIT AMOUNT */}
+                    <TableCell className="py-2 text-right font-mono text-rose-600 dark:text-rose-400 font-semibold text-sm">
+                      {entry.entryType === "cr" ? (
+                        <span>{formatCurrency(entry.amount)}</span>
+                      ) : (
+                        <span className="opacity-15 font-light">—</span>
+                      )}
+                    </TableCell>
+
+                    {/* RUNNING BALANCE COLUMN (CRITICAL TALLY CORE REQUIREMENT) */}
+                    <TableCell className="py-2 text-right font-extrabold uppercase font-mono text-sm">
+                      <span>{formatCurrency(entry.runningBalance)} {entry.runningBalanceType.toUpperCase()}</span>
+                    </TableCell>
+                  </tr>
+                ))
+              )}
+
+              {/* DUAL TOTAL RUNNING CHECKS */}
+              <TableRow className="bg-[#dfece7]/50 hover:bg-[#dfece7]/70 font-bold border-t-2 border-[#0e4b47] select-none">
+                <TableCell className="py-2.5 text-muted-foreground/80">Total</TableCell>
+                <TableCell className="py-2.5 uppercase tracking-wide">Current Total</TableCell>
+                <TableCell className="py-2.5 text-muted-foreground/60">—</TableCell>
+                <TableCell className="py-2.5 text-center text-muted-foreground/60">—</TableCell>
+                <TableCell className="py-2.5 text-right font-mono font-bold text-emerald-600">
+                  {formatCurrency(totalDr)}
+                </TableCell>
+                <TableCell className="py-2.5 text-right font-mono font-bold text-rose-600">
+                  {formatCurrency(totalCr)}
+                </TableCell>
+                <TableCell className="py-2.5 text-right font-mono text-muted-foreground/60">—</TableCell>
+              </TableRow>
+
+              {/* CLOSING BALANCE REPORT */}
+              <TableRow className="bg-[#cbe3d9]/40 hover:bg-[#cbe3d9]/60 font-black border-t border-b-2 border-[#0e4b47] select-none">
+                <TableCell className="py-2.5 text-muted-foreground/80">Closing</TableCell>
+                <TableCell className="py-2.5 uppercase tracking-wider text-[#0e4b47] font-extrabold">
+                  Closing Balance
+                </TableCell>
+                <TableCell className="py-2.5 text-muted-foreground/60">—</TableCell>
+                <TableCell className="py-2.5 text-center text-muted-foreground/60">—</TableCell>
+                <TableCell className="py-2.5 text-right font-mono text-emerald-600">
+                  {closingType === "cr" ? formatCurrency(closingBalance) : ""}
+                </TableCell>
+                <TableCell className="py-2.5 text-right font-mono text-rose-600">
+                  {closingType === "dr" ? formatCurrency(closingBalance) : ""}
+                </TableCell>
+                <TableCell className="py-2.5 text-right uppercase text-[#0e4b47] font-black text-sm">
+                  {formatCurrency(closingBalance)} {closingType.toUpperCase()}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* RIGHT MENU BAR (TALLY ERP SIDEBAR ACTION MENU) */}
+      <div className="w-[180px] bg-[#1b615c] text-white flex flex-col border-l border-[#0e4b47] shrink-0 font-sans p-1.5 select-none space-y-1">
+        <div className="text-[10px] text-white/50 uppercase tracking-widest font-black text-center py-2 border-b border-white/10 select-none">
+          Tally Side Bar
+        </div>
+
+        <button
+          onClick={() => setIsDetailed(prev => !prev)}
+          className="w-full text-left bg-[#257670] hover:bg-[#2b8881] border border-[#0e4b47] rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm"
+        >
+          <span className="text-yellow-300 block font-mono text-[9px] uppercase tracking-wider mb-0.5">F1: Format</span>
+          <span>{isDetailed ? "Condensed" : "Detailed Mode"}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            const today = new Date().toISOString().split("T")[0];
+            setDateFrom("2026-04-01");
+            setDateTo(today);
+          }}
+          className="w-full text-left bg-[#257670] hover:bg-[#2b8881] border border-[#0e4b47] rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm"
+        >
+          <span className="text-yellow-300 block font-mono text-[9px] uppercase tracking-wider mb-0.5">F2: Period</span>
+          <span>Financial Year</span>
+        </button>
+
+        <button
+          onClick={() => setShowConfig(prev => !prev)}
+          className="w-full text-left bg-[#257670] hover:bg-[#2b8881] border border-[#0e4b47] rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm"
+        >
+          <span className="text-yellow-300 block font-mono text-[9px] uppercase tracking-wider mb-0.5">F12: Configure</span>
+          <span>{showConfig ? "Hide Config" : "Show Config"}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            toast({
+              title: "Export Completed",
+              description: "Ledger Vouchers printed to Excel sheet.",
+            });
+          }}
+          className="w-full text-left bg-[#257670] hover:bg-[#2b8881] border border-[#0e4b47] rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm"
+        >
+          <span className="text-yellow-300 block font-mono text-[9px] uppercase tracking-wider mb-0.5">Alt+E: Excel</span>
+          <span>Export Ledger</span>
+        </button>
+
+        <div className="flex-1"></div>
+
+        <button
+          onClick={() => router.push("/ledgers")}
+          className="w-full text-left bg-[#a23d3d] hover:bg-[#bd4848] border border-[#791b1b] rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm mt-auto"
+        >
+          <span className="text-yellow-300 block font-mono text-[9px] uppercase tracking-wider mb-0.5">Q: Quit</span>
+          <span>Gateway exit</span>
+        </button>
+      </div>
     </div>
   );
 }

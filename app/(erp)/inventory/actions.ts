@@ -306,3 +306,25 @@ export async function getItemDetailsAction(itemId: string) {
     return { success: false, error: message };
   }
 }
+
+export async function getInventoryItemsOptions() {
+  try {
+    const items = await db
+      .select({
+        id: inventoryItems.id,
+        name: inventoryItems.name,
+        category: inventoryItems.category,
+        purchaseRate: inventoryItems.purchaseRate,
+        saleRate: inventoryItems.saleRate,
+        gstPercent: inventoryItems.gstPercent,
+        unit: inventoryItems.unit,
+      })
+      .from(inventoryItems)
+      .where(eq(inventoryItems.companyId as any, "company_1"))
+      .orderBy(inventoryItems.name);
+    return items;
+  } catch (err) {
+    console.error("Failed to fetch inventory items:", err);
+    return [];
+  }
+}

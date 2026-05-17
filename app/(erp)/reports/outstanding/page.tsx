@@ -1,6 +1,6 @@
 "use client";
 
-import { db, ledgers, voucherEntries, vouchers, eq, sum, and, lte, sql } from "@/lib/database";
+import { getOutstandingReportData } from "@/app/(erp)/reports/actions";
 import { formatCurrency, formatDate } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,124 +22,19 @@ export default function OutstandingPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDate(today.toISOString().split("T")[0] ?? null);
-    fetchOutstanding();
+    const todayStr = today.toISOString().split("T")[0];
+    setDate(todayStr);
+    fetchOutstanding(todayStr);
   }, []);
 
-  const fetchOutstanding = async () => {
+  const fetchOutstanding = async (selectedDate = date) => {
     setLoading(true);
     try {
-      const dateParam = date ? new Date(date).getTime() : undefined;
-
-      // Get all debtors and creditors ledgers
-      const debtorLedgers = await db
-        .select({
-          id: ledgers.id,
-          name: ledgers.name,
-          group: ledgers.group,
-          openingBalance: ledgers.openingBalance,
-          balanceType: ledgers.balanceType,
-          phone: ledgers.phone,
-          creditLimit: ledgers.creditLimit,
-        })
-        .from(ledgers)
-        .where(
-          and(
-            eq(ledgers.companyId as any, "company_1"),
-            eq(ledgers.isActive as any, true),
-            eq(ledgers.group as any, "sundry_debtors")
-          )
-        )
-        .orderBy(ledgers.name);
-
-      const creditorLedgers = await db
-        .select({
-          id: ledgers.id,
-          name: ledgers.name,
-          group: ledgers.group,
-          openingBalance: ledgers.openingBalance,
-          balanceType: ledgers.balanceType,
-          phone: ledgers.phone,
-          creditLimit: ledgers.creditLimit,
-        })
-        .from(ledgers)
-        .where(
-          and(
-            eq(ledgers.companyId as any, "company_1"),
-            eq(ledgers.isActive as any, true),
-            eq(ledgers.group as any, "sundry_creditors")
-          )
-        )
-        .orderBy(ledgers.name);
-
-      // For each ledger, compute total debit and credit up to date
-      const processLedgers = async (ledgers: any[]) => {
-        const results = await Promise.all(
-          ledgers.map(async (ledger) => {
-            const [debitResult, creditResult] = await Promise.all([
-              db
-                .select({ total: sum(voucherEntries.amount) })
-                .from(voucherEntries)
-                .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-                .where(
-                  and(
-                    eq(voucherEntries.ledgerId, ledger.id),
-                    eq(vouchers.companyId, "company_1"),
-                    dateParam ? lte(vouchers.date, dateParam) : undefined,
-                    eq(voucherEntries.type, "dr")
-                  )
-                ),
-              db
-                .select({ total: sum(voucherEntries.amount) })
-                .from(voucherEntries)
-                .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-                .where(
-                  and(
-                    eq(voucherEntries.ledgerId, ledger.id),
-                    eq(vouchers.companyId, "company_1"),
-                    dateParam ? lte(vouchers.date, dateParam) : undefined,
-                    eq(voucherEntries.type, "cr")
-                  )
-                )
-            ]);
-
-            const debitTotal = Number(debitResult[0]?.total ?? 0);
-            const creditTotal = Number(creditResult[0]?.total ?? 0);
-            let balance;
-            if (ledger.balanceType === "dr") {
-              // Normal balance is debit: Opening + Debit - Credit
-              balance = Number(ledger.openingBalance) + debitTotal - creditTotal;
-            } else {
-              // Normal balance is credit: Opening + Credit - Debit
-              balance = Number(ledger.openingBalance) + creditTotal - debitTotal;
-            }
-            const overdueDays = 0; // We'll compute based on due date later, for now 0
-            return {
-              ledgerId: ledger.id,
-              name: ledger.name,
-              group: ledger.group,
-              openingBalance: Number(ledger.openingBalance),
-              debitTotal,
-              creditTotal,
-              balance,
-              overdueDays,
-              phone: ledger.phone,
-              creditLimit: Number(ledger.creditLimit),
-            };
-          })
-        );
-        return results;
-      };
-
-      const [debtorDetails, creditorDetails] = await Promise.all([
-        processLedgers(debtorLedgers),
-        processLedgers(creditorLedgers),
-      ]);
-
+      const { debtors: debtorDetails, creditors: creditorDetails } = await getOutstandingReportData(selectedDate);
       setDebtors(debtorDetails);
       setCreditors(creditorDetails);
     } catch (err) {
-      console.error("Failed to fetch outstanding report:", err);
+      console.error("Failed to fetch outstanding summary:", err);
     } finally {
       setLoading(false);
     }
@@ -170,7 +65,7 @@ export default function OutstandingPage() {
               />
             </div>
           </div>
-          <Button onClick={fetchOutstanding} className="h-10">
+          <Button onClick={() => fetchOutstanding()} className="h-10">
             Refresh
           </Button>
         </div>

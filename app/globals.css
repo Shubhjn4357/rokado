@@ -35,65 +35,67 @@
 
 @layer base {
   :root {
-    --background: #ffffff;
-    --foreground: #171717;
+    --background: #f8fafc; /* Elegant light slate white */
+    --foreground: #0f172a; /* Clean dark slate */
 
-    --card: #ffffff;
-    --card-foreground: #171717;
+    --card: rgba(255, 255, 255, 0.75); /* Soft glass card surface */
+    --card-foreground: #0f172a;
 
     --popover: #ffffff;
-    --popover-foreground: #171717;
+    --popover-foreground: #0f172a;
 
-    --primary: #3B82F6;
+    --primary: #0f2238; /* Deep corporate navy blue */
     --primary-foreground: #ffffff;
 
-    --secondary: #f1f5f9;
-    --secondary-foreground: #0f172a;
+    --secondary: #f1f5f9; /* Slate secondary */
+    --secondary-foreground: #0f2238;
 
-    --muted: #f1f5f9;
+    --muted: #f8fafc;
     --muted-foreground: #64748b;
 
-    --accent: #f1f5f9;
-    --accent-foreground: #0f172a;
+    --accent: #2563eb; /* Luxury Sapphire Blue */
+    --accent-foreground: #ffffff;
 
-    --destructive: #ef4444;
-    --destructive-foreground: #f8fafc;
+    --destructive: #dc2626; /* Crimson Red */
+    --destructive-foreground: #ffffff;
 
-    --border: #e2e8f0;
+    --border: #e2e8f0; /* Soft grid border */
     --input: #e2e8f0;
-    --ring: #3B82F6;
+    --ring: #2563eb;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem; /* Elegant rounded corners */
   }
 
   .dark {
-    --background: #0B1020;
-    --foreground: #f8fafc;
+    --background: #070c15; /* Sleek high-end space-dark blue background */
+    --foreground: #f1f5f9;
 
-    --card: #121826;
-    --card-foreground: #f8fafc;
+    --card: rgba(15, 23, 42, 0.75); /* Dark elegant glass card surface */
+    --card-foreground: #f1f5f9;
 
-    --popover: #121826;
-    --popover-foreground: #f8fafc;
+    --popover: #0f172a;
+    --popover-foreground: #f1f5f9;
 
-    --primary: #8B5CF6;
+    --primary: #3b82f6; /* Modern active sapphire */
     --primary-foreground: #ffffff;
 
-    --secondary: #1E293B;
-    --secondary-foreground: #f8fafc;
+    --secondary: #1e293b;
+    --secondary-foreground: #f1f5f9;
 
-    --muted: #1E293B;
+    --muted: #1e293b;
     --muted-foreground: #94a3b8;
 
-    --accent: #1E293B;
-    --accent-foreground: #f8fafc;
+    --accent: #2563eb;
+    --accent-foreground: #ffffff;
 
-    --destructive: #7f1d1d;
-    --destructive-foreground: #f8fafc;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
 
-    --border: #1E293B;
-    --input: #1E293B;
-    --ring: #8B5CF6;
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #2563eb;
+
+    --radius: 0.75rem;
   }
 }
 
@@ -102,6 +104,6 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased font-sans text-xs selection:bg-accent/20;
   }
 }

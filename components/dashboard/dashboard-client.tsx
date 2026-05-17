@@ -2,9 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
-  TrendingUp,
-  TrendingDown,
   Users,
   Banknote,
   Package,
@@ -12,6 +11,11 @@ import {
   ReceiptText,
   Activity,
   ArrowUpRight,
+  TrendingDown,
+  FileCheck,
+  Zap,
+  TrendingUp,
+  Inbox
 } from "lucide-react";
 import { formatCurrency } from "@/lib/types";
 import type { InferSelectModel } from "@/lib/database";
@@ -34,186 +38,210 @@ interface DashboardData {
   recentDebtors: LedgerRow[];
 }
 
-const METRIC_CARDS = (data: DashboardData) => [
-  {
-    title: "Customer Dues",
-    value: formatCurrency(data.debtorsTotal),
-    icon: Users,
-    trend: "up",
-    sub: `${data.recentDebtors.length} active debtors`,
-    color: "text-blue-500",
-    bg: "bg-blue-500/10",
-  },
-  {
-    title: "Supplier Dues",
-    value: formatCurrency(data.creditorsTotal),
-    icon: TrendingDown,
-    trend: "down",
-    sub: "Payable to suppliers",
-    color: "text-amber-500",
-    bg: "bg-amber-500/10",
-  },
-  {
-    title: "Cash in Hand",
-    value: formatCurrency(data.cashBalance),
-    icon: Banknote,
-    trend: "neutral",
-    sub: "Opening balance",
-    color: "text-emerald-500",
-    bg: "bg-emerald-500/10",
-  },
-  {
-    title: "Bank Balance",
-    value: formatCurrency(data.bankBalance),
-    icon: Activity,
-    trend: "neutral",
-    sub: "All accounts combined",
-    color: "text-violet-500",
-    bg: "bg-violet-500/10",
-  },
-  {
-    title: "Today's Sales",
-    value: `${data.todaySalesCount} bills`,
-    icon: ReceiptText,
-    trend: "up",
-    sub: "Vouchers posted today",
-    color: "text-pink-500",
-    bg: "bg-pink-500/10",
-  },
-  {
-    title: "Total Vouchers",
-    value: data.totalVouchers.toString(),
-    icon: TrendingUp,
-    trend: "up",
-    sub: "All time entries",
-    color: "text-cyan-500",
-    bg: "bg-cyan-500/10",
-  },
-];
-
 export function DashboardClient({ data }: { data: DashboardData }) {
-  const metrics = METRIC_CARDS(data);
+  
+  // High-Density Tally-Inspired Financial Indicators Data Structure
+  const stats = [
+    {
+      title: "RECEIVABLES (SUNDRY DEBTORS)",
+      value: formatCurrency(data.debtorsTotal),
+      sub: `${data.recentDebtors.length} outstanding accounts`,
+      color: "text-[#1E7D32]", // Green credit indicator
+      bg: "bg-[#E8F5E9]/50 border-[#1E7D32]/20",
+      desc: "Total due from clients"
+    },
+    {
+      title: "PAYABLES (SUNDRY CREDITORS)",
+      value: formatCurrency(data.creditorsTotal),
+      sub: "Active liabilities in ledger",
+      color: "text-[#C62828]", // Red debit indicator
+      bg: "bg-[#FDECEC]/50 border-[#C62828]/20",
+      desc: "Outstanding supplier payments"
+    },
+    {
+      title: "CASH IN HAND BALANCE",
+      value: formatCurrency(data.cashBalance),
+      sub: "Liquid cash registry sum",
+      color: "text-[#1F3A5F]",
+      bg: "bg-[#EAF1F8]/50 border-[#1F3A5F]/20",
+      desc: "Petty cash account balance"
+    },
+    {
+      title: "BANK REGISTRY ACCOUNTS",
+      value: formatCurrency(data.bankBalance),
+      sub: "Combined institutional balance",
+      color: "text-[#1F3A5F]",
+      bg: "bg-[#EAF1F8]/50 border-[#1F3A5F]/20",
+      desc: "All active bank ledgers"
+    },
+    {
+      title: "DAILY VOUCHERS FILED",
+      value: `${data.todaySalesCount} sales bills`,
+      sub: "Transaction postings filed today",
+      color: "text-[#2F6FED]",
+      bg: "bg-[#DCE8FF]/40 border-[#2F6FED]/20",
+      desc: "Today's sales transactions"
+    },
+    {
+      title: "CUMULATIVE LEDGER ENTRIES",
+      value: data.totalVouchers.toString(),
+      sub: "All-time journal postings",
+      color: "text-[#1B1F23]",
+      bg: "bg-muted/40 border-border/80",
+      desc: "Total database transactions count"
+    }
+  ];
 
   return (
-    <div className="space-y-8">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Shree Saree House · FY 2025–26
-        </p>
+    <div className="space-y-6 font-mono text-[#1B1F23]">
+      
+      {/* Tally Workspace Title Header */}
+      <div className="flex items-center justify-between border-b-2 border-[#1F3A5F]/10 pb-3 select-none">
+        <div>
+          <h1 className="text-base font-extrabold uppercase tracking-wide flex items-center gap-2">
+            <Zap className="w-4 h-4 text-[#2F6FED] animate-pulse" />
+            Gateway of Tally : Dashboard Summary
+          </h1>
+          <p className="text-[10px] text-muted-foreground mt-0.5">
+            Active Accounting Period: FY 2026–27 · Shree Saree House
+          </p>
+        </div>
+        <div className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 border border-emerald-200 uppercase rounded-sm">
+          ● Secure Localhost Database
+        </div>
       </div>
 
-      {/* Metric cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {metrics.map((m) => (
-          <Card
-            key={m.title}
-            className="relative overflow-hidden border-border/60 bg-card/80 backdrop-blur hover:shadow-md transition-shadow"
+      {/* STATS MATRIX SECTION (High-Density Tally Cards) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5 select-none">
+        {stats.map((s) => (
+          <div
+            key={s.title}
+            className={`border px-4 py-3 rounded-sm bg-surface transition-shadow shadow-sm hover:shadow-md ${s.bg}`}
           >
-            <div className={`absolute top-0 right-0 w-24 h-24 rounded-full ${m.bg} blur-2xl opacity-60 -mr-8 -mt-8 pointer-events-none`} />
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardDescription className="text-xs font-medium">{m.title}</CardDescription>
-                <div className={`p-1.5 rounded-lg ${m.bg}`}>
-                  <m.icon className={`w-4 h-4 ${m.color}`} />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold tracking-tight">{m.value}</div>
-              <div className="flex items-center gap-1 mt-1">
-                {m.trend === "up" && <ArrowUpRight className="w-3 h-3 text-emerald-500" />}
-                <span className="text-xs text-muted-foreground">{m.sub}</span>
-              </div>
-            </CardContent>
-          </Card>
+            <div className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">{s.title}</div>
+            <div className={`text-lg font-black tracking-tight mt-1 font-mono ${s.color}`}>
+              {s.value}
+            </div>
+            <div className="text-[10px] text-[#5B6573] mt-1.5 flex items-center justify-between font-sans">
+              <span>{s.sub}</span>
+              <span className="text-[9px] opacity-60 italic font-mono uppercase tracking-tight">{s.desc}</span>
+            </div>
+          </div>
         ))}
       </div>
 
-      {/* Bottom section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Top debtors */}
-        <Card className="border-border/60 bg-card/80 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center justify-between">
-              <span>Top Outstanding Customers</span>
-              <Badge variant="secondary" className="font-mono text-xs">
-                Receivables
-              </Badge>
-            </CardTitle>
+      {/* REPORTING COLUMNS (OUTSTANDING & STOCK ALERTS) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        
+        {/* Receivables Master Ledger */}
+        <Card className="border border-border/80 bg-surface rounded-sm overflow-hidden shadow-sm">
+          <CardHeader className="bg-tableHeader/70 border-b border-border/60 py-2.5 px-4 flex flex-row items-center justify-between select-none">
+            <div>
+              <CardTitle className="text-xs font-black uppercase text-[#1F3A5F] tracking-wider">
+                Top Outstanding Accounts (Receivables)
+              </CardTitle>
+              <CardDescription className="text-[9px] mt-0.5 font-sans">
+                A-group debit balances requiring immediate collection
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="font-mono text-[9px] font-bold uppercase tracking-wider text-[#1F3A5F] border-[#1F3A5F]/20 bg-[#EAF1F8]">
+              Sundry Debtors
+            </Badge>
           </CardHeader>
-          <CardContent className="space-y-3">
+          
+          <CardContent className="p-0">
             {data.recentDebtors.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No debtors found.</p>
+              <div className="py-12 text-center text-xs text-muted-foreground font-sans">
+                <Inbox className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                No outstanding debtors found.
+              </div>
             ) : (
-              data.recentDebtors.map((d) => (
-                <div
-                  key={d.id}
-                  className="flex items-center justify-between py-2 border-b border-border/40 last:border-0"
-                >
-                  <div>
-                    <div className="font-medium text-sm">{d.name}</div>
-                    <div className="text-xs text-muted-foreground">{d.phone ?? "—"}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-bold text-sm text-blue-500">
-                      {formatCurrency(d.openingBalance)}
-                    </div>
-                    <div className="text-xs text-muted-foreground">Dr</div>
-                  </div>
-                </div>
-              ))
+              <Table className="text-xs">
+                <TableHeader className="bg-muted/30 border-b border-border/40 select-none">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="py-1.5 font-bold">Ledger/Particulars</TableHead>
+                    <TableHead className="py-1.5 font-bold w-[120px]">Phone Number</TableHead>
+                    <TableHead className="py-1.5 font-bold w-[120px] text-right">Debit Balance (₹)</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.recentDebtors.map((d) => (
+                    <TableRow key={d.id} className="hover:bg-muted/10">
+                      <TableCell className="py-2.5 font-semibold text-slate-800">
+                        {d.name}
+                      </TableCell>
+                      <TableCell className="py-2.5 font-mono text-[11px] text-[#5B6573]">
+                        {d.phone ?? "—"}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right font-extrabold text-[#C62828] text-sm">
+                        {formatCurrency(d.openingBalance)} <span className="text-[10px] font-bold">Dr</span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
 
-        {/* Low stock alerts */}
-        <Card className="border-border/60 bg-card/80 backdrop-blur">
-          <CardHeader>
-            <CardTitle className="text-base flex items-center justify-between">
-              <span>Low Stock Alerts</span>
-              <Badge variant="destructive" className="font-mono text-xs">
-                {data.lowStockItems.length} items
-              </Badge>
-            </CardTitle>
+        {/* Inventory Stock Exception Alerts */}
+        <Card className="border border-border/80 bg-surface rounded-sm overflow-hidden shadow-sm">
+          <CardHeader className="bg-tableHeader/70 border-b border-border/60 py-2.5 px-4 flex flex-row items-center justify-between select-none">
+            <div>
+              <CardTitle className="text-xs font-black uppercase text-[#1F3A5F] tracking-wider">
+                Critical Inventory Shortfall & Reorder Alerts
+              </CardTitle>
+              <CardDescription className="text-[9px] mt-0.5 font-sans">
+                Sarees and items running below safety stock margins
+              </CardDescription>
+            </div>
+            <Badge variant="destructive" className="font-mono text-[9px] font-bold uppercase tracking-wider bg-[#C62828] text-white">
+              {data.lowStockItems.length} Exceptions
+            </Badge>
           </CardHeader>
-          <CardContent className="space-y-3">
+          
+          <CardContent className="p-0">
             {data.lowStockItems.length === 0 ? (
-              <p className="text-muted-foreground text-sm">All stock levels healthy.</p>
+              <div className="py-12 text-center text-xs text-[#1E7D32] bg-[#E8F5E9]/10 font-sans">
+                <FileCheck className="w-8 h-8 mx-auto mb-2 opacity-40 text-[#1E7D32]" />
+                All stock levels healthy. No reorders needed!
+              </div>
             ) : (
-              data.lowStockItems.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 py-2 border-b border-border/40 last:border-0"
-                >
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-                    <Package className="w-4 h-4 text-amber-500" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate">{item.name}</div>
-                    <div className="text-xs text-muted-foreground">{item.category} · {item.rackLocation}</div>
-                  </div>
-                  <div className="text-right shrink-0">
-                    <div
-                      className={`font-bold text-sm ${
-                        item.stockQuantity === 0
-                          ? "text-destructive"
-                          : "text-amber-500"
-                      }`}
-                    >
-                      {item.stockQuantity} {item.unit}
-                    </div>
-                    <div className="text-xs text-muted-foreground flex items-center gap-0.5 justify-end">
-                      <AlertTriangle className="w-2.5 h-2.5" />
-                      {item.reorderLevel ?? 10} min
-                    </div>
-                  </div>
-                </div>
-              ))
+              <Table className="text-xs">
+                <TableHeader className="bg-muted/30 border-b border-border/40 select-none">
+                  <TableRow className="hover:bg-transparent">
+                    <TableHead className="py-1.5 font-bold">Saree Item / Code</TableHead>
+                    <TableHead className="py-1.5 font-bold w-[100px] text-center">Location</TableHead>
+                    <TableHead className="py-1.5 font-bold w-[120px] text-right">In Stock</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.lowStockItems.map((item) => (
+                    <TableRow key={item.id} className="hover:bg-[#FDECEC]/30">
+                      <TableCell className="py-2.5">
+                        <div className="font-semibold text-slate-800">{item.name}</div>
+                        <div className="text-[10px] text-[#8A94A6] uppercase mt-0.5 font-sans">{item.category} • #{item.designNo}</div>
+                      </TableCell>
+                      <TableCell className="py-2.5 text-center font-mono font-bold text-slate-600">
+                        {item.rackLocation ?? "—"}
+                      </TableCell>
+                      <TableCell className="py-2.5 text-right shrink-0">
+                        <span className="font-extrabold text-[#C62828] text-sm">
+                          {item.stockQuantity} {item.unit}
+                        </span>
+                        <div className="text-[10px] text-[#8A94A6] mt-0.5 flex items-center gap-0.5 justify-end font-sans">
+                          <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span>Reorder: {item.reorderLevel ?? 10}</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

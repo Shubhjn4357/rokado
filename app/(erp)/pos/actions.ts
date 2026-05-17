@@ -3,7 +3,7 @@
 import { db, ledgers, voucherEntries, inventoryItems, stockMovements, vouchers } from "@/lib/database";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
-import { and, eq } from "@/lib/database";
+import { and, eq, sql } from "@/lib/database";
 import type { VoucherType } from "@/lib/types";
 
 export interface PosSaveInput {
@@ -25,29 +25,6 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
     // Validate input
     if (!input.items || input.items.length === 0) {
       return { success: false, error: "Cart is empty" };
-    }
-
-    // Determine customer ledger: if customerLedgerId provided, use it; else if walkInCustomerName, create a new ledger under sundry_debtors; else error.
-    let customerLedgerId = input.customerLedgerId;
-    if (!customerLedgerId && input.walkInCustomerName) {
-      // Create a new ledger for walk-in customer
-      const [ledger] = await db.insert(ledgers).values({
-        id: randomUUID(),
-        companyId: "company_1",
-        name: input.walkInCustomerName,
-        group: "sundry_debtors",
-        openingBalance: 0,
-        balanceType: "dr",
-      }).returning({ id: ledgers.id });
-      
-      if (!ledger) {
-        return { success: false, error: "Failed to create customer ledger" };
-      }
-      customerLedgerId = ledger.id;
-    }
-
-    if (!customerLedgerId) {
-      return { success: false, error: "Customer is required" };
     }
 
     // Calculate amount due
@@ -85,54 +62,70 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
       return { success: false, error: "Sales ledger not found. Please create a ledger with group 'Sales Accounts'." };
     }
 
-    // Create voucher entries: Dr Customer, Cr Sales
-    const entries = [
-      {
-        ledgerId: customerLedgerId,
-        type: "dr" as const,
-        amount: amountDue,
-        narration: `POS Sale`,
-      },
-      {
-        ledgerId: salesLedger.id,
-        type: "cr" as const,
-        amount: amountDue,
-        narration: `POS Sale`,
-      },
-    ];
-
     // Create voucher
     const voucherId = randomUUID();
     await db.transaction(async (tx) => {
+      // Determine customer ledger inside transaction to enable atomic rollback on failure
+      let activeCustomerLedgerId = input.customerLedgerId;
+      if (!activeCustomerLedgerId && input.walkInCustomerName) {
+        // Create a new ledger for walk-in customer
+        const [ledger] = await tx.insert(ledgers).values({
+          id: randomUUID(),
+          companyId: "company_1",
+          name: input.walkInCustomerName,
+          group: "sundry_debtors",
+          openingBalance: 0,
+          balanceType: "dr",
+        }).returning({ id: ledgers.id });
+        
+        if (!ledger) {
+          throw new Error("Failed to create customer ledger");
+        }
+        activeCustomerLedgerId = ledger.id;
+      }
+
+      if (!activeCustomerLedgerId) {
+        throw new Error("Customer is required");
+      }
+
       await tx.insert(vouchers).values({
         id: voucherId,
         companyId: "company_1",
         type: "sales",
         number: `POS-${Date.now()}`,
         date: Date.now(),
-        partyLedgerId: customerLedgerId,
+        partyLedgerId: activeCustomerLedgerId,
         totalAmount: amountDue,
         gstTotal: 0,
         grandTotal: amountDue,
         status: "posted",
       });
 
-      for (const entry of entries) {
-        await tx.insert(voucherEntries).values({
-          id: randomUUID(),
-          voucherId,
-          ledgerId: entry.ledgerId,
-          type: entry.type,
-          amount: entry.amount,
-          narration: entry.narration,
-        });
-      }
+      // Dr Customer
+      await tx.insert(voucherEntries).values({
+        id: randomUUID(),
+        voucherId,
+        ledgerId: activeCustomerLedgerId,
+        type: "dr",
+        amount: amountDue,
+        narration: `POS Sale`,
+      });
+
+      // Cr Sales
+      await tx.insert(voucherEntries).values({
+        id: randomUUID(),
+        voucherId,
+        ledgerId: salesLedger.id,
+        type: "cr",
+        amount: amountDue,
+        narration: `POS Sale`,
+      });
 
       // Update inventory and stock movements
       for (const line of lines) {
         // Decrease stock
         await tx.update(inventoryItems)
-          .set({ stockQuantity: (inventoryItems.stockQuantity as any) - line.quantity })
+          .set({ stockQuantity: sql`${inventoryItems.stockQuantity} - ${line.quantity}` })
           .where(and(
             eq(inventoryItems.id as any, line.inventoryItemId),
             eq(inventoryItems.companyId as any, "company_1")
@@ -232,5 +225,24 @@ export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails 
   } catch (err) {
     console.error("Failed to get ledger details:", err);
     return null;
+  }
+}
+
+export async function getDebtorsOptions(): Promise<Array<{ id: string; name: string; openingBalance: number }>> {
+  try {
+    return await db
+      .select({ id: ledgers.id, name: ledgers.name, openingBalance: ledgers.openingBalance })
+      .from(ledgers)
+      .where(
+        and(
+          eq(ledgers.group as any, "sundry_debtors"),
+          eq(ledgers.isActive as any, true),
+          eq(ledgers.companyId as any, "company_1")
+        )
+      )
+      .orderBy(ledgers.name);
+  } catch (err) {
+    console.error("Failed to fetch debtors options:", err);
+    return [];
   }
 }

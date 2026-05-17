@@ -1,6 +1,6 @@
 "use client";
 
-import { db, ledgers, voucherEntries, vouchers, eq, sum, and, gte, lte, or } from "@/lib/database";
+import { getPLReportData } from "@/app/(erp)/reports/actions";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,263 +29,46 @@ export default function PLPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDateFrom(fyStart().toISOString().split("T")[0] ?? null);
-    setDateTo(today.toISOString().split("T")[0] ?? null);
-    // Calculate previous period for comparison
+    const fromStr = fyStart().toISOString().split("T")[0];
+    const toStr = today.toISOString().split("T")[0];
     const prevTo = fyStart();
     const prevFrom = new Date(prevTo.getFullYear() - 1, 3, 1); // Previous year April 1
-    setPrevDateFrom(prevFrom.toISOString().split("T")[0] ?? null);
-    setPrevDateTo(prevTo.toISOString().split("T")[0] ?? null);
-    fetchPL();
+    const pFromStr = prevFrom.toISOString().split("T")[0];
+    const pToStr = prevTo.toISOString().split("T")[0];
+
+    setDateFrom(fromStr);
+    setDateTo(toStr);
+    setPrevDateFrom(pFromStr);
+    setPrevDateTo(pToStr);
+
+    fetchPL(fromStr, toStr, pFromStr, pToStr);
   }, []);
 
-  const fetchPL = async () => {
+  const fetchPL = async (
+    from = dateFrom,
+    to = dateTo,
+    pFrom = prevDateFrom,
+    pTo = prevDateTo
+  ) => {
     setLoading(true);
     try {
-      const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
-      const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
-      const prevFromDate = prevDateFrom ? new Date(prevDateFrom).getTime() : undefined;
-      const prevToDate = prevDateTo ? new Date(prevDateTo).getTime() : undefined;
-
-      // Get sales ledger (income)
-      const [salesLedger] = await db
-        .select()
-        .from(ledgers)
-        .where(
-          and(
-            eq(ledgers.group as any, "sales"),
-            eq(ledgers.companyId as any, "company_1")
-          )
-        )
-        .limit(1);
-
-      // Get purchase ledger (expense - cost of goods sold)
-      const [purchaseLedger] = await db
-        .select()
-        .from(ledgers)
-        .where(
-          and(
-            eq(ledgers.group as any, "purchase"),
-            eq(ledgers.companyId as any, "company_1")
-          )
-        )
-        .limit(1);
-
-      // Get expense ledgers (indirect expenses)
-      const expenseLedgers = await db
-        .select({ id: ledgers.id, name: ledgers.name })
-        .from(ledgers)
-        .where(
-          and(
-            eq(ledgers.group as any, "expenses"),
-            eq(ledgers.companyId as any, "company_1")
-          )
-        )
-        .orderBy(ledgers.name);
-
-      // Get other income ledgers (if any)
-      const otherIncomeLedgers = await db
-        .select({ id: ledgers.id, name: ledgers.name })
-        .from(ledgers)
-        .where(
-          and(
-            or(
-              eq(ledgers.group as any, "other_income"),
-              eq(ledgers.group as any, "interest_income")
-            ),
-            eq(ledgers.companyId as any, "company_1")
-          )
-        )
-        .orderBy(ledgers.name);
-
-      // Calculate current period values
-      const [
-        salesResult,
-        purchaseResult,
-        expenseResults,
-        otherIncomeResults
-      ] = (await Promise.all([
-        // Sales (credit balance in sales ledger)
-        db
-          .select({ total: sum(voucherEntries.amount) })
-          .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-          .where(
-            and(
-              eq(voucherEntries.ledgerId as any, salesLedger?.id ?? ""),
-              eq(vouchers.companyId as any, "company_1"),
-              eq(voucherEntries.type as any, "cr"), // Credit for sales income
-              fromDate ? gte(vouchers.date as any, fromDate) : undefined,
-              toDate ? lte(vouchers.date as any, toDate) : undefined
-            )
-          ),
-
-        // Purchase (debit balance in purchase ledger)
-        db
-          .select({ total: sum(voucherEntries.amount) })
-          .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-          .where(
-            and(
-              eq(voucherEntries.ledgerId as any, purchaseLedger?.id ?? ""),
-              eq(vouchers.companyId as any, "company_1"),
-              eq(voucherEntries.type as any, "dr"), // Debit for purchase expense
-              fromDate ? gte(vouchers.date as any, fromDate) : undefined,
-              toDate ? lte(vouchers.date as any, toDate) : undefined
-            )
-          ),
-
-        // Expenses (debit balance)
-        ...expenseLedgers.map(ledger =>
-          db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId as any, ledger.id),
-                eq(vouchers.companyId as any, "company_1"),
-                eq(voucherEntries.type as any, "dr"), // Debit for expenses
-                fromDate ? gte(vouchers.date as any, fromDate) : undefined,
-                toDate ? lte(vouchers.date as any, toDate) : undefined
-              )
-            )
-        ),
-
-        // Other income (credit balance)
-        ...otherIncomeLedgers.map(ledger =>
-          db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId as any, ledger.id),
-                eq(vouchers.companyId as any, "company_1"),
-                eq(voucherEntries.type as any, "cr"), // Credit for other income
-                fromDate ? gte(vouchers.date as any, fromDate) : undefined,
-                toDate ? lte(vouchers.date as any, toDate) : undefined
-              )
-            )
-        )
-      ])) as any[];
-
-      const salesTotal = Number(salesResult[0]?.total ?? 0);
-      const purchaseTotal = Number(purchaseResult[0]?.total ?? 0);
-      const expenseTotals = expenseResults.map((result: any, index: number) => ({
-        ledger: expenseLedgers[index],
-        amount: Number(result[0]?.total ?? 0)
-      }));
-      const otherIncomeTotal = otherIncomeResults.reduce((sum: number, result: any) => {
-        return sum + Number(result[0]?.total ?? 0);
-      }, 0);
-
-      const totalExpenses = expenseTotals.reduce((sum: number, item: any) => sum + item.amount, 0);
-      const grossProfit = salesTotal - purchaseTotal;
-      const netProfit = grossProfit - totalExpenses + otherIncomeTotal;
-
-      // Calculate previous period values
-      const [
-        prevSalesResult,
-        prevPurchaseResult,
-        prevExpenseResults,
-        prevOtherIncomeResults
-      ] = (await Promise.all([
-        // Previous period sales
-        db
-          .select({ total: sum(voucherEntries.amount) })
-          .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-          .where(
-            and(
-              eq(voucherEntries.ledgerId as any, salesLedger?.id ?? ""),
-              eq(vouchers.companyId as any, "company_1"),
-              eq(voucherEntries.type as any, "cr"),
-              prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
-              prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
-            )
-          ),
-
-        // Previous period purchase
-        db
-          .select({ total: sum(voucherEntries.amount) })
-          .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-          .where(
-            and(
-              eq(voucherEntries.ledgerId as any, purchaseLedger?.id ?? ""),
-              eq(vouchers.companyId as any, "company_1"),
-              eq(voucherEntries.type as any, "dr"),
-              prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
-              prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
-            )
-          ),
-
-        // Previous period expenses
-        ...expenseLedgers.map(ledger =>
-          db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId as any, ledger.id),
-                eq(vouchers.companyId as any, "company_1"),
-                eq(voucherEntries.type as any, "dr"),
-                prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
-                prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
-              )
-            )
-        ),
-
-        // Previous period other income
-        ...otherIncomeLedgers.map(ledger =>
-          db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId as any, ledger.id),
-                eq(vouchers.companyId as any, "company_1"),
-                eq(voucherEntries.type as any, "cr"),
-                prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
-                prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
-              )
-            )
-        )
-      ])) as any[];
-
-      const prevSalesTotal = Number(prevSalesResult[0]?.total ?? 0);
-      const prevPurchaseTotal = Number(prevPurchaseResult[0]?.total ?? 0);
-      const prevExpenseTotals = prevExpenseResults.map((result: any, index: number) => ({
-        ledger: expenseLedgers[index],
-        amount: Number(result[0]?.total ?? 0)
-      }));
-      const prevOtherIncomeTotal = prevOtherIncomeResults.reduce((sum: number, result: any) => {
-        return sum + Number(result[0]?.total ?? 0);
-      }, 0);
-
-      const prevTotalExpenses = prevExpenseTotals.reduce((sum: number, item: any) => sum + item.amount, 0);
-      const prevGrossProfit = prevSalesTotal - prevPurchaseTotal;
-      const prevNetProfit = prevGrossProfit - prevTotalExpenses + prevOtherIncomeTotal;
-
+      const data = await getPLReportData(from, to, pFrom, pTo);
       setPLData({
         current: {
-          sales: salesTotal,
-          purchase: purchaseTotal,
-          grossProfit: grossProfit,
-          expenses: expenseTotals,
-          otherIncome: otherIncomeTotal,
-          netProfit: netProfit
+          sales: data.salesTotal,
+          purchase: data.purchaseTotal,
+          grossProfit: data.grossProfit,
+          expenses: data.expenseTotals,
+          otherIncome: data.otherIncomeTotal,
+          netProfit: data.netProfit
         },
         previous: {
-          sales: prevSalesTotal,
-          purchase: prevPurchaseTotal,
-          grossProfit: prevGrossProfit,
-          expenses: prevExpenseTotals,
-          otherIncome: prevOtherIncomeTotal,
-          netProfit: prevNetProfit
+          sales: data.prevSalesTotal,
+          purchase: data.prevPurchaseTotal,
+          grossProfit: data.prevGrossProfit,
+          expenses: data.prevExpenseTotals,
+          otherIncome: data.prevOtherIncomeTotal,
+          netProfit: data.prevNetProfit
         }
       });
     } catch (err) {
@@ -335,7 +118,7 @@ export default function PLPage() {
               />
             </div>
           </div>
-          <Button onClick={fetchPL} className="h-10">
+          <Button onClick={() => fetchPL()} className="h-10">
             Refresh
           </Button>
         </div>

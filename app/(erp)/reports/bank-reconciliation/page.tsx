@@ -1,6 +1,6 @@
 "use client";
 
-import { db, ledgers, voucherEntries, vouchers, eq, and, gte, lte, sql } from "@/lib/database";
+import { getBankLedgersOptions, getBankBalances, getBankReconciliationData } from "@/app/(erp)/reports/actions";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -50,54 +50,19 @@ export default function BankReconciliationPage() {
   // Fetch reconciliation data when bank ledger or date range changes
   useEffect(() => {
     if (bankLedgerId) {
-      fetchReconciliationData();
-      fetchBalances();
+      fetchReconciliationData(bankLedgerId, dateFrom, dateTo);
+      fetchBalances(bankLedgerId);
     }
   }, [bankLedgerId, dateFrom, dateTo]);
 
   // Fetch opening and closing balances
-  const fetchBalances = async () => {
-    if (!bankLedgerId) return;
+  const fetchBalances = async (ledgerId = bankLedgerId) => {
+    if (!ledgerId) return;
     setBalanceLoading(true);
     try {
-      // Get opening balance from ledger
-      const ledger = await db.query.ledgers.findFirst({
-        where: eq(ledgers.id as any, bankLedgerId),
-        columns: { openingBalance: true, balanceType: true }
-      });
-
-      const openingBalance = ledger?.openingBalance ?? 0;
-      const balanceType = ledger?.balanceType ?? 'dr';
-
-      // Get all voucher entries for the bank ledger (no date limit for closing balance)
-      const entries = await db
-        .select({
-          amount: voucherEntries.amount,
-          type: voucherEntries.type,
-        })
-        .from(voucherEntries)
-        .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-        .where(and(
-          eq(voucherEntries.ledgerId as any, bankLedgerId),
-          eq(vouchers.companyId as any, "company_1")
-        ));
-
-      let totalDr = 0;
-      let totalCr = 0;
-      entries.forEach(e => {
-        if (e.type === 'dr') totalDr += e.amount;
-        else totalCr += e.amount;
-      });
-
-      let closingBalance;
-      if (balanceType === 'dr') {
-        closingBalance = openingBalance + totalDr - totalCr;
-      } else {
-        closingBalance = openingBalance + totalCr - totalDr;
-      }
-
-      setOpeningBalance(openingBalance);
-      setClosingBalanceBooks(closingBalance);
+      const { openingBalance: opBal, closingBalanceBooks: clBal } = await getBankBalances(ledgerId);
+      setOpeningBalance(opBal);
+      setClosingBalanceBooks(clBal);
     } catch (err) {
       console.error("Failed to calculate balances:", err);
       setOpeningBalance(0);
@@ -109,16 +74,7 @@ export default function BankReconciliationPage() {
 
   const fetchBankLedgers = async () => {
     try {
-      const ledgersList = await db
-        .select({ id: ledgers.id, name: ledgers.name })
-        .from(ledgers)
-        .where(and(
-          eq(ledgers.companyId as any, "company_1"),
-          eq(ledgers.isActive as any, true),
-          eq(ledgers.group as any, "bank")
-        ))
-        .orderBy(ledgers.name);
-
+      const ledgersList = await getBankLedgersOptions();
       setBankLedgers(ledgersList);
       if (ledgersList.length > 0 && !bankLedgerId) {
         setBankLedgerId(ledgersList[0]?.id ?? null);
@@ -128,51 +84,26 @@ export default function BankReconciliationPage() {
     }
   };
 
-  const fetchReconciliationData = async () => {
-    if (!bankLedgerId) return;
+  const fetchReconciliationData = async (ledgerId = bankLedgerId, from = dateFrom, to = dateTo) => {
+    if (!ledgerId) return;
 
     setLoading(true);
     try {
-      const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
-      const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
-
-      // Get all voucher entries for the bank ledger in the date range
-      const entries = await db
-        .select({
-          id: voucherEntries.id,
-          voucherId: voucherEntries.voucherId,
-          date: vouchers.date,
-          voucherNumber: vouchers.number,
-          type: voucherEntries.type,
-          amount: voucherEntries.amount,
-          narration: voucherEntries.narration,
-          voucherType: vouchers.type,
-        })
-        .from(voucherEntries)
-        .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-        .where(and(
-          eq(voucherEntries.ledgerId as any, bankLedgerId),
-          eq(vouchers.companyId as any, "company_1"),
-          fromDate ? gte(vouchers.date as any, fromDate) : undefined,
-          toDate ? lte(vouchers.date as any, toDate) : undefined
-        ))
-        .orderBy(vouchers.date as any);
+      const data = await getBankReconciliationData(ledgerId, from, to);
 
       // Transform to reconciliation format
-      const data = entries.map(entry => ({
+      const transformed = data.map(entry => ({
         id: entry.id,
         date: entry.date,
         voucherNumber: entry.voucherNumber,
-        type: entry.voucherType === 'payment' || entry.voucherType === 'receipt'
-          ? (entry.type === 'dr' ? 'Payment' : 'Receipt')
-          : entry.voucherType,
+        type: entry.type,
         amount: entry.amount,
         narration: entry.narration ?? '',
         matched: matchedEntries.has(entry.id),
         source: 'books' as const
       }));
 
-      setReconciliationData(data);
+      setReconciliationData(transformed);
     } catch (err) {
       console.error("Failed to fetch reconciliation data:", err);
     } finally {
@@ -463,7 +394,7 @@ export default function BankReconciliationPage() {
               </Select>
             </div>
           </div>
-          <Button onClick={fetchReconciliationData} className="h-10">
+          <Button onClick={() => fetchReconciliationData()} className="h-10">
             Refresh
           </Button>
         </div>

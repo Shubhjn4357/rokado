@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,8 @@ import {
   ArrowLeft
 } from "lucide-react";
 import Link from "next/link";
+import { getSettings, saveCompanySettings, saveFinancialSettings, saveTaxSettings, saveNotificationSettings } from "./actions";
+import { toast } from "@/components/ui/use-toast";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("company");
@@ -60,27 +62,49 @@ export default function SettingsPage() {
     backupReminders: true,
   });
 
-  const handleSave = async (tab: string) => {
-    // In a real implementation, this would save to database
-    console.log(`Saving ${tab} settings:`);
+  // Load settings on mount
+  useEffect(() => {
+    async function loadSettings() {
+      const settings = await getSettings();
+      if (settings) {
+        setCompanyInfo(settings.companyInfo);
+        setFinancialSettings(settings.financialSettings);
+        setTaxSettings(settings.taxSettings);
+        setNotificationSettings(settings.notificationSettings);
+      }
+    }
+    loadSettings();
+  }, []);
 
+  const handleSave = async (tab: string) => {
+    let res;
     switch (tab) {
       case "company":
-        console.log("Company info:", companyInfo);
+        res = await saveCompanySettings(companyInfo);
         break;
       case "financial":
-        console.log("Financial settings:", financialSettings);
+        res = await saveFinancialSettings(financialSettings);
         break;
       case "tax":
-        console.log("Tax settings:", taxSettings);
+        res = await saveTaxSettings(taxSettings);
         break;
       case "notifications":
-        console.log("Notification settings:", notificationSettings);
+        res = await saveNotificationSettings(notificationSettings);
         break;
     }
 
-    // Show success message
-    alert(`${tab.charAt(0).toUpperCase() + tab.slice(1)} settings saved successfully!`);
+    if (res?.success) {
+      toast({
+        title: "Settings Saved",
+        description: `${tab.charAt(0).toUpperCase() + tab.slice(1)} settings saved successfully!`,
+      });
+    } else {
+      toast({
+        title: "Error Saving Settings",
+        description: res?.error || "An unknown error occurred while saving.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

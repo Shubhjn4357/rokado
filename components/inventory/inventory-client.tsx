@@ -205,7 +205,7 @@ export function InventoryClient({ items }: { items: InventoryItem[] }) {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center text-muted-foreground py-16">
+                  <TableCell colSpan={10} className="text-center text-muted-foreground py-16">
                     No items found.
                   </TableCell>
                 </TableRow>
@@ -229,13 +229,13 @@ export function InventoryClient({ items }: { items: InventoryItem[] }) {
                         {item.designNo ?? "—"} {item.color ? `· ${item.color}` : ""}
                       </TableCell>
                       <TableCell className="font-mono text-xs text-muted-foreground">{item.hsnCode ?? "—"}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">{item.barcode ?? "—"}</TableCell>
                       <TableCell className="text-right font-mono text-sm">{formatCurrency(item.purchaseRate)}</TableCell>
                       <TableCell className="text-right font-mono text-sm font-semibold">{formatCurrency(item.saleRate)}</TableCell>
                       <TableCell className="text-right text-sm">{item.gstPercent}%</TableCell>
                       <TableCell className="text-right font-mono font-semibold">
                         {item.stockQuantity} {item.unit}
                       </TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">{item.barcode ?? "—"}</TableCell>
                       <TableCell>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_STYLES[status]}`}>
                           {STATUS_LABELS[status]}

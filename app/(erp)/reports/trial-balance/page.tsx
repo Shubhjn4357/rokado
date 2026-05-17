@@ -1,6 +1,6 @@
 "use client";
 
-import { db, ledgers, voucherEntries, vouchers, eq, sum, and, gte, lte } from "@/lib/database";
+import { getTrialBalanceReportData } from "@/app/(erp)/reports/actions";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,88 +27,28 @@ export default function TrialBalancePage() {
   const today = new Date();
 
   useEffect(() => {
-    setDateFrom(fyStart().toISOString().split("T")[0] ?? null);
-    setDateTo(today.toISOString().split("T")[0] ?? null);
-    fetchTrialBalance();
+    const fromStr = fyStart().toISOString().split("T")[0];
+    const toStr = today.toISOString().split("T")[0];
+    setDateFrom(fromStr);
+    setDateTo(toStr);
+    fetchTrialBalance(fromStr, toStr);
   }, []);
 
-  const fetchTrialBalance = async () => {
+  const fetchTrialBalance = async (from = dateFrom, to = dateTo) => {
     setLoading(true);
     try {
-      const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
-      const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
-
-      // Get all ledgers with their opening balance and balance type
-      const allLedgers = await db
-        .select({
-          id: ledgers.id,
-          name: ledgers.name,
-          group: ledgers.group,
-          openingBalance: ledgers.openingBalance,
-          balanceType: ledgers.balanceType,
-        })
-        .from(ledgers)
-        .where(
-          eq(ledgers.companyId as any, "company_1")
-        )
-        .orderBy(ledgers.name);
-
-      // For each ledger, compute total debit and credit in the period
-      const trialBalance = await Promise.all(
-        allLedgers.map(async (ledger) => {
-          // Debit sum
-          const debitResult = await db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                fromDate ? gte(vouchers.date, fromDate) : undefined,
-                toDate ? lte(vouchers.date, toDate) : undefined,
-                eq(voucherEntries.type, "dr")
-              )
-            );
-
-          // Credit sum
-          const creditResult = await db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                fromDate ? gte(vouchers.date, fromDate) : undefined,
-                toDate ? lte(vouchers.date, toDate) : undefined,
-                eq(voucherEntries.type, "cr")
-              )
-            );
-
-          const debitTotal = Number(debitResult[0]?.total ?? 0);
-          const creditTotal = Number(creditResult[0]?.total ?? 0);
-          let closingBalance;
-          if (ledger.balanceType === "dr") {
-            // Normal balance is debit: Opening + Debit - Credit
-            closingBalance = Number(ledger.openingBalance) + debitTotal - creditTotal;
-          } else {
-            // Normal balance is credit: Opening + Credit - Debit
-            closingBalance = Number(ledger.openingBalance) + creditTotal - debitTotal;
-          }
-          return {
-            ledgerId: ledger.id,
-            name: ledger.name,
-            group: ledger.group,
-            openingBalance: Number(ledger.openingBalance),
-            debitTotal,
-            creditTotal,
-            closingBalance,
-          };
-        })
-      );
-
-      setTrialBalanceData(trialBalance);
+      const data = await getTrialBalanceReportData(from, to);
+      // Map to the shape expected by the UI if there is a discrepancy in field names (closingType is computed inside action, but we need it)
+      const mapped = data.map((item: any) => ({
+        ledgerId: item.ledgerId,
+        name: item.name,
+        group: item.group,
+        openingBalance: item.openingBalance,
+        debitTotal: item.debit,
+        creditTotal: item.credit,
+        closingBalance: item.closingBalance * (item.closingType === 'cr' ? -1 : 1),
+      }));
+      setTrialBalanceData(mapped as any);
     } catch (err) {
       console.error("Failed to fetch trial balance:", err);
     } finally {
@@ -156,7 +96,7 @@ export default function TrialBalancePage() {
               />
             </div>
           </div>
-          <Button onClick={fetchTrialBalance} className="h-10">
+          <Button onClick={() => fetchTrialBalance()} className="h-10">
             Refresh
           </Button>
         </div>

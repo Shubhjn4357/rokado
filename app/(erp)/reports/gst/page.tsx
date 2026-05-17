@@ -1,6 +1,6 @@
 "use client";
 
-import { db, vouchers, eq, sum, and, gte, lte } from "@/lib/database";
+import { getGSTReportData } from "@/app/(erp)/reports/actions";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,68 +24,22 @@ export default function GSTPage() {
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   useEffect(() => {
-    setDateFrom(firstDayOfMonth.toISOString().split("T")[0] ?? null);
-    setDateTo(lastDayOfMonth.toISOString().split("T")[0] ?? null);
-    fetchGSTData();
+    const fromStr = firstDayOfMonth.toISOString().split("T")[0];
+    const toStr = lastDayOfMonth.toISOString().split("T")[0];
+    setDateFrom(fromStr);
+    setDateTo(toStr);
+    fetchGSTData(fromStr, toStr);
   }, []);
 
-  const fetchGSTData = async () => {
+  const fetchGSTData = async (from = dateFrom, to = dateTo) => {
     setLoading(true);
     try {
-      const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
-      const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
-
-      // Calculate Output GST (from sales vouchers)
-      const outputGSTResult = await db
-        .select({ total: sum(vouchers.gstTotal) })
-        .from(vouchers)
-        .where(
-          and(
-            eq(vouchers.companyId as any, "company_1"),
-            eq(vouchers.type, "sales"),
-            fromDate ? gte(vouchers.date, fromDate) : undefined,
-            toDate ? lte(vouchers.date, toDate) : undefined
-          )
-        );
-
-      // Calculate Input GST (from purchase vouchers)
-      const inputGSTResult = await db
-        .select({ total: sum(vouchers.gstTotal) })
-        .from(vouchers)
-        .where(
-          and(
-            eq(vouchers.companyId as any, "company_1"),
-            eq(vouchers.type, "purchase"),
-            fromDate ? gte(vouchers.date, fromDate) : undefined,
-            toDate ? lte(vouchers.date, toDate) : undefined
-          )
-        );
-
-      const journalGSTResult = await db
-        .select({ total: sum(vouchers.gstTotal) })
-        .from(vouchers)
-        .where(
-          and(
-            eq(vouchers.companyId as any, "company_1"),
-            eq(vouchers.type as any, "journal"),
-            fromDate ? gte(vouchers.date, fromDate) : undefined,
-            toDate ? lte(vouchers.date, toDate) : undefined
-          )
-        );
-
-      const outputGST = Number(outputGSTResult[0]?.total ?? 0);
-      const inputGST = Number(inputGSTResult[0]?.total ?? 0);
-      const journalGST = Number(journalGSTResult[0]?.total ?? 0);
-      const netGST = outputGST - inputGST + journalGST; // Journal entries can adjust GST
-
+      const data = await getGSTReportData(from, to);
       setGSTData({
-        outputGST,
-        inputGST,
-        journalGST,
-        netGST,
+        ...data,
         period: {
-          from: dateFrom,
-          to: dateTo
+          from,
+          to
         }
       });
     } catch (err) {
@@ -135,7 +89,7 @@ export default function GSTPage() {
               />
             </div>
           </div>
-          <Button onClick={fetchGSTData} className="h-10">
+          <Button onClick={() => fetchGSTData()} className="h-10">
             Refresh
           </Button>
         </div>

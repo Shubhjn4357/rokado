@@ -49,6 +49,8 @@ function useCommandItems(router: ReturnType<typeof useRouter>): CommandItem[] {
     { id: "trial-balance", label: "Trial Balance", icon: BarChart3, action: () => router.push("/reports/trial-balance"), keywords: ["report", "balance"] },
     { id: "outstanding", label: "Outstanding Report", icon: BarChart3, action: () => router.push("/reports/outstanding"), keywords: ["due", "debtors", "creditors"] },
     { id: "gst-report", label: "GST Report", icon: FileText, action: () => router.push("/reports/gst"), keywords: ["tax", "gstr1", "gstr3b"] },
+    { id: "bank-reconciliation", label: "Bank Reconciliation", icon: BarChart3, action: () => router.push("/reports/bank-reconciliation"), keywords: ["report", "reconcile", "bank"] },
+    { id: "dual-book", label: "Dual Book Mode", icon: BookOpen, action: () => router.push("/reports/dual-book"), keywords: ["report", "dual", "shadow", "paper", "mismatch"] },
   ];
 }
 

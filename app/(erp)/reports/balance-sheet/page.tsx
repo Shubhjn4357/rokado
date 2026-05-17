@@ -1,6 +1,6 @@
 "use client";
 
-import { db, ledgers, voucherEntries, vouchers, eq, sum, and, gte, lte } from "@/lib/database";
+import { getBalanceSheetReportData } from "@/app/(erp)/reports/actions";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,159 +21,16 @@ export default function BalanceSheetPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDate(today.toISOString().split("T")[0] ?? null);
-    fetchBalanceSheet();
+    const todayStr = today.toISOString().split("T")[0];
+    setDate(todayStr);
+    fetchBalanceSheet(todayStr);
   }, []);
 
-  const fetchBalanceSheet = async () => {
+  const fetchBalanceSheet = async (selectedDate = date) => {
     setLoading(true);
     try {
-      const dateParam = date ? new Date(date).getTime() : undefined;
-
-      // Get all ledgers with their opening balance and balance type
-      const allLedgers = await db
-        .select({
-          id: ledgers.id,
-          name: ledgers.name,
-          group: ledgers.group,
-          openingBalance: ledgers.openingBalance,
-          balanceType: ledgers.balanceType,
-        })
-        .from(ledgers)
-        .where(
-          eq(ledgers.companyId as any, "company_1")
-        )
-        .orderBy(ledgers.name);
-
-      // For each ledger, compute total debit and credit up to date
-      const ledgerBalances = await Promise.all(
-        allLedgers.map(async (ledger) => {
-          const [debitResult, creditResult] = await Promise.all([
-            db
-              .select({ total: sum(voucherEntries.amount) })
-              .from(voucherEntries)
-              .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-              .where(
-                and(
-                  eq(voucherEntries.ledgerId as any, ledger.id),
-                  eq(vouchers.companyId as any, "company_1"),
-                  dateParam ? lte(vouchers.date as any, dateParam) : undefined,
-                  eq(voucherEntries.type as any, "dr")
-                )
-              ),
-            db
-              .select({ total: sum(voucherEntries.amount) })
-              .from(voucherEntries)
-              .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
-              .where(
-                and(
-                  eq(voucherEntries.ledgerId as any, ledger.id),
-                  eq(vouchers.companyId as any, "company_1"),
-                  dateParam ? lte(vouchers.date as any, dateParam) : undefined,
-                  eq(voucherEntries.type as any, "cr")
-                )
-              )
-          ]);
-
-          const debitTotal = Number(debitResult[0]?.total ?? 0);
-          const creditTotal = Number(creditResult[0]?.total ?? 0);
-          let closingBalance;
-          if (ledger.balanceType === "dr") {
-            // Normal balance is debit: Opening + Debit - Credit
-            closingBalance = Number(ledger.openingBalance) + debitTotal - creditTotal;
-          } else {
-            // Normal balance is credit: Opening + Credit - Debit
-            closingBalance = Number(ledger.openingBalance) + creditTotal - debitTotal;
-          }
-          return {
-            ledgerId: ledger.id,
-            name: ledger.name,
-            group: ledger.group,
-            openingBalance: Number(ledger.openingBalance),
-            debitTotal,
-            creditTotal,
-            closingBalance,
-          };
-        })
-      );
-
-      // Group by group for balance sheet presentation
-      const groups: any = {
-        capital: [],
-        sundryCreditors: [],
-        sundryDebtors: [],
-        bank: [],
-        cash: [],
-        stock: [],
-        fixedAssets: [],
-        dutiesTaxes: [],
-        expenses: [],
-        sales: [],
-        purchase: [],
-        other: []
-      };
-
-      ledgerBalances.forEach(ledger => {
-        switch (ledger.group) {
-          case "capital":
-            groups.capital.push(ledger);
-            break;
-          case "sundry_creditors":
-            groups.sundryCreditors.push(ledger);
-            break;
-          case "sundry_debtors":
-            groups.sundryDebtors.push(ledger);
-            break;
-          case "bank":
-            groups.bank.push(ledger);
-            break;
-          case "cash":
-            groups.cash.push(ledger);
-            break;
-          case "stock":
-            groups.stock.push(ledger);
-            break;
-          case "fixed_assets":
-            groups.fixedAssets.push(ledger);
-            break;
-          case "duties_taxes":
-            groups.dutiesTaxes.push(ledger);
-            break;
-          case "expenses":
-            groups.expenses.push(ledger);
-            break;
-          case "sales":
-            groups.sales.push(ledger);
-            break;
-          case "purchase":
-            groups.purchase.push(ledger);
-            break;
-          default:
-            groups.other.push(ledger);
-        }
-      });
-
-      // Calculate totals
-      const calculateGroupTotal = (groupArray: any[]) =>
-        groupArray.reduce((sum, ledger) => sum + ledger.closingBalance, 0);
-
-      setBalanceSheetData({
-        groups,
-        totals: {
-          capital: calculateGroupTotal(groups.capital),
-          sundryCreditors: calculateGroupTotal(groups.sundryCreditors),
-          sundryDebtors: calculateGroupTotal(groups.sundryDebtors),
-          bank: calculateGroupTotal(groups.bank),
-          cash: calculateGroupTotal(groups.cash),
-          stock: calculateGroupTotal(groups.stock),
-          fixedAssets: calculateGroupTotal(groups.fixedAssets),
-          dutiesTaxes: calculateGroupTotal(groups.dutiesTaxes),
-          expenses: calculateGroupTotal(groups.expenses),
-          sales: calculateGroupTotal(groups.sales),
-          purchase: calculateGroupTotal(groups.purchase),
-          other: calculateGroupTotal(groups.other)
-        }
-      });
+      const data = await getBalanceSheetReportData(selectedDate);
+      setBalanceSheetData(data);
     } catch (err) {
       console.error("Failed to fetch balance sheet:", err);
     } finally {
@@ -206,7 +63,7 @@ export default function BalanceSheetPage() {
               />
             </div>
           </div>
-          <Button onClick={fetchBalanceSheet} className="h-10">
+          <Button onClick={() => fetchBalanceSheet()} className="h-10">
             Refresh
           </Button>
         </div>
