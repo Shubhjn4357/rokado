@@ -1,4 +1,6 @@
-import { db, inventoryItems, stockMovements, vouchers, eq, sum, and, gte, lte, sql } from "@repo/database";
+"use client";
+
+import { db, inventoryItems, stockMovements, vouchers, eq, sum, and, gte, lte, sql, lt } from "@repo/database";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 
-export const dynamic = "force-dynamic";
-export const metadata = { title: "Stock Summary Report - Shree Saree House ERP" };
+// export const dynamic = "force-dynamic";
+// export const metadata = { title: "Stock Summary Report - Shree Saree House ERP" };
 
-export default async function StockPage() {
+export default function StockPage() {
   const [date, setDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<Array<any>>([]);
@@ -19,7 +21,7 @@ export default async function StockPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDate(today.toISOString().split("T")[0]);
+    setDate(today.toISOString().split("T")[0] ?? null);
     fetchStockSummary();
   }, []);
 
@@ -39,8 +41,8 @@ export default async function StockPage() {
           // We'll calculate opening stock from movements before date
         })
         .from(inventoryItems)
-        .where(({ companyId, isActive }) =>
-          eq(inventoryItems.companyId, "company_1")
+        .where(
+          eq(inventoryItems.companyId as any, "company_1")
         )
         .orderBy(inventoryItems.name);
 
@@ -63,12 +65,12 @@ export default async function StockPage() {
                 `
               })
               .from(stockMovements)
-              .innerJoin(vouchers, eq(stockMovements.voucherId, vouchers.id))
+              .innerJoin(vouchers, eq(stockMovements.voucherId as any, vouchers.id as any))
               .where(
                 and(
                   eq(stockMovements.itemId, item.id),
                   eq(vouchers.companyId, "company_1"),
-                  lt(stockMovements.date, dateParam) // Before selected date
+                  lt(vouchers.date, dateParam) // Before selected date
                 )
               );
 
@@ -84,7 +86,7 @@ export default async function StockPage() {
               and(
                 eq(stockMovements.itemId, item.id),
                 eq(vouchers.companyId, "company_1"),
-                dateParam ? lte(stockMovements.date, dateParam) : undefined,
+                dateParam ? lte(vouchers.date, dateParam) : undefined,
                 eq(stockMovements.type, "in")
               )
             );
@@ -98,7 +100,7 @@ export default async function StockPage() {
               and(
                 eq(stockMovements.itemId, item.id),
                 eq(vouchers.companyId, "company_1"),
-                dateParam ? lte(stockMovements.date, dateParam) : undefined,
+                dateParam ? lte(vouchers.date, dateParam) : undefined,
                 eq(stockMovements.type, "out")
               )
             );
@@ -116,7 +118,7 @@ export default async function StockPage() {
             inwardTotal,
             outwardTotal,
             closingStock,
-          });
+          };
         })
       );
 
@@ -143,9 +145,10 @@ export default async function StockPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">As of Date</label>
               <Calendar
-                value={date ? new Date(date) : undefined}
-                onChange={(value) => {
-                  setDate(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={date ? new Date(date) : undefined}
+                onSelect={(value: any) => {
+                  setDate(value?.toISOString().split("T")[0] ?? null);
                   fetchStockSummary();
                 }}
                 className="w-48"
@@ -166,11 +169,11 @@ export default async function StockPage() {
           {loading ? (
             <div className="flex items-center justify-center py-8">
               Loading...
-            )
+            </div>
           ) : stockData.length === 0 ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               No inventory items found.
-            )
+            </div>
           ) : (
             <Table>
               <thead>
@@ -204,7 +207,7 @@ export default async function StockPage() {
                 ))}
                 {/* Totals row */}
                 <tr className="border-t">
-                  <td colSpan="3" className="px-6 py-4 text-right font-bold">
+                  <td colSpan={3} className="px-6 py-4 text-right font-bold">
                     TOTAL
                   </td>
                   <td className="px-6 py-4 text-right text-sm">

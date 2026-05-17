@@ -1,3 +1,5 @@
+"use client";
+
 import { db, ledgers, voucherEntries, vouchers, eq, sum, and, gte, lte, or } from "@repo/database";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
@@ -7,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 
-export const dynamic = "force-dynamic";
-export const metadata = { title: "Profit & Loss Statement - Shree Saree House ERP" };
+// export const dynamic = "force-dynamic";
+// export const metadata = { title: "Profit & Loss Statement - Shree Saree House ERP" };
 
-export default async function PLPage() {
+export default function PLPage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
   const [dateTo, setDateTo] = useState<string | null>(null);
   const [prevDateFrom, setPrevDateFrom] = useState<string | null>(null);
@@ -27,13 +29,13 @@ export default async function PLPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDateFrom(fyStart().toISOString().split("T")[0]);
-    setDateTo(today.toISOString().split("T")[0]);
+    setDateFrom(fyStart().toISOString().split("T")[0] ?? null);
+    setDateTo(today.toISOString().split("T")[0] ?? null);
     // Calculate previous period for comparison
     const prevTo = fyStart();
     const prevFrom = new Date(prevTo.getFullYear() - 1, 3, 1); // Previous year April 1
-    setPrevDateFrom(prevFrom.toISOString().split("T")[0]);
-    setPrevDateTo(prevTo.toISOString().split("T")[0]);
+    setPrevDateFrom(prevFrom.toISOString().split("T")[0] ?? null);
+    setPrevDateTo(prevTo.toISOString().split("T")[0] ?? null);
     fetchPL();
   }, []);
 
@@ -49,8 +51,11 @@ export default async function PLPage() {
       const [salesLedger] = await db
         .select()
         .from(ledgers)
-        .where(({ group, companyId }) =>
-          eq(ledgers.group, "sales") && eq(ledgers.companyId, "company_1")
+        .where(
+          and(
+            eq(ledgers.group as any, "sales"),
+            eq(ledgers.companyId as any, "company_1")
+          )
         )
         .limit(1);
 
@@ -58,8 +63,11 @@ export default async function PLPage() {
       const [purchaseLedger] = await db
         .select()
         .from(ledgers)
-        .where(({ group, companyId }) =>
-          eq(ledgers.group, "purchase") && eq(ledgers.companyId, "company_1")
+        .where(
+          and(
+            eq(ledgers.group as any, "purchase"),
+            eq(ledgers.companyId as any, "company_1")
+          )
         )
         .limit(1);
 
@@ -67,8 +75,11 @@ export default async function PLPage() {
       const expenseLedgers = await db
         .select({ id: ledgers.id, name: ledgers.name })
         .from(ledgers)
-        .where(({ group, companyId }) =>
-          eq(ledgers.group, "expenses") && eq(ledgers.companyId, "company_1")
+        .where(
+          and(
+            eq(ledgers.group as any, "expenses"),
+            eq(ledgers.companyId as any, "company_1")
+          )
         )
         .orderBy(ledgers.name);
 
@@ -76,11 +87,14 @@ export default async function PLPage() {
       const otherIncomeLedgers = await db
         .select({ id: ledgers.id, name: ledgers.name })
         .from(ledgers)
-        .where(({ group, companyId }) =>
-          or(
-            eq(ledgers.group, "other_income"),
-            eq(ledgers.group, "interest_income")
-          ) && eq(ledgers.companyId, "company_1")
+        .where(
+          and(
+            or(
+              eq(ledgers.group as any, "other_income"),
+              eq(ledgers.group as any, "interest_income")
+            ),
+            eq(ledgers.companyId as any, "company_1")
+          )
         )
         .orderBy(ledgers.name);
 
@@ -90,19 +104,19 @@ export default async function PLPage() {
         purchaseResult,
         expenseResults,
         otherIncomeResults
-      ] = await Promise.all([
+      ] = (await Promise.all([
         // Sales (credit balance in sales ledger)
         db
           .select({ total: sum(voucherEntries.amount) })
           .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
           .where(
             and(
-              eq(voucherEntries.ledgerId, salesLedger?.id ?? ""),
-              eq(vouchers.companyId, "company_1"),
-              eq(voucherEntries.type, "cr"), // Credit for sales income
-              fromDate ? gte(vouchers.date, fromDate) : undefined,
-              toDate ? lte(vouchers.date, toDate) : undefined
+              eq(voucherEntries.ledgerId as any, salesLedger?.id ?? ""),
+              eq(vouchers.companyId as any, "company_1"),
+              eq(voucherEntries.type as any, "cr"), // Credit for sales income
+              fromDate ? gte(vouchers.date as any, fromDate) : undefined,
+              toDate ? lte(vouchers.date as any, toDate) : undefined
             )
           ),
 
@@ -110,14 +124,14 @@ export default async function PLPage() {
         db
           .select({ total: sum(voucherEntries.amount) })
           .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
           .where(
             and(
-              eq(voucherEntries.ledgerId, purchaseLedger?.id ?? ""),
-              eq(vouchers.companyId, "company_1"),
-              eq(voucherEntries.type, "dr"), // Debit for purchase expense
-              fromDate ? gte(vouchers.date, fromDate) : undefined,
-              toDate ? lte(vouchers.date, toDate) : undefined
+              eq(voucherEntries.ledgerId as any, purchaseLedger?.id ?? ""),
+              eq(vouchers.companyId as any, "company_1"),
+              eq(voucherEntries.type as any, "dr"), // Debit for purchase expense
+              fromDate ? gte(vouchers.date as any, fromDate) : undefined,
+              toDate ? lte(vouchers.date as any, toDate) : undefined
             )
           ),
 
@@ -126,14 +140,14 @@ export default async function PLPage() {
           db
             .select({ total: sum(voucherEntries.amount) })
             .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
             .where(
               and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                eq(voucherEntries.type, "dr"), // Debit for expenses
-                fromDate ? gte(vouchers.date, fromDate) : undefined,
-                toDate ? lte(vouchers.date, toDate) : undefined
+                eq(voucherEntries.ledgerId as any, ledger.id),
+                eq(vouchers.companyId as any, "company_1"),
+                eq(voucherEntries.type as any, "dr"), // Debit for expenses
+                fromDate ? gte(vouchers.date as any, fromDate) : undefined,
+                toDate ? lte(vouchers.date as any, toDate) : undefined
               )
             )
         ),
@@ -143,30 +157,30 @@ export default async function PLPage() {
           db
             .select({ total: sum(voucherEntries.amount) })
             .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
             .where(
               and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                eq(voucherEntries.type, "cr"), // Credit for other income
-                fromDate ? gte(vouchers.date, fromDate) : undefined,
-                toDate ? lte(vouchers.date, toDate) : undefined
+                eq(voucherEntries.ledgerId as any, ledger.id),
+                eq(vouchers.companyId as any, "company_1"),
+                eq(voucherEntries.type as any, "cr"), // Credit for other income
+                fromDate ? gte(vouchers.date as any, fromDate) : undefined,
+                toDate ? lte(vouchers.date as any, toDate) : undefined
               )
             )
         )
-      ]);
+      ])) as any[];
 
       const salesTotal = Number(salesResult[0]?.total ?? 0);
       const purchaseTotal = Number(purchaseResult[0]?.total ?? 0);
-      const expenseTotals = expenseResults.map((result, index) => ({
+      const expenseTotals = expenseResults.map((result: any, index: number) => ({
         ledger: expenseLedgers[index],
         amount: Number(result[0]?.total ?? 0)
       }));
-      const otherIncomeTotal = otherIncomeResults.reduce((sum, result, index) => {
-        return sum + Number(otherIncomeResults[index][0]?.total ?? 0);
+      const otherIncomeTotal = otherIncomeResults.reduce((sum: number, result: any) => {
+        return sum + Number(result[0]?.total ?? 0);
       }, 0);
 
-      const totalExpenses = expenseTotals.reduce((sum, item) => sum + item.amount, 0);
+      const totalExpenses = expenseTotals.reduce((sum: number, item: any) => sum + item.amount, 0);
       const grossProfit = salesTotal - purchaseTotal;
       const netProfit = grossProfit - totalExpenses + otherIncomeTotal;
 
@@ -176,19 +190,19 @@ export default async function PLPage() {
         prevPurchaseResult,
         prevExpenseResults,
         prevOtherIncomeResults
-      ] = await Promise.all([
+      ] = (await Promise.all([
         // Previous period sales
         db
           .select({ total: sum(voucherEntries.amount) })
           .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
           .where(
             and(
-              eq(voucherEntries.ledgerId, salesLedger?.id ?? ""),
-              eq(vouchers.companyId, "company_1"),
-              eq(voucherEntries.type, "cr"),
-              prevFromDate ? gte(vouchers.date, prevFromDate) : undefined,
-              prevToDate ? lte(vouchers.date, prevToDate) : undefined
+              eq(voucherEntries.ledgerId as any, salesLedger?.id ?? ""),
+              eq(vouchers.companyId as any, "company_1"),
+              eq(voucherEntries.type as any, "cr"),
+              prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
+              prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
             )
           ),
 
@@ -196,14 +210,14 @@ export default async function PLPage() {
         db
           .select({ total: sum(voucherEntries.amount) })
           .from(voucherEntries)
-          .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+          .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
           .where(
             and(
-              eq(voucherEntries.ledgerId, purchaseLedger?.id ?? ""),
-              eq(vouchers.companyId, "company_1"),
-              eq(voucherEntries.type, "dr"),
-              prevFromDate ? gte(vouchers.date, prevFromDate) : undefined,
-              prevToDate ? lte(vouchers.date, prevToDate) : undefined
+              eq(voucherEntries.ledgerId as any, purchaseLedger?.id ?? ""),
+              eq(vouchers.companyId as any, "company_1"),
+              eq(voucherEntries.type as any, "dr"),
+              prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
+              prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
             )
           ),
 
@@ -212,14 +226,14 @@ export default async function PLPage() {
           db
             .select({ total: sum(voucherEntries.amount) })
             .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
             .where(
               and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                eq(voucherEntries.type, "dr"),
-                prevFromDate ? gte(vouchers.date, prevFromDate) : undefined,
-                prevToDate ? lte(vouchers.date, prevToDate) : undefined
+                eq(voucherEntries.ledgerId as any, ledger.id),
+                eq(vouchers.companyId as any, "company_1"),
+                eq(voucherEntries.type as any, "dr"),
+                prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
+                prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
               )
             )
         ),
@@ -229,30 +243,30 @@ export default async function PLPage() {
           db
             .select({ total: sum(voucherEntries.amount) })
             .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
             .where(
               and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                eq(voucherEntries.type, "cr"),
-                prevFromDate ? gte(vouchers.date, prevFromDate) : undefined,
-                prevToDate ? lte(vouchers.date, prevToDate) : undefined
+                eq(voucherEntries.ledgerId as any, ledger.id),
+                eq(vouchers.companyId as any, "company_1"),
+                eq(voucherEntries.type as any, "cr"),
+                prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
+                prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
               )
             )
         )
-      ]);
+      ])) as any[];
 
       const prevSalesTotal = Number(prevSalesResult[0]?.total ?? 0);
       const prevPurchaseTotal = Number(prevPurchaseResult[0]?.total ?? 0);
-      const prevExpenseTotals = prevExpenseResults.map((result, index) => ({
+      const prevExpenseTotals = prevExpenseResults.map((result: any, index: number) => ({
         ledger: expenseLedgers[index],
         amount: Number(result[0]?.total ?? 0)
       }));
-      const prevOtherIncomeTotal = prevOtherIncomeResults.reduce((sum, result, index) => {
-        return sum + Number(prevOtherIncomeResults[index][0]?.total ?? 0);
+      const prevOtherIncomeTotal = prevOtherIncomeResults.reduce((sum: number, result: any) => {
+        return sum + Number(result[0]?.total ?? 0);
       }, 0);
 
-      const prevTotalExpenses = prevExpenseTotals.reduce((sum, item) => sum + item.amount, 0);
+      const prevTotalExpenses = prevExpenseTotals.reduce((sum: number, item: any) => sum + item.amount, 0);
       const prevGrossProfit = prevSalesTotal - prevPurchaseTotal;
       const prevNetProfit = prevGrossProfit - prevTotalExpenses + prevOtherIncomeTotal;
 
@@ -296,9 +310,10 @@ export default async function PLPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">From</label>
               <Calendar
-                value={dateFrom ? new Date(dateFrom) : undefined}
-                onChange={(value) => {
-                  setDateFrom(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateFrom ? new Date(dateFrom) : undefined}
+                onSelect={(value: any) => {
+                  setDateFrom(value?.toISOString().split("T")[0] ?? null);
                   fetchPL();
                 }}
                 className="w-48"
@@ -310,9 +325,10 @@ export default async function PLPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">To</label>
               <Calendar
-                value={dateTo ? new Date(dateTo) : undefined}
-                onChange={(value) => {
-                  setDateTo(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateTo ? new Date(dateTo) : undefined}
+                onSelect={(value: any) => {
+                  setDateTo(value?.toISOString().split("T")[0] ?? null);
                   fetchPL();
                 }}
                 className="w-48"
@@ -333,11 +349,11 @@ export default async function PLPage() {
           {loading ? (
             <div className="flex items-center justify-center py-8">
               Loading...
-            )
+            </div>
           ) : Object.keys(plData).length === 0 ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               No data found for the selected period.
-            )
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -352,7 +368,7 @@ export default async function PLPage() {
                   </thead>
                   <tbody className="divide-y">
                     <tr className="border-b font-semibold">
-                      <td colSpan="4" className="px-6 py-4">INCOME</td>
+                      <td colSpan={4} className="px-6 py-4">INCOME</td>
                     </tr>
                     <tr>
                       <td className="px-6 py-4 text-left">Sales</td>
@@ -383,7 +399,7 @@ export default async function PLPage() {
                       </>
                     )}
                     <tr className="border-t border-b font-semibold">
-                      <td colSpan="4" className="px-6 py-4">TOTAL INCOME</td>
+                      <td colSpan={4} className="px-6 py-4">TOTAL INCOME</td>
                     </tr>
                     <tr>
                       <td className="px-6 py-4 text-left font-semibold">Total Income</td>
@@ -399,7 +415,7 @@ export default async function PLPage() {
                     </tr>
 
                     <tr className="border-b font-semibold">
-                      <td colSpan="4" className="px-6 py-4">EXPENSES</td>
+                      <td colSpan={4} className="px-6 py-4">EXPENSES</td>
                     </tr>
                     <tr>
                       <td className="px-6 py-4 text-left">Purchase (Cost of Goods Sold)</td>
@@ -413,7 +429,7 @@ export default async function PLPage() {
                             : "0%"}
                       </td>
                     </tr>
-                    {plData.current.expenses.map((expense, index) => (
+                    {plData.current.expenses.map((expense: any, index: number) => (
                       <tr key={index}>
                         <td className="px-6 py-4 text-left pl-8">{expense.ledger.name}</td>
                         <td className="px-6 py-4 text-right text-sm">{formatCurrency(expense.amount)}</td>
@@ -428,23 +444,23 @@ export default async function PLPage() {
                       </tr>
                     ))}
                     <tr className="border-t border-b font-semibold">
-                      <td colSpan="4" className="px-6 py-4">TOTAL EXPENSES</td>
+                      <td colSpan={4} className="px-6 py-4">TOTAL EXPENSES</td>
                     </tr>
                     <tr>
                       <td className="px-6 py-4 text-left font-semibold">Total Expenses</td>
-                      <td className="px-6 py-4 text-right text-sm font-semibold">{formatCurrency(plData.current.purchase + plData.current.expenses.reduce((sum, e) => sum + e.amount, 0))}</td>
-                      <td className="px-6 py-4 text-right text-sm font-semibold">{formatCurrency(plData.previous.purchase + plData.previous.expenses.reduce((sum, e) => sum + e.amount, 0))}</td>
+                      <td className="px-6 py-4 text-right text-sm font-semibold">{formatCurrency(plData.current.purchase + plData.current.expenses.reduce((sum: number, e: any) => sum + e.amount, 0))}</td>
+                      <td className="px-6 py-4 text-right text-sm font-semibold">{formatCurrency(plData.previous.purchase + plData.previous.expenses.reduce((sum: number, e: any) => sum + e.amount, 0))}</td>
                       <td className="px-6 py-4 text-right text-sm">
-                        {(plData.previous.purchase + plData.previous.expenses.reduce((sum, e) => sum + e.amount, 0)) !== 0
-                          ? (((plData.current.purchase + plData.current.expenses.reduce((sum, e) => sum + e.amount, 0)) - (plData.previous.purchase + plData.previous.expenses.reduce((sum, e) => sum + e.amount, 0))) / (plData.previous.purchase + plData.previous.expenses.reduce((sum, e) => sum + e.amount, 0)) * 100).toFixed(1) + "%"
-                          : (plData.current.purchase + plData.current.expenses.reduce((sum, e) => sum + e.amount, 0)) !== 0
+                        {(plData.previous.purchase + plData.previous.expenses.reduce((sum: number, e: any) => sum + e.amount, 0)) !== 0
+                          ? (((plData.current.purchase + plData.current.expenses.reduce((sum: number, e: any) => sum + e.amount, 0)) - (plData.previous.purchase + plData.previous.expenses.reduce((sum: number, e: any) => sum + e.amount, 0))) / (plData.previous.purchase + plData.previous.expenses.reduce((sum: number, e: any) => sum + e.amount, 0)) * 100).toFixed(1) + "%"
+                          : (plData.current.purchase + plData.current.expenses.reduce((sum: number, e: any) => sum + e.amount, 0)) !== 0
                             ? "∞%"
                             : "0%"}
                       </td>
                     </tr>
 
                     <tr className="border-b font-semibold">
-                      <td colSpan="4" className="px-6 py-4">PROFIT</td>
+                      <td colSpan={4} className="px-6 py-4">PROFIT</td>
                     </tr>
                     <tr>
                       <td className="px-6 py-4 text-left">Gross Profit</td>

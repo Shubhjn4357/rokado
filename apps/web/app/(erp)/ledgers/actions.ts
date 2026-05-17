@@ -44,6 +44,10 @@ export async function createLedger(input: CreateLedgerInput): Promise<{ success:
     // Revalidate ledgers page
     revalidatePath("/ledgers");
 
+    if (!ledger) {
+      return { success: false, error: "Failed to create ledger" };
+    }
+
     return { success: true, ledgerId: ledger.id };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error creating ledger.";

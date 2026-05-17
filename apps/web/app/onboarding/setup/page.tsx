@@ -1,15 +1,15 @@
+"use client";
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Shirt, CreditCard, Building2, Truck, Settings, CircleCheck, FileText } from "lucide-react";
-import { db, companies, ledgers } from "@repo/database";
+import { Shirt, CreditCard, Building2, Truck, Settings, CircleCheck, FileText, Undo2 } from "lucide-react";
 import { z } from "zod";
-import { crypto } from "crypto";
-import { revalidatePath } from "next/cache";
 import { formatCurrency } from "@/lib/types";
+import { createCompanyAndLedgersAction } from "./actions";
 
 interface Props {
   businessType: string;
@@ -36,14 +36,16 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
     bankBalance: 0,
   });
 
-  const businessTypeConfig = {
+  const businessTypeConfig: Record<string, { title: string; defaultGst: number }> = {
     wholesale_saree: { title: "Saree Wholesale", defaultGst: 5 },
     textile_retail: { title: "Textile Retail", defaultGst: 5 },
     garment_store: { title: "Garment Store", defaultGst: 5 },
     distributor: { title: "Distributor", defaultGst: 12 },
     mixed_inventory: { title: "Mixed Inventory", defaultGst: 5 },
     custom: { title: "Custom Business", defaultGst: 0 },
-  }[businessType as keyof typeof businessTypeConfig] || {
+  };
+  
+  const currentConfig = businessTypeConfig[businessType] || {
     title: "Custom Business",
     defaultGst: 0,
   };
@@ -74,89 +76,29 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
 
   const handleComplete = async () => {
     try {
-      // Create company record
-      const [company] = await db.insert(companies).values({
-        id: crypto.randomUUID(),
-        name: formData.businessName,
+      const result = await createCompanyAndLedgersAction({
+        businessName: formData.businessName,
         gstin: formData.gstin,
-        address: `${formData.businessAddress}, ${formData.businessCity}, ${formData.businessState} - ${formData.businessPincode}`,
-        phone: formData.businessPhone,
-        email: formData.businessEmail,
-        fiscalYearStart: Date.now(),
+        businessAddress: formData.businessAddress,
+        businessCity: formData.businessCity,
+        businessState: formData.businessState,
+        businessPincode: formData.businessPincode,
+        businessPhone: formData.businessPhone,
+        businessEmail: formData.businessEmail,
         businessType,
-      }).returning({ id: companies.id });
+        cashInHand: formData.cashInHand,
+        bankBalance: formData.bankBalance,
+      });
 
-      // Create default ledgers based on business type
-      const defaultLedgers = getDefaultLedgers(company.id, businessType);
-      await db.insert(ledgers).values(defaultLedgers);
-
-      // Set opening balances if provided
-      if (formData.cashInHand > 0 || formData.bankBalance > 0) {
-        // Find or create cash and bank ledgers
-        const cashLedger = defaultLedgers.find((l) => l.group === "cash");
-        const bankLedger = defaultLedgers.find((l) => l.group === "bank");
-
-        if (cashLedger && formData.cashInHand > 0) {
-          await db.update(ledgers)
-            .set({ openingBalance: formData.cashInHand })
-            .where(({ id, companyId }) =>
-              eq(id, cashLedger.id) && eq(companyId, company.id)
-            );
-        }
-
-        if (bankLedger && formData.bankBalance > 0) {
-          await db.update(ledgers)
-            .set({ openingBalance: formData.bankBalance })
-            .where(({ id, companyId }) =>
-              eq(id, bankLedger.id) && eq(companyId, company.id)
-            );
-        }
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      revalidatePath("/");
       onComplete();
     } catch (error) {
       console.error("Failed to complete setup:", error);
-      // In a real app, you'd show an error toast
-      alert("Setup failed. Please try again.");
+      alert(error instanceof Error ? error.message : "Setup failed. Please try again.");
     }
-  };
-
-  const getDefaultLedgers = (companyId: string, businessType: string) => {
-    const ledgers: Array<Partial<typeof ledgers.$inferSelect>> = [
-      // Cash & Bank
-      { id: crypto.randomUUID(), companyId, name: "Cash", group: "cash", openingBalance: 0, balanceType: "dr" as const },
-      { id: crypto.randomUUID(), companyId, name: "Bank", group: "bank", openingBalance: 0, balanceType: "dr" as const },
-
-      // Sales & Purchase
-      { id: crypto.randomUUID(), companyId, name: "Sales Account", group: "sales", openingBalance: 0, balanceType: "cr" as const },
-      { id: crypto.randomUUID(), companyId, name: "Purchase Account", group: "purchase", openingBalance: 0, balanceType: "dr" as const },
-
-      // GST Ledgers (will vary by state, but using placeholders)
-      { id: crypto.randomUUID(), companyId, name: "CGST Payable", group: "duties_taxes", openingBalance: 0, balanceType: "cr" as const },
-      { id: crypto.randomUUID(), companyId, name: "SGST Payable", group: "duties_taxes", openingBalance: 0, balanceType: "cr" as const },
-      { id: crypto.randomUUID(), companyId, name: "IGST Payable", group: "duties_taxes", openingBalance: 0, balanceType: "cr" as const },
-
-      // Default Debtors & Creditors
-      { id: crypto.randomUUID(), companyId, name: "Sundry Debtors", group: "sundry_debtors", openingBalance: 0, balanceType: "dr" as const },
-      { id: crypto.randomUUID(), companyId, name: "Sundry Creditors", group: "sundry_creditors", openingBalance: 0, balanceType: "cr" as const },
-
-      // Expenses
-      { id: crypto.randomUUID(), companyId, name: "Expenses", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
-
-      // Capital
-      { id: crypto.randomUUID(), companyId, name: "Capital Account", group: "capital", openingBalance: 0, balanceType: "cr" as const },
-    ];
-
-    // Add business-type specific ledgers
-    if (businessType === "wholesale_saree" || businessType === "textile_retail") {
-      ledgers.push(
-        { id: crypto.randomUUID(), companyId, name: "Transport & Freight", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
-        { id: crypto.randomUUID(), companyId, name: "Shop Rent", group: "expenses", openingBalance: 0, balanceType: "dr" as const }
-      );
-    }
-
-    return ledgers;
   };
 
   return (
@@ -168,7 +110,7 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
         <div className="text-center mb-6">
           <CardTitle className="text-2xl font-bold">Business Setup</CardTitle>
           <CardDescription className="mt-2 text-muted-foreground">
-            Step {step} of 4 - Configure your {businessTypeConfig.title} business
+            Step {step} of 4 - Configure your {currentConfig.title} business
           </CardDescription>
         </div>
       </CardHeader>
@@ -261,8 +203,8 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
             <div className="bg-muted/50 p-4 rounded-lg">
               <Label className="mb-2 block font-medium">GST Configuration</Label>
               <p className="text-sm text-muted-foreground">
-                Based on your business type ({businessTypeConfig.title}), the default GST rate is
-                <span className="font-medium">{businessTypeConfig.defaultGst}%</span>.
+                Based on your business type ({currentConfig.title}), the default GST rate is
+                <span className="font-medium">{currentConfig.defaultGst}%</span>.
                 This will be applied to sales and purchase transactions.
               </p>
             </div>
@@ -314,55 +256,54 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
         )}
 
         {step === 4 && (
-          <>
-            <div className="space-y-4">
-              <div className="text-lg font-semibold">Setup Complete!</div>
-              <p className="text-muted-foreground">
-                Your {businessTypeConfig.title} business is now ready to use.
-              </p>
+          <div className="space-y-4">
+            <div className="text-lg font-semibold">Setup Complete!</div>
+            <p className="text-muted-foreground">
+              Your {currentConfig.title} business is now ready to use.
+            </p>
 
-              <div className="grid gap-2 md:grid-cols-2">
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center mb-2">
-                    <Building2 className="w-5 h-5 text-primary mr-3" />
-                    <div>
-                      <div className="font-medium">{formData.businessName}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {formData.businessAddress}, {formData.businessCity}
-                      </div>
+            <div className="grid gap-2 md:grid-cols-2">
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center mb-2">
+                  <Building2 className="w-5 h-5 text-primary mr-3" />
+                  <div>
+                    <div className="font-medium">{formData.businessName}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {formData.businessAddress}, {formData.businessCity}
                     </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="text-sm text-muted-foreground">GSTIN: {formData.gstin || "Not provided"}</div>
-                    <div className="text-sm text-muted-foreground mt-1">Business Type: {businessTypeConfig.title}</div>
                   </div>
                 </div>
-
-                <div className="p-4 bg-muted/50 rounded-lg">
-                  <div className="flex items-center mb-2">
-                    <CircleCheck className="w-5 h-5 text-success mr-3" />
-                    <div>
-                      <div className="font-medium">Default Ledgers Created</div>
-                      <div className="text-sm text-muted-foreground">
-                        Sales, Purchase, GST, Debtors, Creditors, Cash, Bank
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-4 pt-4 border-t">
-                    <div className="text-sm text-muted-foreground">
-                      Opening Cash: {formatCurrency(formData.cashInHand)}
-                    </div>
-                    <div className="text-sm text-muted-foreground mt-1">
-                      Opening Bank: {formatCurrency(formData.bankBalance)}
-                    </div>
-                  </div>
+                <div className="mt-4 pt-4 border-t">
+                  <div className="text-sm text-muted-foreground">GSTIN: {formData.gstin || "Not provided"}</div>
+                  <div className="text-sm text-muted-foreground mt-1">Business Type: {currentConfig.title}</div>
                 </div>
               </div>
 
-              <p className="text-muted-foreground mt-6">
-                You can now start using the ERP system. Access the dashboard to begin.
-              </p>
-            </>
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center mb-2">
+                  <CircleCheck className="w-5 h-5 text-success mr-3" />
+                  <div>
+                    <div className="font-medium">Default Ledgers Created</div>
+                    <div className="text-sm text-muted-foreground">
+                      Sales, Purchase, GST, Debtors, Creditors, Cash, Bank
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t">
+                  <div className="text-sm text-muted-foreground">
+                    Opening Cash: {formatCurrency(formData.cashInHand)}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1">
+                    Opening Bank: {formatCurrency(formData.bankBalance)}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-muted-foreground mt-6">
+              You can now start using the ERP system. Access the dashboard to begin.
+            </p>
+          </div>
         )}
       </CardContent>
 
@@ -383,5 +324,17 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
         )}
       </CardFooter>
     </Card>
+  );
+}
+
+export default function OnboardingSetupPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-muted/50 to-background">
+      <BusinessSetupWizard 
+        businessType="wholesale_saree" 
+        onComplete={() => window.location.href = "/"}
+        onBack={() => window.location.href = "/onboarding"}
+      />
+    </div>
   );
 }

@@ -115,41 +115,41 @@ export function InvoicePrint({
           </tbody>
           <tfoot>
             <tr className="border-t">
-              <td colSpan="5" className="text-right py-1 font-medium">Subtotal:</td>
+              <td colSpan={5} className="text-right py-1 font-medium">Subtotal:</td>
               <td className="py-1 text-right">{formatCurrency(subtotal)}</td>
             </tr>
             <tr>
-              <td colSpan="5" className="text-right py-1 font-medium">Discount:</td>
+              <td colSpan={5} className="text-right py-1 font-medium">Discount:</td>
               <td className="py-1 text-right">{formatCurrency(discountAmount)}</td>
             </tr>
             <tr>
-              <td colSpan="5" className="text-right py-1 font-medium">Taxable Value:</td>
+              <td colSpan={5} className="text-right py-1 font-medium">Taxable Value:</td>
               <td className="py-1 text-right">{formatCurrency(taxableValue)}</td>
             </tr>
             {cgstAmount > 0 && (
               <tr>
-                <td colSpan="5" className="text-right py-1 font-medium">CGST @{formatCurrency((cgstAmount / taxableValue) * 100)}%:</td>
+                <td colSpan={5} className="text-right py-1 font-medium">CGST @{formatCurrency((cgstAmount / taxableValue) * 100)}%:</td>
                 <td className="py-1 text-right">{formatCurrency(cgstAmount)}</td>
               </tr>
             )}
             {sgstAmount > 0 && (
               <tr>
-                <td colSpan="5" className="text-right py-1 font-medium">SGST @{formatCurrency((sgstAmount / taxableValue) * 100)}%:</td>
+                <td colSpan={5} className="text-right py-1 font-medium">SGST @{formatCurrency((sgstAmount / taxableValue) * 100)}%:</td>
                 <td className="py-1 text-right">{formatCurrency(sgstAmount)}</td>
               </tr>
             )}
             {igstAmount > 0 && (
               <tr>
-                <td colSpan="5" className="text-right py-1 font-medium">IGST @{formatCurrency((igstAmount / taxableValue) * 100)}%:</td>
+                <td colSpan={5} className="text-right py-1 font-medium">IGST @{formatCurrency((igstAmount / taxableValue) * 100)}%:</td>
                 <td className="py-1 text-right">{formatCurrency(igstAmount)}</td>
               </tr>
             )}
             <tr className="border-t font-bold">
-              <td colSpan="5" className="text-right py-1">Total Amount:</td>
+              <td colSpan={5} className="text-right py-1">Total Amount:</td>
               <td className="py-1 text-right">{formatCurrency(totalAmount)}</td>
             </tr>
             <tr>
-              <td colSpan="6" className="py-2 text-left">
+              <td colSpan={6} className="py-2 text-left">
                 Amount in Words: {amountInWords}
               </td>
             </tr>

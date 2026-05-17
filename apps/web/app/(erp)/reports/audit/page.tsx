@@ -1,6 +1,8 @@
-import { db, auditLog, eq, and, gte, lte, desc } from "@repo/database";
+"use client";
+
 import { formatDate } from "@/lib/types";
 import { useState, useEffect } from "react";
+import { fetchAuditLogsAction } from "./actions";
 import {
   Card,
   CardContent,
@@ -9,23 +11,20 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
-  Button,
-  Input,
-  Label,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/input";
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
-
-export const dynamic = "force-dynamic";
-export const metadata = { title: "Audit Trail Report - Shree Saree House ERP" };
 
 export default function AuditPage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
@@ -41,8 +40,8 @@ export default function AuditPage() {
     const thirtyDaysAgo = new Date(today);
     thirtyDaysAgo.setDate(today.getDate() - 30);
 
-    setDateFrom(thirtyDaysAgo.toISOString().split("T")[0]);
-    setDateTo(today.toISOString().split("T")[0]);
+    setDateFrom(thirtyDaysAgo.toISOString().split("T")[0] ?? null);
+    setDateTo(today.toISOString().split("T")[0] ?? null);
     fetchAuditLog();
   }, []);
 
@@ -52,32 +51,27 @@ export default function AuditPage() {
       const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
       const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
 
-      const results = await db
-        .select({
-          id: auditLog.id,
-          entityType: auditLog.entityType,
-          entityId: auditLog.entityId,
-          action: auditLog.action,
-          changes: auditLog.changes,
-          performedBy: auditLog.performedBy,
-          timestamp: auditLog.timestamp,
-          ipAddress: auditLog.ipAddress,
-        })
-        .from(auditLog)
-        .where(
-          and(
-            fromDate ? gte(auditLog.timestamp, fromDate) : undefined,
-            toDate ? lte(auditLog.timestamp, toDate) : undefined,
-            entityType ? eq(auditLog.entityType, entityType) : undefined,
-            actionType ? eq(auditLog.action, actionType) : undefined
-          )
-        )
-        .orderBy(desc(auditLog.timestamp));
+      const result = await fetchAuditLogsAction({
+        dateFrom: fromDate,
+        dateTo: toDate,
+        entityType: entityType ?? undefined,
+        actionType: actionType ?? undefined,
+      });
 
-      const processedEntries = results.map(entry => ({
+      if (!result.success || !result.data) {
+        setAuditEntries([]);
+        return;
+      }
+
+      const processedEntries = result.data.map(entry => ({
         ...entry,
-        timestamp: Number(entry.timestamp),
-        changes: entry.changes ? JSON.parse(entry.changes) : {}
+        timestamp: Number(entry.createdAt),
+        entityType: entry.entity,
+        performedBy: entry.userId,
+        changes: {
+          before: entry.before ? JSON.parse(entry.before) : {},
+          after: entry.after ? JSON.parse(entry.after) : {}
+        }
       }));
 
       setAuditEntries(processedEntries);
@@ -104,9 +98,10 @@ export default function AuditPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">From</label>
               <Calendar
-                value={dateFrom ? new Date(dateFrom) : undefined}
-                onChange={(value) => {
-                  setDateFrom(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateFrom ? new Date(dateFrom) : undefined}
+                onSelect={(value: any) => {
+                  setDateFrom(value?.toISOString().split("T")[0] ?? null);
                   fetchAuditLog();
                 }}
                 className="w-48"
@@ -118,9 +113,10 @@ export default function AuditPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">To</label>
               <Calendar
-                value={dateTo ? new Date(dateTo) : undefined}
-                onChange={(value) => {
-                  setDateTo(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateTo ? new Date(dateTo) : undefined}
+                onSelect={(value: any) => {
+                  setDateTo(value?.toISOString().split("T")[0] ?? null);
                   fetchAuditLog();
                 }}
                 className="w-48"
@@ -181,11 +177,11 @@ export default function AuditPage() {
           {loading ? (
             <div className="flex items-center justify-center py-8">
               Loading...
-            )
+            </div>
           ) : auditEntries.length === 0 ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               No audit entries found for the selected criteria.
-            )
+            </div>
           ) : (
             <Table className="w-full">
               <thead>
@@ -249,29 +245,33 @@ function formatChangesSummary(changes: any): string {
     return "No changes";
   }
 
-  const keys = Object.keys(changes);
-  if (keys.length === 0) {
-    return "No changes";
-  }
+  const { before, after } = changes;
+  if (!before && !after) return "No changes";
 
-  // Show first few changes
-  const shownChanges = keys.slice(0, 3).map(key => {
-    const oldValue = changes[key]?.old ?? changes[key]?.previous;
-    const newValue = changes[key]?.new ?? changes[key]?.current;
+  const beforeKeys = before ? Object.keys(before) : [];
+  const afterKeys = after ? Object.keys(after) : [];
+  const allKeys = Array.from(new Set([...beforeKeys, ...afterKeys]));
 
-    if (oldValue !== undefined && newValue !== undefined) {
-      return `${key}: "${oldValue}" → "${newValue}"`;
-    } else if (newValue !== undefined) {
+  if (allKeys.length === 0) return "No changes";
+
+  const shownChanges = allKeys.slice(0, 3).map(key => {
+    const oldValue = before?.[key];
+    const newValue = after?.[key];
+
+    if (oldValue !== undefined && newValue !== undefined && oldValue !== newValue) {
+      return `${key}: "${oldValue}" -> "${newValue}"`;
+    } else if (newValue !== undefined && oldValue === undefined) {
       return `${key}: "${newValue}"`;
-    } else {
+    } else if (oldValue !== undefined && newValue === undefined) {
       return `${key}: removed`;
     }
-  });
+    return null;
+  }).filter(Boolean);
 
   let summary = shownChanges.join(", ");
-  if (keys.length > 3) {
-    summary += `...and ${keys.length - 3} more`;
+  if (allKeys.length > 3) {
+    summary += `...and ${allKeys.length - 3} more`;
   }
 
-  return summary;
+  return summary || "No significant changes";
 }

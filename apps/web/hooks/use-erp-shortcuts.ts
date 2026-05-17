@@ -11,7 +11,7 @@ export function useERPShortcuts() {
       const active = document.activeElement;
       const isInputFocused =
         active instanceof HTMLInputElement ||
-        active instanceof HTMLTextareaElement ||
+        active instanceof HTMLTextAreaElement ||
         active instanceof HTMLSelectElement ||
         (active instanceof HTMLElement && active.isContentEditable);
 

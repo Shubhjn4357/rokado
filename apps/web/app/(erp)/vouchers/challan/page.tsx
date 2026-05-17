@@ -1,3 +1,4 @@
+"use client";
 import { VoucherForm } from "@/components/vouchers/voucher-form";
 import { useRouter } from "next/navigation";
 import { toast } from "@/components/ui/use-toast";

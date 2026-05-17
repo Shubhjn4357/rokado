@@ -1,3 +1,5 @@
+"use client";
+
 import { db, vouchers, eq, sum, and, gte, lte } from "@repo/database";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
@@ -7,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 
-export const dynamic = "force-dynamic";
-export const metadata = { title: "GST Report - Shree Saree House ERP" };
+// export const dynamic = "force-dynamic";
+// export const metadata = { title: "GST Report - Shree Saree House ERP" };
 
-export default async function GSTPage() {
+export default function GSTPage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
   const [dateTo, setDateTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,8 +24,8 @@ export default async function GSTPage() {
   const lastDayOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
   useEffect(() => {
-    setDateFrom(firstDayOfMonth.toISOString().split("T")[0]);
-    setDateTo(lastDayOfMonth.toISOString().split("T")[0]);
+    setDateFrom(firstDayOfMonth.toISOString().split("T")[0] ?? null);
+    setDateTo(lastDayOfMonth.toISOString().split("T")[0] ?? null);
     fetchGSTData();
   }, []);
 
@@ -39,7 +41,7 @@ export default async function GSTPage() {
         .from(vouchers)
         .where(
           and(
-            eq(vouchers.companyId, "company_1"),
+            eq(vouchers.companyId as any, "company_1"),
             eq(vouchers.type, "sales"),
             fromDate ? gte(vouchers.date, fromDate) : undefined,
             toDate ? lte(vouchers.date, toDate) : undefined
@@ -52,21 +54,20 @@ export default async function GSTPage() {
         .from(vouchers)
         .where(
           and(
-            eq(vouchers.companyId, "company_1"),
+            eq(vouchers.companyId as any, "company_1"),
             eq(vouchers.type, "purchase"),
             fromDate ? gte(vouchers.date, fromDate) : undefined,
             toDate ? lte(vouchers.date, toDate) : undefined
           )
         );
 
-      // Calculate GST on journal vouchers (if any adjustments)
       const journalGSTResult = await db
         .select({ total: sum(vouchers.gstTotal) })
         .from(vouchers)
         .where(
           and(
-            eq(vouchers.companyId, "company_1"),
-            eq(vouchers.type, "journal"),
+            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.type as any, "journal"),
             fromDate ? gte(vouchers.date, fromDate) : undefined,
             toDate ? lte(vouchers.date, toDate) : undefined
           )
@@ -109,9 +110,10 @@ export default async function GSTPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">From</label>
               <Calendar
-                value={dateFrom ? new Date(dateFrom) : undefined}
-                onChange={(value) => {
-                  setDateFrom(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateFrom ? new Date(dateFrom) : undefined}
+                onSelect={(value: any) => {
+                  setDateFrom(value?.toISOString().split("T")[0] ?? null);
                   fetchGSTData();
                 }}
                 className="w-48"
@@ -123,9 +125,10 @@ export default async function GSTPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">To</label>
               <Calendar
-                value={dateTo ? new Date(dateTo) : undefined}
-                onChange={(value) => {
-                  setDateTo(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateTo ? new Date(dateTo) : undefined}
+                onSelect={(value: any) => {
+                  setDateTo(value?.toISOString().split("T")[0] ?? null);
                   fetchGSTData();
                 }}
                 className="w-48"
@@ -146,11 +149,11 @@ export default async function GSTPage() {
           {loading ? (
             <div className="flex items-center justify-center py-8">
               Loading...
-            )
+            </div>
           ) : !gstData ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               No data available.
-            )
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -177,13 +180,13 @@ export default async function GSTPage() {
                           <td className="px-6 py-4 text-right text-sm">{formatCurrency(gstData.journalGST)}</td>
                         </tr>
                         <tr className="border-t border-b font-semibold">
-                          <td colSpan="2" className="px-6 py-4">Net GST Liability</td>
+                          <td colSpan={2} className="px-6 py-4">Net GST Liability</td>
                         </tr>
                       </>
                     )}
-                    {! (gstData.journalGST !== 0) && (
+                    {gstData.journalGST === 0 && (
                       <tr className="border-t border-b font-semibold">
-                        <td colSpan="2" className="px-6 py-4">Net GST Liability</td>
+                        <td colSpan={2} className="px-6 py-4">Net GST Liability</td>
                       </tr>
                     )}
                     <tr>

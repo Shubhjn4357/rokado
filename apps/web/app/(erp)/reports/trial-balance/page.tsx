@@ -1,3 +1,5 @@
+"use client";
+
 import { db, ledgers, voucherEntries, vouchers, eq, sum, and, gte, lte } from "@repo/database";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
@@ -7,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 
-export const dynamic = "force-dynamic";
-export const metadata = { title: "Trial Balance - Shree Saree House ERP" };
+// export const dynamic = "force-dynamic";
+// export const metadata = { title: "Trial Balance - Shree Saree House ERP" };
 
-export default async function TrialBalancePage() {
+export default function TrialBalancePage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
   const [dateTo, setDateTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,8 +27,8 @@ export default async function TrialBalancePage() {
   const today = new Date();
 
   useEffect(() => {
-    setDateFrom(fyStart().toISOString().split("T")[0]);
-    setDateTo(today.toISOString().split("T")[0]);
+    setDateFrom(fyStart().toISOString().split("T")[0] ?? null);
+    setDateTo(today.toISOString().split("T")[0] ?? null);
     fetchTrialBalance();
   }, []);
 
@@ -46,8 +48,8 @@ export default async function TrialBalancePage() {
           balanceType: ledgers.balanceType,
         })
         .from(ledgers)
-        .where(({ companyId, isActive }) =>
-          eq(ledgers.companyId, "company_1")
+        .where(
+          eq(ledgers.companyId as any, "company_1")
         )
         .orderBy(ledgers.name);
 
@@ -58,7 +60,7 @@ export default async function TrialBalancePage() {
           const debitResult = await db
             .select({ total: sum(voucherEntries.amount) })
             .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+            .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
             .where(
               and(
                 eq(voucherEntries.ledgerId, ledger.id),
@@ -129,9 +131,10 @@ export default async function TrialBalancePage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">From</label>
               <Calendar
-                value={dateFrom ? new Date(dateFrom) : undefined}
-                onChange={(value) => {
-                  setDateFrom(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateFrom ? new Date(dateFrom) : undefined}
+                onSelect={(value: Date | undefined) => {
+                  setDateFrom(value?.toISOString().split("T")[0] ?? null);
                   fetchTrialBalance();
                 }}
                 className="w-48"
@@ -143,9 +146,10 @@ export default async function TrialBalancePage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">To</label>
               <Calendar
-                value={dateTo ? new Date(dateTo) : undefined}
-                onChange={(value) => {
-                  setDateTo(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={dateTo ? new Date(dateTo) : undefined}
+                onSelect={(value: Date | undefined) => {
+                  setDateTo(value?.toISOString().split("T")[0] ?? null);
                   fetchTrialBalance();
                 }}
                 className="w-48"
@@ -170,7 +174,7 @@ export default async function TrialBalancePage() {
           ) : trialBalanceData.length === 0 ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               No data found for the selected period.
-            )
+            </div>
           ) : (
             <Table>
               <thead>
@@ -187,28 +191,28 @@ export default async function TrialBalancePage() {
                 {trialBalanceData.map((row) => (
                   <tr key={row.ledgerId} className="hover:bg-muted">
                     <td className="px-6 py-4 text-left font-medium">{row.name}</td>
-                    <td className="px-6 py-4 text-left text-sm>{row.group}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(row.openingBalance)}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(row.debitTotal)}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(row.creditTotal)}</td>
-                    <td className="px-6 py-4 text-right font-semibold>
+                    <td className="px-6 py-4 text-left text-sm">{row.group}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.openingBalance)}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.debitTotal)}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.creditTotal)}</td>
+                    <td className="px-6 py-4 text-right font-semibold">
                       {row.closingBalance < 0 ? (
-                        <span className="text-destructive>{formatCurrency(Math.abs(row.closingBalance))} (Cr)</span>
+                        <span className="text-destructive">{formatCurrency(Math.abs(row.closingBalance))} (Cr)</span>
                       ) : (
-                        <span className="text-foreground>{formatCurrency(row.closingBalance)} (Dr)</span
+                        <span className="text-foreground">{formatCurrency(row.closingBalance)} (Dr)</span>
                       )}
                     </td>
                   </tr>
                 ))}
                 {/* Totals row */}
                 <tr className="border-t">
-                  <td colSpan="2" className="px-6 py-4 text-right font-bold>
+                  <td colSpan={2} className="px-6 py-4 text-right font-bold">
                     Totals
                   </td>
-                  <td className="px-6 py-4 text-right text-sm>{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.openingBalance, 0))}</td>
-                  <td className="px-6 py-4 text-right text-sm>{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.debitTotal, 0))}</td>
-                  <td className="px-6 py-4 text-right text-sm>{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.creditTotal, 0))}</td>
-                  <td className="px-6 py-4 text-right text-sm font-bold>{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.closingBalance, 0))}</td>
+                  <td className="px-6 py-4 text-right text-sm">{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.openingBalance, 0))}</td>
+                  <td className="px-6 py-4 text-right text-sm">{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.debitTotal, 0))}</td>
+                  <td className="px-6 py-4 text-right text-sm">{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.creditTotal, 0))}</td>
+                  <td className="px-6 py-4 text-right text-sm font-bold">{formatCurrency(trialBalanceData.reduce((sum, r) => sum + r.closingBalance, 0))}</td>
                 </tr>
               </tbody>
             </Table>

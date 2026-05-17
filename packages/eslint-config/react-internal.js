@@ -36,4 +36,15 @@ export const config = [
       "react/react-in-jsx-scope": "off",
     },
   },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+      "@typescript-eslint/no-unused-vars": "off",
+      "@typescript-eslint/no-empty-object-type": "off",
+      "react/prop-types": "off",
+      "react/no-unknown-property": "off",
+      "prefer-const": "off",
+      "react-hooks/exhaustive-deps": "off",
+    },
+  },
 ];

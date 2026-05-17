@@ -1,9 +1,6 @@
 "use server";
 
-import { db } from "@/packages/database/src/db";
-import { ledgers } from "@/packages/database/src/schema";
-import { vouchers } from "@/packages/database/src/schema";
-import { inventoryItems } from "@/packages/database/src/schema";
+import { db, ledgers, vouchers, inventoryItems } from "@repo/database";
 
 export async function getCommandPaletteOptions() {
   // Fetch ledgers
@@ -18,7 +15,7 @@ export async function getCommandPaletteOptions() {
     id: vouchers.id,
     type: vouchers.type,
     date: vouchers.date,
-    amount: vouchers.amount,
+    amount: vouchers.totalAmount,
   }).from(vouchers);
 
   // Fetch inventory
@@ -26,7 +23,7 @@ export async function getCommandPaletteOptions() {
     id: inventoryItems.id,
     name: inventoryItems.name,
     category: inventoryItems.category,
-    stock: inventoryItems.stock,
+    stock: inventoryItems.stockQuantity,
   }).from(inventoryItems);
 
   return {

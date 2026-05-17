@@ -215,7 +215,7 @@ export default function SettingsPage() {
                         value={companyInfo.pincode}
                         onChange={(e) => setCompanyInfo(prev => ({ ...prev, pincode: e.target.value }))}
                         required
-                        maxLength="6"
+                        maxLength={6}
                       />
                     </div>
                   </div>
@@ -283,7 +283,7 @@ export default function SettingsPage() {
                         placeholder="MM-DD"
                         value={financialSettings.fiscalYearStart}
                         onChange={(e) => setFinancialSettings(prev => ({ ...prev, fiscalYearStart: e.target.value }))}
-                        maxLength="5"
+                        maxLength={5}
                         pattern="(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])"
                       />
                       <span className="text-xs text-muted-foreground">
@@ -318,7 +318,7 @@ export default function SettingsPage() {
                         placeholder="e.g., INR, USD, EUR"
                         value={financialSettings.currencyCode}
                         onChange={(e) => setFinancialSettings(prev => ({ ...prev, currencyCode: e.target.value.toUpperCase() }))}
-                        maxLength="3"
+                        maxLength={3}
                       />
                     </div>
                   </div>
@@ -372,7 +372,7 @@ export default function SettingsPage() {
                       <Checkbox
                         id="gstApplicable"
                         checked={taxSettings.gstApplicable}
-                        onCheckedChange={(checked) => setTaxSettings(prev => ({ ...prev, gstApplicable: checked }))}
+                        onCheckedChange={(checked: any) => setTaxSettings(prev => ({ ...prev, gstApplicable: !!checked }))}
                       />
                       <span className="ml-2">Yes, my business is registered for GST</span>
                     </div>
@@ -426,7 +426,7 @@ export default function SettingsPage() {
                       <Checkbox
                         id="TDSApplicable"
                         checked={taxSettings.TDSApplicable}
-                        onCheckedChange={(checked) => setTaxSettings(prev => ({ ...prev, TDSApplicable: checked }))}
+                        onCheckedChange={(checked: any) => setTaxSettings(prev => ({ ...prev, TDSApplicable: !!checked }))}
                       />
                       <span className="ml-2">Yes, I need to deduct TDS on payments</span>
                     </div>
@@ -495,7 +495,7 @@ export default function SettingsPage() {
                       <Switch
                         id="emailNotifications"
                         checked={notificationSettings.emailNotifications}
-                        onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, emailNotifications: checked }))}
+                        onCheckedChange={(checked: boolean) => setNotificationSettings(prev => ({ ...prev, emailNotifications: checked }))}
                       />
                       <span className="ml-2">Receive important updates via email</span>
                     </div>
@@ -508,7 +508,7 @@ export default function SettingsPage() {
                       <Switch
                         id="smsNotifications"
                         checked={notificationSettings.smsNotifications}
-                        onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, smsNotifications: checked }))}
+                        onCheckedChange={(checked: boolean) => setNotificationSettings(prev => ({ ...prev, smsNotifications: checked }))}
                       />
                       <span className="ml-2">Receive alerts via SMS (may incur charges)</span>
                     </div>
@@ -522,7 +522,7 @@ export default function SettingsPage() {
                         <Switch
                           id="lowStockAlerts"
                           checked={notificationSettings.lowStockAlerts}
-                          onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, lowStockAlerts: checked }))}
+                          onCheckedChange={(checked: boolean) => setNotificationSettings(prev => ({ ...prev, lowStockAlerts: checked }))}
                         />
                         <span className="ml-2">Get alerts when stock falls below reorder level</span>
                       </div>
@@ -532,7 +532,7 @@ export default function SettingsPage() {
                         <Switch
                           id="backupReminders"
                           checked={notificationSettings.backupReminders}
-                          onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, backupReminders: checked }))}
+                          onCheckedChange={(checked: boolean) => setNotificationSettings(prev => ({ ...prev, backupReminders: checked }))}
                         />
                         <span className="ml-2">Receive reminders to backup your data</span>
                       </div>
@@ -547,7 +547,7 @@ export default function SettingsPage() {
                         <Switch
                           id="paymentReminders"
                           checked={notificationSettings.paymentReminders}
-                          onCheckedChange={(checked) => setNotificationSettings(prev => ({ ...prev, paymentReminders: checked }))}
+                          onCheckedChange={(checked: boolean) => setNotificationSettings(prev => ({ ...prev, paymentReminders: checked }))}
                         />
                         <span className="ml-2">Get reminders for upcoming payments and receivables</span>
                       </div>

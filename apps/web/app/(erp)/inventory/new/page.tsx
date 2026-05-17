@@ -1,20 +1,21 @@
+"use client";
+
 import { db, inventoryItems } from "@repo/database";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { ComboBox, ComboBoxContent, ComboBoxItem, ComboBoxPortal, ComboBoxTrigger, ComboBoxValue } from "@/components/ui/combobox";
-import { Input, InputErrorMessage, InputLabel } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
 import { useState } from "react";
-import type { InventoryItem } from "@repo/database";
+import type { InferSelectModel } from "@repo/database";
+import { inventoryItems as inventoryItemsTable } from "@repo/database";
 import { INVENTORY_CATEGORIES, type InventoryCategory } from "@/lib/types";
 import { formatCurrency } from "@/lib/types";
 import { createInventoryItem } from "@/app/(erp)/inventory/actions";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Add Inventory Item - Shree Saree House ERP" };
 
 export default function NewInventoryItemPage() {
   const [name, setName] = useState("");
@@ -112,7 +113,7 @@ export default function NewInventoryItemPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <InputLabel htmlFor="name">Item Name</InputLabel>
+                <Label htmlFor="name">Item Name</Label>
                 <Input
                   id="name"
                   placeholder="Enter item name"
@@ -122,7 +123,7 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div>
-                <InputLabel htmlFor="designNo">Design No. (Optional)</InputLabel>
+                <Label htmlFor="designNo">Design No. (Optional)</Label>
                 <Input
                   id="designNo"
                   placeholder="Enter design number"
@@ -131,7 +132,7 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div>
-                <InputLabel htmlFor="color">Color (Optional)</InputLabel>
+                <Label htmlFor="color">Color (Optional)</Label>
                 <Input
                   id="color"
                   placeholder="Enter color"
@@ -140,11 +141,10 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <InputLabel htmlFor="category">Category</InputLabel>
+                <Label htmlFor="category">Category</Label>
                 <Select
                   value={category}
-                  onValueChange={setCategory}
-                  className="w-full"
+                  onValueChange={(v) => setCategory(v as InventoryCategory)}
                 >
                   <SelectTrigger className="w-full h-9 rounded-xl bg-muted/40">
                     <SelectValue placeholder="Select category" />
@@ -172,7 +172,7 @@ export default function NewInventoryItemPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <InputLabel htmlFor="purchaseRate">Purchase Rate (₹)</InputLabel>
+                <Label htmlFor="purchaseRate">Purchase Rate (₹)</Label>
                 <Input
                   id="purchaseRate"
                   type="number"
@@ -185,7 +185,7 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div>
-                <InputLabel htmlFor="saleRate">Sale Rate (₹)</InputLabel>
+                <Label htmlFor="saleRate">Sale Rate (₹)</Label>
                 <Input
                   id="saleRate"
                   type="number"
@@ -198,7 +198,7 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div>
-                <InputLabel htmlFor="gstPercent">GST (%)</InputLabel>
+                <Label htmlFor="gstPercent">GST (%)</Label>
                 <Input
                   id="gstPercent"
                   type="number"
@@ -225,11 +225,10 @@ export default function NewInventoryItemPage() {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <InputLabel htmlFor="unit">Unit</InputLabel>
+                <Label htmlFor="unit">Unit</Label>
                 <Select
                   value={unit}
                   onValueChange={setUnit}
-                  className="w-full"
                 >
                   <SelectTrigger className="w-full h-9 rounded-xl bg-muted/40">
                     <SelectValue placeholder="Select unit" />
@@ -245,7 +244,7 @@ export default function NewInventoryItemPage() {
                 </Select>
               </div>
               <div>
-                <InputLabel htmlFor="hsnCode">HSN Code (Optional)</InputLabel>
+                <Label htmlFor="hsnCode">HSN Code (Optional)</Label>
                 <Input
                   id="hsnCode"
                   placeholder="Enter HSN code"
@@ -254,7 +253,7 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div>
-                <InputLabel htmlFor="rackLocation">Rack Location (Optional)</InputLabel>
+                <Label htmlFor="rackLocation">Rack Location (Optional)</Label>
                 <Input
                   id="rackLocation"
                   placeholder="Enter rack location"
@@ -263,7 +262,7 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div>
-                <InputLabel htmlFor="reorderLevel">Reorder Level</InputLabel>
+                <Label htmlFor="reorderLevel">Reorder Level</Label>
                 <Input
                   id="reorderLevel"
                   type="number"
@@ -275,7 +274,7 @@ export default function NewInventoryItemPage() {
                 />
               </div>
               <div className="sm:col-span-2">
-                <InputLabel htmlFor="initialStock">Initial Stock Quantity</InputLabel>
+                <Label htmlFor="initialStock">Initial Stock Quantity</Label>
                 <Input
                   id="initialStock"
                   type="number"

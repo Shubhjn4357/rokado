@@ -1,3 +1,5 @@
+"use client";
+
 import { db, ledgers, voucherEntries, vouchers, eq, sum, and, lte, sql } from "@repo/database";
 import { formatCurrency, formatDate } from "@/lib/types";
 import { useState, useEffect } from "react";
@@ -7,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 
-export const dynamic = "force-dynamic";
-export const metadata = { title: "Outstanding Report - Shree Saree House ERP" };
+// export const dynamic = "force-dynamic";
+// export const metadata = { title: "Outstanding Report - Shree Saree House ERP" };
 
-export default async function OutstandingPage() {
+export default function OutstandingPage() {
   const [date, setDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [debtors, setDebtors] = useState<Array<any>>([]);
@@ -20,7 +22,7 @@ export default async function OutstandingPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDate(today.toISOString().split("T")[0]);
+    setDate(today.toISOString().split("T")[0] ?? null);
     fetchOutstanding();
   }, []);
 
@@ -43,9 +45,9 @@ export default async function OutstandingPage() {
         .from(ledgers)
         .where(
           and(
-            eq(ledgers.companyId, "company_1"),
-            eq(ledgers.isActive, true),
-            eq(ledgers.group, "sundry_debtors")
+            eq(ledgers.companyId as any, "company_1"),
+            eq(ledgers.isActive as any, true),
+            eq(ledgers.group as any, "sundry_debtors")
           )
         )
         .orderBy(ledgers.name);
@@ -63,9 +65,9 @@ export default async function OutstandingPage() {
         .from(ledgers)
         .where(
           and(
-            eq(ledgers.companyId, "company_1"),
-            eq(ledgers.isActive, true),
-            eq(ledgers.group, "sundry_creditors")
+            eq(ledgers.companyId as any, "company_1"),
+            eq(ledgers.isActive as any, true),
+            eq(ledgers.group as any, "sundry_creditors")
           )
         )
         .orderBy(ledgers.name);
@@ -78,7 +80,7 @@ export default async function OutstandingPage() {
               db
                 .select({ total: sum(voucherEntries.amount) })
                 .from(voucherEntries)
-                .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+                .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
                 .where(
                   and(
                     eq(voucherEntries.ledgerId, ledger.id),
@@ -90,7 +92,7 @@ export default async function OutstandingPage() {
               db
                 .select({ total: sum(voucherEntries.amount) })
                 .from(voucherEntries)
-                .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+                .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
                 .where(
                   and(
                     eq(voucherEntries.ledgerId, ledger.id),
@@ -158,9 +160,10 @@ export default async function OutstandingPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">Date</label>
               <Calendar
-                value={date ? new Date(date) : undefined}
-                onChange={(value) => {
-                  setDate(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={date ? new Date(date) : undefined}
+                onSelect={(value: any) => {
+                  setDate(value?.toISOString().split("T")[0] ?? null);
                   fetchOutstanding();
                 }}
                 className="w-48"
@@ -187,7 +190,7 @@ export default async function OutstandingPage() {
             ) : debtors.length === 0 ? (
               <div className="flex items-center justify-center py-8 text-muted-foreground">
                 No debtor ledgers found.
-              )
+              </div>
             ) : (
               <Table>
                 <thead>
@@ -210,7 +213,7 @@ export default async function OutstandingPage() {
                       <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.openingBalance)}</td>
                       <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.debitTotal)}</td>
                       <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.creditTotal)}</td>
-                      <td className="px-6 py-4 text-right font-semibold>
+                      <td className="px-6 py-4 text-right font-semibold">
                         {row.balance < 0 ? (
                           <>
                             <span className="text-destructive">{formatCurrency(Math.abs(row.balance))} (Cr)</span>
@@ -222,7 +225,7 @@ export default async function OutstandingPage() {
                         )}
                       </td>
                       <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.creditLimit)}</td>
-                      <td className="px-6 py-4 text-right text-sm>
+                      <td className="px-6 py-4 text-right text-sm">
                         {row.creditLimit > 0
                           ? `${Math.min(100, Math.max(0, (row.balance / row.creditLimit) * 100)).toFixed(0)}%`
                           : "-"}
@@ -231,17 +234,17 @@ export default async function OutstandingPage() {
                   ))}
                   {/* Totals row */}
                   <tr className="border-t">
-                    <td colSpan="2" className="px-6 py-4 text-right font-bold>
+                    <td colSpan={2} className="px-6 py-4 text-right font-bold">
                       Totals
                     </td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(debtors.reduce((sum, r) => sum + r.openingBalance, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(debtors.reduce((sum, r) => sum + r.debitTotal, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(debtors.reduce((sum, r) => sum + r.creditTotal, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm font-bold>{formatCurrency(debtors.reduce((sum, r) => sum + r.balance, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(debtors.reduce((sum, r) => sum + r.creditLimit, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>
-                      {debtors.reduce((sum, r) => sum + r.creditLimit, 0) > 0
-                        ? `${Math.min(100, Math.max(0, (debtors.reduce((sum, r) => sum + r.balance, 0) / debtors.reduce((sum, r) => sum + r.creditLimit, 0)) * 100)).toFixed(0)}%`
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(debtors.reduce((sum: number, r: any) => sum + r.openingBalance, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(debtors.reduce((sum: number, r: any) => sum + r.debitTotal, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(debtors.reduce((sum: number, r: any) => sum + r.creditTotal, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold">{formatCurrency(debtors.reduce((sum: number, r: any) => sum + r.balance, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(debtors.reduce((sum: number, r: any) => sum + r.creditLimit, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">
+                      {debtors.reduce((sum: number, r: any) => sum + r.creditLimit, 0) > 0
+                        ? `${Math.min(100, Math.max(0, (debtors.reduce((sum: number, r: any) => sum + r.balance, 0) / debtors.reduce((sum: number, r: any) => sum + r.creditLimit, 0)) * 100)).toFixed(0)}%`
                         : "-"}
                     </td>
                   </tr>
@@ -264,7 +267,7 @@ export default async function OutstandingPage() {
             ) : creditors.length === 0 ? (
               <div className="flex items-center justify-center py-8 text-muted-foreground">
                 No creditor ledgers found.
-              )
+              </div>
             ) : (
               <Table>
                 <thead>
@@ -282,12 +285,12 @@ export default async function OutstandingPage() {
                 <tbody className="divide-y">
                   {creditors.map((row) => (
                     <tr key={row.ledgerId} className="hover:bg-muted">
-                      <td className="px-6 py-4 text-left font-medium>{row.name}</td>
-                      <td className="px-6 py-4 text-left text-sm>{row.phone || "-"}</td>
-                      <td className="px-6 py-4 text-right text-sm>{formatCurrency(row.openingBalance)}</td>
-                      <td className="px-6 py-4 text-right text-sm>{formatCurrency(row.debitTotal)}</td>
-                      <td className="px-6 py-4 text-right text-sm>{formatCurrency(row.creditTotal)}</td>
-                      <td className="px-6 py-4 text-right font-semibold>
+                      <td className="px-6 py-4 text-left font-medium">{row.name}</td>
+                      <td className="px-6 py-4 text-left text-sm">{row.phone || "-"}</td>
+                      <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.openingBalance)}</td>
+                      <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.debitTotal)}</td>
+                      <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.creditTotal)}</td>
+                      <td className="px-6 py-4 text-right font-semibold">
                         {row.balance < 0 ? (
                           <>
                             <span className="text-destructive">{formatCurrency(Math.abs(row.balance))} (Cr)</span>
@@ -298,8 +301,8 @@ export default async function OutstandingPage() {
                           </>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-right text-sm>{formatCurrency(row.creditLimit)}</td>
-                      <td className="px-6 py-4 text-right text-sm>
+                      <td className="px-6 py-4 text-right text-sm">{formatCurrency(row.creditLimit)}</td>
+                      <td className="px-6 py-4 text-right text-sm">
                         {row.creditLimit > 0
                           ? `${Math.min(100, Math.max(0, (row.balance / row.creditLimit) * 100)).toFixed(0)}%`
                           : "-"}
@@ -308,17 +311,17 @@ export default async function OutstandingPage() {
                   ))}
                   {/* Totals row */}
                   <tr className="border-t">
-                    <td colSpan="2" className="px-6 py-4 text-right font-bold>
+                    <td colSpan={2} className="px-6 py-4 text-right font-bold">
                       Totals
                     </td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(creditors.reduce((sum, r) => sum + r.openingBalance, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(creditors.reduce((sum, r) => sum + r.debitTotal, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(creditors.reduce((sum, r) => sum + r.creditTotal, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm font-bold>{formatCurrency(creditors.reduce((sum, r) => sum + r.balance, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>{formatCurrency(creditors.reduce((sum, r) => sum + r.creditLimit, 0))}</td>
-                    <td className="px-6 py-4 text-right text-sm>
-                      {creditors.reduce((sum, r) => sum + r.creditLimit, 0) > 0
-                        ? `${Math.min(100, Math.max(0, (creditors.reduce((sum, r) => sum + r.balance, 0) / creditors.reduce((sum, r) => sum + r.creditLimit, 0)) * 100)).toFixed(0)}%`
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(creditors.reduce((sum: number, r: any) => sum + r.openingBalance, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(creditors.reduce((sum: number, r: any) => sum + r.debitTotal, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(creditors.reduce((sum: number, r: any) => sum + r.creditTotal, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm font-bold">{formatCurrency(creditors.reduce((sum: number, r: any) => sum + r.balance, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">{formatCurrency(creditors.reduce((sum: number, r: any) => sum + r.creditLimit, 0))}</td>
+                    <td className="px-6 py-4 text-right text-sm">
+                      {creditors.reduce((sum: number, r: any) => sum + r.creditLimit, 0) > 0
+                        ? `${Math.min(100, Math.max(0, (creditors.reduce((sum: number, r: any) => sum + r.balance, 0) / creditors.reduce((sum: number, r: any) => sum + r.creditLimit, 0)) * 100)).toFixed(0)}%`
                         : "-"}
                     </td>
                   </tr>

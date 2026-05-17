@@ -3,7 +3,7 @@
 import { db, ledgers, voucherEntries, inventoryItems, stockMovements, vouchers } from "@repo/database";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq } from "@repo/database";
 import type { VoucherType } from "@/lib/types";
 
 export interface PosSaveInput {
@@ -39,6 +39,10 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
         openingBalance: 0,
         balanceType: "dr",
       }).returning({ id: ledgers.id });
+      
+      if (!ledger) {
+        return { success: false, error: "Failed to create customer ledger" };
+      }
       customerLedgerId = ledger.id;
     }
 
@@ -71,9 +75,10 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
     const [salesLedger] = await db
       .select()
       .from(ledgers)
-      .where(({ group, companyId }) =>
-        group === "sales" && companyId === "company_1"
-      )
+      .where(and(
+        eq(ledgers.group as any, "sales"),
+        eq(ledgers.companyId as any, "company_1")
+      ))
       .limit(1);
 
     if (!salesLedger) {
@@ -127,10 +132,11 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
       for (const line of lines) {
         // Decrease stock
         await tx.update(inventoryItems)
-          .set({ stockQuantity: inventoryItems.stockQuantity - line.quantity })
-          .where(({ id, companyId }) =>
-            id === line.inventoryItemId && companyId === "company_1"
-          );
+          .set({ stockQuantity: (inventoryItems.stockQuantity as any) - line.quantity })
+          .where(and(
+            eq(inventoryItems.id as any, line.inventoryItemId),
+            eq(inventoryItems.companyId as any, "company_1")
+          ));
 
         // Stock movement
         await tx.insert(stockMovements).values({
@@ -180,7 +186,10 @@ export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails 
         openingBalance: ledgers.openingBalance,
       })
       .from(ledgers)
-      .where(({ id, companyId }) => eq(id, ledgerId) && eq(companyId, "company_1"))
+      .where(and(
+        eq(ledgers.id as any, ledgerId),
+        eq(ledgers.companyId as any, "company_1")
+      ))
       .limit(1);
 
     if (!ledger.length) return null;
@@ -194,11 +203,11 @@ export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails 
         amount: voucherEntries.amount,
       })
       .from(voucherEntries)
-      .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+      .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
       .where(
         and(
-          eq(voucherEntries.ledgerId, ledgerId),
-          eq(vouchers.companyId, "company_1")
+          eq(voucherEntries.ledgerId as any, ledgerId),
+          eq(vouchers.companyId as any, "company_1")
         )
       );
 
@@ -209,13 +218,15 @@ export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails 
       else totalCredit += e.amount;
     }
 
-    const outstanding = l.openingBalance + totalDebit - totalCredit;
+    if (!l) return null;
+
+    const outstanding = (l.openingBalance ?? 0) + totalDebit - totalCredit;
 
     return {
       id: l.id,
       name: l.name,
       group: l.group,
-      creditLimit: l.creditLimit,
+      creditLimit: l.creditLimit ?? 0,
       outstanding: outstanding,
     };
   } catch (err) {

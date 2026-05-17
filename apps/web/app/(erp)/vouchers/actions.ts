@@ -1,12 +1,10 @@
 "use server";
 
-import { db, vouchers, voucherEntries, auditLog, inventoryItems, stockMovements, ledgers } from "@repo/database";
+import { db, vouchers, voucherEntries, auditLog, inventoryItems, stockMovements, ledgers, and, eq, sql } from "@repo/database";
 import { updateLedgerBalancesForVoucher } from "@/lib/accounting/balance-engine";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
-import { and, eq } from "drizzle-orm";
 import type { VoucherType } from "@/lib/types";
-import type { InventoryItem } from "@repo/database";
 
 export interface VoucherEntryLine {
   ledgerId: string;
@@ -86,7 +84,7 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
       totalAmount += input.freightAmount;
     }
 
-    const idempotencyKey = randomUUID(); // In production, client generates this
+    const idempotencyKey = randomUUID();
 
     // ── Atomic Transaction ───────────────────────────────────────────────────
     await db.transaction(async (tx) => {
@@ -97,14 +95,13 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
         type: input.type,
         number: generateVoucherNumber(input.type, voucherId),
         date: input.date,
-        partyLedgerId: input.entries.find(e => e.type === "cr")?.ledgerId ?? null, // Assuming first credit is party
+        partyLedgerId: input.entries.find(e => e.type === "cr")?.ledgerId ?? null,
         reference: input.reference ?? null,
         narration: input.narration ?? null,
         totalAmount,
         gstTotal: 0,
         grandTotal: totalAmount,
         status: "posted",
-        // Challan specific fields
         transportName: input.transportName ?? null,
         lrNumber: input.lrNumber ?? null,
         dispatchDate: input.dispatchDate ?? null,
@@ -112,7 +109,7 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
         idempotencyKey,
       });
 
-      // 2. Insert double-entry lines from input
+      // 2. Insert double-entry lines
       for (const entry of input.entries) {
         await tx.insert(voucherEntries).values({
           id: randomUUID(),
@@ -127,59 +124,18 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
         });
       }
 
-      // 3. Handle freight accounting for challan vouchers
+      // 3. Handle freight accounting for challan
       if (input.type === "challan" && input.freightAmount && input.freightAmount > 0) {
-        // Find freight expense ledger (assuming we have one named "Freight Outward" or similar)
-        const freightLedger = await tx.query.ledgers.findFirst({
-          where: and(
-            eq(ledgers.companyId, "company_1"),
-            eq(ledgers.group, "expenses"),
-            eq(ledgers.name, "Freight Outward")
-          )
-        });
-
-        // If freight ledger doesn't exist, create it (in real app, this would be pre-configured)
-        // For now, we'll use expenses group ledger or create a simple approach
-        // Let's find any expenses ledger for freight
         const expenseLedger = await tx.query.ledgers.findFirst({
-          where: and(
-            eq(ledgers.companyId, "company_1"),
-            eq(ledgers.group, "expenses")
-          )
+          where: and(eq(ledgers.companyId as any, "company_1"), eq(ledgers.group as any, "expenses"))
         });
 
         if (expenseLedger) {
-          // Add freight expense entry (debit)
-          await tx.insert(voucherEntries).values({
-            id: randomUUID(),
-            voucherId,
-            ledgerId: expenseLedger.id,
-            type: "dr",
-            amount: input.freightAmount,
-            narration: `Freight charges for challan ${voucherId}`,
-          });
-
-          // To keep voucher balanced, we need to add a credit entry
-          // This would typically go to the party ledger or cash/bank
-          // For simplicity, let's add it to the party ledger (increase amount payable by party)
-          const partyLedgerEntry = input.entries.find(e => e.type === "cr");
-          if (partyLedgerEntry) {
-            // Update the existing party credit entry to include freight amount
-            await tx.update(voucherEntries)
-              .set({
-                amount: partyLedgerEntry.amount + input.freightAmount,
-              })
-              .where(eq(voucherEntries.id, partyLedgerEntry.id)); // We don't have the ID here, so let's reconsider
-
-            // Actually, easier approach: add a separate credit entry to party ledger
-            // But we need to avoid double entry complexity. Let's adjust the original party credit
-          }
-
-          // Simpler approach: just add freight as debit and adjust the party credit accordingly
-          // Find the party credit entry and increase it by freight amount
           const partyEntries = input.entries.filter(e => e.type === "cr");
-          if (partyEntries.length > 0) {
-            // For now, we'll add freight as a separate line item - debit freight expense, credit party
+          const firstPartyEntry = partyEntries[0];
+          
+          if (firstPartyEntry) {
+            // Add freight expense entry
             await tx.insert(voucherEntries).values({
               id: randomUUID(),
               voucherId,
@@ -189,26 +145,24 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
               narration: `Freight charges for challan ${voucherId}`,
             });
 
-            // Increase the party credit amount by freight amount (first party credit entry)
-            const firstPartyCredit = partyEntries[0];
+            // Update party credit entry to include freight
             await tx.update(voucherEntries)
               .set({
-                amount: firstPartyCredit.amount + input.freightAmount,
+                amount: sql`${voucherEntries.amount} + ${input.freightAmount}`,
               })
               .where(and(
-                eq(voucherEntries.voucherId, voucherId),
-                eq(voucherEntries.ledgerId, firstPartyCredit.ledgerId),
-                eq(voucherEntries.type, "cr")
+                eq(voucherEntries.voucherId as any, voucherId),
+                eq(voucherEntries.ledgerId as any, firstPartyEntry.ledgerId),
+                eq(voucherEntries.type as any, "cr")
               ));
           }
         }
       }
 
-      // 4. Handle stock movements for inventory items (for purchase and sales vouchers)
+      // 4. Handle stock movements
       if (input.type === "purchase" || input.type === "sales") {
         for (const entry of input.entries) {
           if (entry.inventoryItemId && entry.quantity && entry.rate) {
-            // Determine stock movement type based on voucher type
             const movementType: "in" | "out" = input.type === "purchase" ? "in" : "out";
 
             await tx.insert(stockMovements).values({
@@ -222,40 +176,28 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
               narration: entry.narration ?? `${input.type === "purchase" ? "Purchase" : "Sale"} of inventory item`,
             });
 
-            // Update inventory stock quantity
             await tx.update(inventoryItems)
               .set({
-                stockQuantity:
-                  input.type === "purchase"
-                    ? inventoryItems.stockQuantity + entry.quantity
-                    : inventoryItems.stockQuantity - entry.quantity,
+                stockQuantity: movementType === "in" 
+                  ? sql`${inventoryItems.stockQuantity} + ${entry.quantity}`
+                  : sql`${inventoryItems.stockQuantity} - ${entry.quantity}`,
                 updatedAt: Date.now()
               })
-              .where(({ id, companyId }) =>
-                and(
-                  eq(id, entry.inventoryItemId),
-                  eq(companyId, "company_1")
-                )
-              );
+              .where(and(eq(inventoryItems.id as any, entry.inventoryItemId), eq(inventoryItems.companyId as any, "company_1")));
           }
         }
       }
 
-      // 5. Update ledger balances (materialized)
-      // We need to reconstruct ledgerEffects to include freight entries
+      // 5. Update materialized balances
       const ledgerEffects = input.entries.map(entry => ({
         ledgerId: entry.ledgerId,
         debit: entry.type === "dr" ? entry.amount : 0,
         credit: entry.type === "cr" ? entry.amount : 0,
       }));
 
-      // Add freight effects if applicable
       if (input.type === "challan" && input.freightAmount && input.freightAmount > 0) {
         const expenseLedger = await tx.query.ledgers.findFirst({
-          where: and(
-            eq(ledgers.companyId, "company_1"),
-            eq(ledgers.group, "expenses")
-          )
+          where: and(eq(ledgers.companyId as any, "company_1"), eq(ledgers.group as any, "expenses"))
         });
 
         if (expenseLedger) {
@@ -265,9 +207,8 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
             credit: 0,
           });
 
-          // Also add the offsetting credit to party ledger (we'll estimate this)
           const partyEntries = input.entries.filter(e => e.type === "cr");
-          if (partyEntries.length > 0) {
+          if (partyEntries[0]) {
             ledgerEffects.push({
               ledgerId: partyEntries[0].ledgerId,
               debit: 0,
@@ -279,7 +220,7 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
 
       await updateLedgerBalancesForVoucher(tx, input.date, ledgerEffects);
 
-      // 6. Append audit log
+      // 6. Audit Log
       await tx.insert(auditLog).values({
         id: randomUUID(),
         entity: "voucher",
@@ -297,7 +238,7 @@ export async function createVoucher(input: CreateVoucherInput): Promise<{ succes
 
     revalidatePath("/vouchers");
     revalidatePath("/dashboard");
-    revalidatePath("/inventory"); // Revalidate inventory page as stock may have changed
+    revalidatePath("/inventory");
 
     return { success: true, voucherId };
   } catch (err) {

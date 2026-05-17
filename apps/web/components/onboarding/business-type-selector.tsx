@@ -23,8 +23,7 @@ const BUSINESS_TYPES = [
   { id: "custom", title: "Custom", icon: Settings, description: "Configure from scratch" },
 ];
 
-export function BusinessTypeSelector({ onBack }: Props) {
-  const [selectedType, setSelectedType] = useState<string>("wholesale_saree");
+export function BusinessTypeSelector({ onBack, onNext, selectedType, onSelect }: Props) {
 
   return (
     <Card className="w-full max-w-2xl shadow-2xl bg-card/80 backdrop-blur-xl border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -38,7 +37,7 @@ export function BusinessTypeSelector({ onBack }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        <RadioGroup value={selectedType} onValueChange={setSelectedType} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <RadioGroup value={selectedType} onValueChange={onSelect} className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
           {BUSINESS_TYPES.map((type) => {
             const Icon = type.icon;
             const isSelected = selectedType === type.id;

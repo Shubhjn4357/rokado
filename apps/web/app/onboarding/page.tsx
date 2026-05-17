@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, ArrowRightUp, ArrowRight, Database, UploadCloud } from "lucide-react";
+import { Building2, ArrowUpRight, ArrowRight, Database, UploadCloud } from "lucide-react";
 
 export default function OnboardingPage() {
   return (
@@ -25,7 +25,7 @@ export default function OnboardingPage() {
               className="w-full h-14 text-lg justify-between group rounded-xl"
             >
               <span className="flex items-center gap-3">
-                <ArrowRightUp className="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" />
+                <ArrowUpRight className="w-5 h-5 opacity-70 group-hover:opacity-100 transition-opacity" />
                 Start New Business
               </span>
               <ArrowRight className="w-5 h-5 opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />

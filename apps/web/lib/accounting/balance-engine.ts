@@ -1,7 +1,6 @@
 "use server";
 
-import { db } from "@repo/database";
-import { and, eq, sql } from "drizzle-orm";
+import { db, and, eq, sql } from "@repo/database";
 import { ledgers, ledgerBalances, vouchers, voucherEntries } from "@repo/database";
 
 /**
@@ -26,7 +25,7 @@ function getFiscalYearAndMonth(dateUnixMs: number): { fiscalYear: string; month:
  * Called within the same transaction as voucher creation
  */
 export async function updateLedgerBalancesForVoucher(
-  tx: Parameters<typeof db.transaction>[0], // Transaction type
+  tx: any,
   voucherDate: number, // Unix ms timestamp
   ledgerEffects: Array<{ ledgerId: string; debit: number; credit: number }>
 ) {

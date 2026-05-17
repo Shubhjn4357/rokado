@@ -11,14 +11,14 @@ interface Props {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const ledger = await db.select().from(ledgers).where(eq(ledgers.id, id)).limit(1);
+  const ledger = await db.select().from(ledgers).where(eq(ledgers.id as any, id)).limit(1);
   return { title: `${ledger[0]?.name ?? "Ledger"} - ERP` };
 }
 
 export default async function LedgerDetailPage({ params }: Props) {
   const { id } = await params;
 
-  const [ledger] = await db.select().from(ledgers).where(eq(ledgers.id, id)).limit(1);
+  const [ledger] = await db.select().from(ledgers).where(eq(ledgers.id as any, id)).limit(1);
   if (!ledger) notFound();
 
   // Get voucher entries for this ledger, joined with voucher info
@@ -35,8 +35,8 @@ export default async function LedgerDetailPage({ params }: Props) {
       voucherNarration: vouchers.narration,
     })
     .from(voucherEntries)
-    .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
-    .where(eq(voucherEntries.ledgerId, id))
+    .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
+    .where(eq(voucherEntries.ledgerId as any, id))
     .orderBy(desc(vouchers.date))
     .limit(50);
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, ArrowRight, DownloadCloud, Database, Undo2 } from "lucide-react";
+import { Building2, ArrowRight, DownloadCloud, Database } from "lucide-react";
 import { BusinessTypeSelector } from "./business-type-selector";
 import { MigrationWizard } from "./migration-wizard";
 
@@ -11,13 +11,27 @@ type FlowState = "welcome" | "new_business" | "migrate" | "backup";
 
 export function WelcomeScreen() {
   const [flow, setFlow] = useState<FlowState>("welcome");
+  const [selectedType, setSelectedType] = useState<string>("wholesale_saree");
 
   if (flow === "new_business") {
-    return <BusinessTypeSelector onBack={() => setFlow("welcome")} />;
+    return (
+      <BusinessTypeSelector 
+        onBack={() => setFlow("welcome")} 
+        onNext={() => console.log("Next")}
+        selectedType={selectedType}
+        onSelect={setSelectedType}
+      />
+    );
   }
 
   if (flow === "migrate") {
-    return <MigrationWizard onBack={() => setFlow("welcome")} />;
+    return (
+      <MigrationWizard 
+        onBack={() => setFlow("welcome")} 
+        onNext={() => console.log("Next")}
+        onSkip={() => setFlow("welcome")}
+      />
+    );
   }
 
   return (

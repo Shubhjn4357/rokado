@@ -1,4 +1,4 @@
-import { db, ledgers, voucherEntries, vouchers, eq, and, gte, lte, sum } from "@repo/database";
+import { db, ledgers, voucherEntries, vouchers, eq, and, gte, lte, sum, sql } from "@repo/database";
 import { formatCurrency, formatDate } from "@/lib/types";
 import * as XLSX from 'xlsx';
 
@@ -25,7 +25,7 @@ export async function exportTrialBalanceToExcel(
         balanceType: ledgers.balanceType,
       })
       .from(ledgers)
-      .where(({ companyId: cmpId }) => eq(cmpId, companyId))
+      .where(eq(ledgers.companyId, companyId))
       .orderBy(ledgers.name);
 
     // Calculate balances for each ledger
@@ -166,6 +166,7 @@ export async function exportLedgerStatementToExcel(
         name: ledgers.name,
         group: ledgers.group,
         openingBalance: ledgers.openingBalance,
+        balanceType: ledgers.balanceType,
       })
       .from(ledgers)
       .where(
@@ -241,7 +242,7 @@ export async function exportLedgerStatementToExcel(
 
     entriesWithBalance.forEach(row => {
       ws_data.push([
-        formatDate(new Date(Number(row.voucherDate))),
+        formatDate(Number(row.voucherDate)),
         row.voucherNumber || "-",
         row.voucherType,
         row.entryType.toUpperCase(),
@@ -270,7 +271,7 @@ export async function exportLedgerStatementToExcel(
       "",
       "",
       formatCurrency(entriesWithBalance.length > 0
-        ? entriesWithBalance[entriesWithBalance.length - 1].runningBalance
+        ? entriesWithBalance[entriesWithBalance.length - 1]?.runningBalance ?? 0
         : Number(ledger.openingBalance))
     ]);
 
@@ -338,7 +339,7 @@ export async function exportVouchersToExcel(
 
     voucherResult.forEach(row => {
       ws_data.push([
-        formatDate(new Date(Number(row.voucherDate))),
+        formatDate(Number(row.voucherDate)),
         row.voucherNumber || "-",
         row.voucherType,
         row.ledgerName,

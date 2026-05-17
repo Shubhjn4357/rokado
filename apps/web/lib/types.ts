@@ -75,7 +75,28 @@ export const INVENTORY_CATEGORIES = [
   "Dress Materials",
 ] as const;
 
-export type InventoryCategory = (typeof INVENTORY_CATEGORIES)[number];
+export type InventoryItemCategory = (typeof INVENTORY_CATEGORIES)[number];
+export type InventoryCategory = InventoryItemCategory;
+
+export interface InventoryItem {
+  id: string;
+  companyId: string | null;
+  name: string;
+  category: string;
+  designNo: string | null;
+  color: string | null;
+  purchaseRate: number;
+  saleRate: number;
+  gstPercent: number;
+  rackLocation: string | null;
+  stockQuantity: number;
+  unit: string;
+  hsnCode: string | null;
+  barcode: string | null;
+  reorderLevel: number | null;
+  createdAt: number;
+  updatedAt: number;
+}
 
 export function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -85,12 +106,12 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function formatDate(timestamp: number): string {
+export function formatDate(date: number | Date): string {
   return new Intl.DateTimeFormat("en-IN", {
     day: "2-digit",
     month: "short",
     year: "numeric",
-  }).format(new Date(timestamp));
+  }).format(new Date(date));
 }
 
 export function getCurrentFiscalYear(): string {

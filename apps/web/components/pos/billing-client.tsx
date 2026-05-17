@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Printer, CreditCard, Banknote, Trash2, Plus, Minus, User, DollarSign, AlertTriangle } from "lucide-react";
 import { type inventoryItems, type InferSelectModel } from "@repo/database";
+import { eq, and } from "@repo/database";
 import { ledgers } from "@repo/database";
 import { db } from "@repo/database";
 import { savePosBill, getLedgerDetails } from "@/app/(erp)/pos/actions";
@@ -37,8 +38,11 @@ export function POSBillingClient({ initialInventory }: { initialInventory: Inven
       const data = await db
         .select({ id: ledgers.id, name: ledgers.name, openingBalance: ledgers.openingBalance })
         .from(ledgers)
-        .where(({ group, companyId, isActive }) =>
-          group === "sundry_debtors" && companyId === "company_1" && isActive
+        .where(
+          and(
+            eq(ledgers.group as any, "sundry_debtors"),
+            eq(ledgers.isActive as any, true)
+          )
         )
         .orderBy(ledgers.name);
       setDebtors(data);

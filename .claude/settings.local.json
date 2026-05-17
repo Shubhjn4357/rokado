@@ -18,7 +18,9 @@
       "PowerShell(npx tsc --noEmit \"apps/web/app/\\(erp\\)/inventory/actions.ts\")",
       "Bash(perl *)",
       "Bash(grep -n \"\\\\\\\\[ \\\\\\\\|– \\\\\\\\|🔲\\\\\\\\|⬜︎\\\\\\\\|⬚\\\\\\\\|☐\\\\\\\\|○\" \"D:/Code/account/Implementationplan.md\")",
-      "Bash(grep *)"
+      "Bash(grep *)",
+      "Bash(dir *)",
+      "Bash(pnpm *)"
     ]
   }
 }

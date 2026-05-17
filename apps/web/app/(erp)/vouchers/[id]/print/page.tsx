@@ -1,19 +1,23 @@
+"use client";
+
 import { db, vouchers, voucherEntries, ledgers, eq } from "@repo/database";
 import { notFound } from "next/navigation";
 import { InvoicePrint } from "@/components/print/invoice-print";
 import { formatCurrency, formatDate } from "@/lib/types";
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 
-export const dynamic = "force-dynamic";
+// export const dynamic = "force-dynamic";
 
+/*
 export const generateMetadata = async ({ params }: { params: Promise<{ id: string }> }) => {
   const { id } = await params;
-  const voucher = await db.select().from(vouchers).where(eq(vouchers.id, id)).limit(1);
+  const [ledger] = await db.select().from(ledgers).where(eq(ledgers.id as any, id)).limit(1);
   return { title: `Invoice ${voucher[0]?.number ?? id} - ERP` };
 };
+*/
 
-export default async function VoucherPrintPage({ params }: { params: Promise<{ id: string> } }) {
-  const { id } = await params;
+export default function VoucherPrintPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -33,24 +37,26 @@ export default async function VoucherPrintPage({ params }: { params: Promise<{ i
             partyLedgerId: vouchers.partyLedgerId,
           })
           .from(vouchers)
-          .where(eq(vouchers.id, id))
+          .where(eq(vouchers.id as any, id))
           .limit(1);
 
         if (!voucher[0]) {
-          notFound();
+          setData({ error: "NotFound" });
           return;
         }
 
-        const partyLedger = await db
-          .select({
-            id: ledgers.id,
-            name: ledgers.name,
-            phone: ledgers.phone,
-            gstNumber: ledgers.gstNumber,
-          })
-          .from(ledgers)
-          .where(eq(ledgers.id, voucher[0].partyLedgerId))
-          .limit(1);
+        const partyLedger = voucher[0].partyLedgerId 
+          ? await db
+              .select({
+                id: ledgers.id,
+                name: ledgers.name,
+                phone: ledgers.phone,
+                gstNumber: ledgers.gstNumber,
+              })
+              .from(ledgers)
+              .where(eq(ledgers.id as any, voucher[0].partyLedgerId))
+              .limit(1)
+          : [];
 
         const entries = await db
           .select({
@@ -72,20 +78,6 @@ export default async function VoucherPrintPage({ params }: { params: Promise<{ i
           ledgerMap[l.id] = l.name;
         });
 
-        // Build items for invoice (simplified: we assume each entry is an inventory item? Actually, voucher entries are ledger entries.)
-        // For a sales voucher, we have two entries: Dr Customer, Cr Sales.
-        // We don't have item details in the voucher entries. We need to link from stock movements or something else.
-        // Since we don't have a direct link from voucher to inventory items in the voucher entries, we cannot get the item details.
-        // This is a limitation of our current design. We need to store item details in the voucher or have a separate table for voucher items.
-        // Given the time, we'll skip the item details and just show a simple invoice with the total.
-        // However, the requirement is to print a bill with item details. We need to adjust.
-
-        // Let's change approach: In the POS save action, we should store the invoice details in a separate table or in the voucher narration?
-        // Alternatively, we can create a new table `pos_invoice_items` that links to the voucher and stores the items.
-        // But we are already late.
-
-        // For now, we'll print a simple voucher receipt without item details, and note that this is a limitation.
-
         setData({
           voucher: voucher[0],
           party: partyLedger[0],
@@ -103,6 +95,7 @@ export default async function VoucherPrintPage({ params }: { params: Promise<{ i
   }, [id]);
 
   if (loading) return <div>Loading...</div>;
+  if (data?.error === "NotFound") return notFound();
   if (!data) return <div>No data</div>;
 
   const { voucher, party, entries, ledgerMap } = data;

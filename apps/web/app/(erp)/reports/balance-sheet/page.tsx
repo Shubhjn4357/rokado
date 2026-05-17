@@ -1,3 +1,5 @@
+"use client";
+
 import { db, ledgers, voucherEntries, vouchers, eq, sum, and, gte, lte } from "@repo/database";
 import { formatCurrency } from "@/lib/types";
 import { useState, useEffect } from "react";
@@ -8,9 +10,9 @@ import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Balance Sheet - Shree Saree House ERP" };
+// export const metadata = { title: "Balance Sheet - Shree Saree House ERP" };
 
-export default async function BalanceSheetPage() {
+export default function BalanceSheetPage() {
   const [date, setDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [balanceSheetData, setBalanceSheetData] = useState<any>(null);
@@ -19,7 +21,7 @@ export default async function BalanceSheetPage() {
   const today = new Date();
 
   useEffect(() => {
-    setDate(today.toISOString().split("T")[0]);
+    setDate(today.toISOString().split("T")[0] ?? null);
     fetchBalanceSheet();
   }, []);
 
@@ -38,41 +40,40 @@ export default async function BalanceSheetPage() {
           balanceType: ledgers.balanceType,
         })
         .from(ledgers)
-        .where(({ companyId, isActive }) =>
-          eq(ledgers.companyId, "company_1")
+        .where(
+          eq(ledgers.companyId as any, "company_1")
         )
         .orderBy(ledgers.name);
 
       // For each ledger, compute total debit and credit up to date
       const ledgerBalances = await Promise.all(
         allLedgers.map(async (ledger) => {
-          // Debit sum
-          const debitResult = await db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                dateParam ? lte(vouchers.date, dateParam) : undefined,
-                eq(voucherEntries.type, "dr")
+          const [debitResult, creditResult] = await Promise.all([
+            db
+              .select({ total: sum(voucherEntries.amount) })
+              .from(voucherEntries)
+              .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
+              .where(
+                and(
+                  eq(voucherEntries.ledgerId as any, ledger.id),
+                  eq(vouchers.companyId as any, "company_1"),
+                  dateParam ? lte(vouchers.date as any, dateParam) : undefined,
+                  eq(voucherEntries.type as any, "dr")
+                )
+              ),
+            db
+              .select({ total: sum(voucherEntries.amount) })
+              .from(voucherEntries)
+              .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
+              .where(
+                and(
+                  eq(voucherEntries.ledgerId as any, ledger.id),
+                  eq(vouchers.companyId as any, "company_1"),
+                  dateParam ? lte(vouchers.date as any, dateParam) : undefined,
+                  eq(voucherEntries.type as any, "cr")
+                )
               )
-            );
-
-          // Credit sum
-          const creditResult = await db
-            .select({ total: sum(voucherEntries.amount) })
-            .from(voucherEntries)
-            .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
-            .where(
-              and(
-                eq(voucherEntries.ledgerId, ledger.id),
-                eq(vouchers.companyId, "company_1"),
-                dateParam ? lte(vouchers.date, dateParam) : undefined,
-                eq(voucherEntries.type, "cr")
-              )
-            );
+          ]);
 
           const debitTotal = Number(debitResult[0]?.total ?? 0);
           const creditTotal = Number(creditResult[0]?.total ?? 0);
@@ -97,7 +98,7 @@ export default async function BalanceSheetPage() {
       );
 
       // Group by group for balance sheet presentation
-      const groups = {
+      const groups: any = {
         capital: [],
         sundryCreditors: [],
         sundryDebtors: [],
@@ -195,9 +196,10 @@ export default async function BalanceSheetPage() {
             <div className="space-y-1">
               <label className="text-xs text-muted-foreground">As of Date</label>
               <Calendar
-                value={date ? new Date(date) : undefined}
-                onChange={(value) => {
-                  setDate(value ? value.toISOString().split("T")[0] : null);
+                mode="single"
+                selected={date ? new Date(date) : undefined}
+                onSelect={(value: any) => {
+                  setDate(value?.toISOString().split("T")[0] ?? null);
                   fetchBalanceSheet();
                 }}
                 className="w-48"
@@ -218,11 +220,11 @@ export default async function BalanceSheetPage() {
           {loading ? (
             <div className="flex items-center justify-center py-8">
               Loading...
-            )
+            </div>
           ) : !balanceSheetData ? (
             <div className="flex items-center justify-center py-8 text-muted-foreground">
               No data available.
-            )
+            </div>
           ) : (
             <>
               <div className="grid gap-4">
@@ -242,7 +244,7 @@ export default async function BalanceSheetPage() {
                         </thead>
                         <tbody className="divide-y">
                           {/* Capital */}
-                          {balanceSheetData.groups.capital.map((ledger, index) => (
+                          {balanceSheetData.groups.capital.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -250,7 +252,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.capital.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No capital ledgers
                               </td>
                             </tr>
@@ -258,9 +260,9 @@ export default async function BalanceSheetPage() {
 
                           {/* Sundry Creditors */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Sundry Creditors</td>
+                            <td colSpan={2} className="px-6 py-4">Sundry Creditors</td>
                           </tr>
-                          {balanceSheetData.groups.sundryCreditors.map((ledger, index) => (
+                          {balanceSheetData.groups.sundryCreditors.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -268,7 +270,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.sundryCreditors.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No sundry creditors
                               </td>
                             </tr>
@@ -276,9 +278,9 @@ export default async function BalanceSheetPage() {
 
                           {/* Duties & Taxes */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Duties & Taxes</td>
+                            <td colSpan={2} className="px-6 py-4">Duties & Taxes</td>
                           </tr>
-                          {balanceSheetData.groups.dutiesTaxes.map((ledger, index) => (
+                          {balanceSheetData.groups.dutiesTaxes.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -286,7 +288,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.dutiesTaxes.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No duties & taxes
                               </td>
                             </tr>
@@ -294,17 +296,17 @@ export default async function BalanceSheetPage() {
 
                           {/* Loans (if any) - could be in other group or create specific group */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Loans</td>
+                            <td colSpan={2} className="px-6 py-4">Loans</td>
                           </tr>
-                          {balanceSheetData.groups.other.filter(l => l.name.toLowerCase().includes('loan') || l.name.toLowerCase().includes('borrow')).map((ledger, index) => (
+                          {balanceSheetData.groups.other.filter((l: any) => l.name.toLowerCase().includes('loan') || l.name.toLowerCase().includes('borrow')).map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
                             </tr>
                           ))}
-                          {!balanceSheetData.groups.other.filter(l => l.name.toLowerCase().includes('loan') || l.name.toLowerCase().includes('borrow')).length && (
+                          {!balanceSheetData.groups.other.filter((l: any) => l.name.toLowerCase().includes('loan') || l.name.toLowerCase().includes('borrow')).length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No loans
                               </td>
                             </tr>
@@ -344,9 +346,9 @@ export default async function BalanceSheetPage() {
                         <tbody className="divide-y">
                           {/* Fixed Assets */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Fixed Assets</td>
+                            <td colSpan={2} className="px-6 py-4">Fixed Assets</td>
                           </tr>
-                          {balanceSheetData.groups.fixedAssets.map((ledger, index) => (
+                          {balanceSheetData.groups.fixedAssets.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -354,7 +356,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.fixedAssets.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No fixed assets
                               </td>
                             </tr>
@@ -362,9 +364,9 @@ export default async function BalanceSheetPage() {
 
                           {/* Sundry Debtors */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Sundry Debtors</td>
+                            <td colSpan={2} className="px-6 py-4">Sundry Debtors</td>
                           </tr>
-                          {balanceSheetData.groups.sundryDebtors.map((ledger, index) => (
+                          {balanceSheetData.groups.sundryDebtors.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -372,7 +374,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.sundryDebtors.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No sundry debtors
                               </td>
                             </tr>
@@ -380,9 +382,9 @@ export default async function BalanceSheetPage() {
 
                           {/* Stock / Inventory */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Stock-in-Trade</td>
+                            <td colSpan={2} className="px-6 py-4">Stock-in-Trade</td>
                           </tr>
-                          {balanceSheetData.groups.stock.map((ledger, index) => (
+                          {balanceSheetData.groups.stock.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -390,7 +392,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.stock.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No stock
                               </td>
                             </tr>
@@ -398,9 +400,9 @@ export default async function BalanceSheetPage() {
 
                           {/* Bank */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Bank Accounts</td>
+                            <td colSpan={2} className="px-6 py-4">Bank Accounts</td>
                           </tr>
-                          {balanceSheetData.groups.bank.map((ledger, index) => (
+                          {balanceSheetData.groups.bank.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -408,7 +410,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.bank.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No bank accounts
                               </td>
                             </tr>
@@ -416,9 +418,9 @@ export default async function BalanceSheetPage() {
 
                           {/* Cash */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Cash-in-Hand</td>
+                            <td colSpan={2} className="px-6 py-4">Cash-in-Hand</td>
                           </tr>
-                          {balanceSheetData.groups.cash.map((ledger, index) => (
+                          {balanceSheetData.groups.cash.map((ledger: any, index: number) => (
                             <tr key={index}>
                               <td className="px-6 py-4 text-left">{ledger.name}</td>
                               <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
@@ -426,7 +428,7 @@ export default async function BalanceSheetPage() {
                           ))}
                           {!balanceSheetData.groups.cash.length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No cash
                               </td>
                             </tr>
@@ -434,20 +436,20 @@ export default async function BalanceSheetPage() {
 
                           {/* Other Current Assets */}
                           <tr className="border-t border-b font-semibold">
-                            <td colSpan="2" className="px-6 py-4">Other Current Assets</td>
+                            <td colSpan={2} className="px-6 py-4">Other Current Assets</td>
                           </tr>
                           {balanceSheetData.groups.other
-                            .filter(l => !l.name.toLowerCase().includes('loan') && !l.name.toLowerCase().includes('borrow'))
-                            .map((ledger, index) => (
+                            .filter((l: any) => !l.name.toLowerCase().includes('loan') && !l.name.toLowerCase().includes('borrow'))
+                            .map((ledger: any, index: number) => (
                               <tr key={index}>
                                 <td className="px-6 py-4 text-left">{ledger.name}</td>
                                 <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
                               </tr>
                           ))}
                           {!balanceSheetData.groups.other
-                            .filter(l => !l.name.toLowerCase().includes('loan') && !l.name.toLowerCase().includes('borrow')).length && (
+                            .filter((l: any) => !l.name.toLowerCase().includes('loan') && !l.name.toLowerCase().includes('borrow')).length && (
                             <tr>
-                              <td colSpan="2" className="px-6 py-4 text-center text-muted-foreground">
+                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
                                 No other current assets
                               </td>
                             </tr>

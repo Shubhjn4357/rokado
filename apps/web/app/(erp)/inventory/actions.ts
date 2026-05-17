@@ -3,6 +3,7 @@
 import { db, inventoryItems, stockMovements, vouchers, voucherEntries, auditLog } from "@repo/database";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
+import { eq, and, sql, desc } from "drizzle-orm";
 import type { InventoryItem, InventoryCategory } from "@/lib/types";
 
 export interface CreateInventoryItemInput {
@@ -63,7 +64,7 @@ export async function createInventoryItem(input: CreateInventoryItemInput): Prom
         barcode: input.barcode ?? null,
         reorderLevel: input.reorderLevel ?? 10,
         stockQuantity: input.initialStock ?? 0,
-      });
+      } as any);
 
       // If initial stock provided, create stock movement
       if (input.initialStock && input.initialStock > 0) {
@@ -76,7 +77,7 @@ export async function createInventoryItem(input: CreateInventoryItemInput): Prom
           rate: input.purchaseRate, // Use purchase rate for initial stock valuation
           date: Date.now(),
           narration: "Initial stock",
-        });
+        } as any);
       }
 
       // Append audit log
@@ -122,9 +123,10 @@ export async function updateInventoryItem(input: UpdateInventoryItemInput): Prom
           reorderLevel: input.reorderLevel,
           updatedAt: Date.now(),
         })
-        .where(({ id, companyId }) =>
-          id === input.id && companyId === "company_1"
-        );
+        .where(and(
+          eq(inventoryItems.id as any, input.id),
+          eq(inventoryItems.companyId as any, "company_1")
+        ));
 
       // Append audit log
       await tx.insert(auditLog).values({
@@ -158,7 +160,7 @@ export async function deleteInventoryItem(itemId: string): Promise<{ success: tr
       const movements = await tx
         .select()
         .from(stockMovements)
-        .where(({ itemId: movItemId }) => movItemId === itemId)
+        .where(eq(stockMovements.itemId as any, itemId))
         .limit(1);
 
       if (movements.length > 0) {
@@ -167,9 +169,10 @@ export async function deleteInventoryItem(itemId: string): Promise<{ success: tr
 
       // Delete inventory item
       await tx.delete(inventoryItems)
-        .where(({ id, companyId }) =>
-          id === itemId && companyId === "company_1"
-        );
+        .where(and(
+          eq(inventoryItems.id as any, itemId),
+          eq(inventoryItems.companyId as any, "company_1")
+        ));
 
       // Append audit log
       await tx.insert(auditLog).values({
@@ -206,9 +209,10 @@ export async function adjustStock(input: AdjustStockInput): Promise<{ success: t
       const [item] = await tx
         .select()
         .from(inventoryItems)
-        .where(({ id, companyId }) =>
-          id === input.itemId && companyId === "company_1"
-        );
+        .where(and(
+          eq(inventoryItems.id as any, input.itemId),
+          eq(inventoryItems.companyId as any, "company_1")
+        ));
 
       if (!item) {
         throw new Error("Inventory item not found");
@@ -219,12 +223,13 @@ export async function adjustStock(input: AdjustStockInput): Promise<{ success: t
       // Update stock quantity
       await tx.update(inventoryItems)
         .set({
-          stockQuantity: inventoryItems.stockQuantity + input.quantity,
+          stockQuantity: (inventoryItems.stockQuantity as any) + input.quantity,
           updatedAt: Date.now()
         })
-        .where(({ id, companyId }) =>
-          id === input.itemId && companyId === "company_1"
-        );
+        .where(and(
+          eq(inventoryItems.id as any, input.itemId),
+          eq(inventoryItems.companyId as any, "company_1")
+        ));
 
       // Record stock movement
       await tx.insert(stockMovements).values({
@@ -236,7 +241,7 @@ export async function adjustStock(input: AdjustStockInput): Promise<{ success: t
         rate,
         date: Date.now(),
         narration: input.narration ?? (input.quantity >= 0 ? "Stock increase" : "Stock decrease"),
-      });
+      } as any);
 
       // Append audit log
       await tx.insert(auditLog).values({
@@ -257,6 +262,47 @@ export async function adjustStock(input: AdjustStockInput): Promise<{ success: t
     return { success: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error adjusting stock.";
+    return { success: false, error: message };
+  }
+}
+
+export async function getItemDetailsAction(itemId: string) {
+  try {
+    const movements = await db
+      .select({
+        id: stockMovements.id,
+        type: stockMovements.type,
+        quantity: stockMovements.quantity,
+        rate: stockMovements.rate,
+        date: stockMovements.date,
+        narration: stockMovements.narration,
+      })
+      .from(stockMovements)
+      .where(eq(stockMovements.itemId, itemId))
+      .orderBy(desc(stockMovements.date));
+
+    const voucherEntriesData = await db
+      .select({
+        voucherId: voucherEntries.voucherId,
+        type: voucherEntries.type,
+        amount: voucherEntries.amount,
+        narration: voucherEntries.narration,
+        inventoryItemId: voucherEntries.inventoryItemId,
+        quantity: voucherEntries.quantity,
+        rate: voucherEntries.rate,
+        voucherType: vouchers.type,
+        voucherDate: vouchers.date,
+        voucherNumber: vouchers.number,
+        partyLedgerId: vouchers.partyLedgerId,
+      })
+      .from(voucherEntries)
+      .innerJoin(vouchers, eq(voucherEntries.voucherId, vouchers.id))
+      .where(eq(voucherEntries.inventoryItemId, itemId))
+      .orderBy(desc(vouchers.date));
+
+    return { success: true, stockMovementsData: movements, linkedVouchers: voucherEntriesData };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error loading item details.";
     return { success: false, error: message };
   }
 }

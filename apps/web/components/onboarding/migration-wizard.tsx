@@ -17,7 +17,7 @@ const MIGRATION_SOURCES = [
   { id: "vyapar", title: "Vyapar CSV", desc: "Quick migration for retail shops", icon: UploadCloud },
 ];
 
-export function MigrationWizard({ onBack }: Props) {
+export function MigrationWizard({ onBack, onNext, onSkip }: Props) {
   const [step, setStep] = useState(1);
   const [source, setSource] = useState<string | null>(null);
 

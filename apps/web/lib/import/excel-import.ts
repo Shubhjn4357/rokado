@@ -14,8 +14,10 @@ export async function parseExcelFile(file: File): Promise<any[][] | null> {
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: 'array' });
     const firstSheetName = workbook.SheetNames[0];
+    if (!firstSheetName) return null;
     const worksheet = workbook.Sheets[firstSheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    if (!worksheet) return null;
+    const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
     return jsonData;
   } catch (error) {
     console.error('Error parsing Excel file:', error);
