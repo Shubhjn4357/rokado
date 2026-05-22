@@ -30,5 +30,6 @@ export {
   auditLog,
   syncQueue,
   users,
+  rateLimits,
 } from "./schema";
 export * from "drizzle-orm";

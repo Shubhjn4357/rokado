@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Building2, Lock, User, Eye, EyeOff, ShieldCheck, KeyRound, Loader2 } from "lucide-react";
+import { Building2, Lock, User, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 import { loginAction } from "./actions";
 
 export default function LoginPage() {
@@ -35,31 +36,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickLogin = async (role: "owner" | "accountant" | "auditor") => {
-    setIsLoading(true);
-    setError(null);
-    const credentials = {
-      owner: { u: "owner", p: "owner123" },
-      accountant: { u: "accountant", p: "accountant123" },
-      auditor: { u: "auditor", p: "auditor123" },
-    }[role];
-
-    setUsername(credentials.u);
-    setPassword(credentials.p);
-
-    try {
-      const result = await loginAction({ username: credentials.u, password: credentials.p });
-      if (!result.success) {
-        setError(result.error || "Quick login failed");
-      } else {
-        window.location.href = "/dashboard";
-      }
-    } catch (err) {
-      setError("Quick login failed.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen relative flex items-center justify-center p-4 bg-[#030712] overflow-hidden">
@@ -165,44 +141,15 @@ export default function LoginPage() {
                 )}
               </Button>
             </form>
+
+            <div className="text-center mt-4 text-xs text-gray-400">
+              Don&apos;t have an account?{" "}
+              <Link href="/register" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
+                Create an Account
+              </Link>
+            </div>
           </CardContent>
-          
-          {/* Quick Demo Logins Panel */}
-          <CardFooter className="flex flex-col space-y-3 pt-4 border-t border-white/5 bg-slate-950/45 p-6">
-            <div className="flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest text-gray-500">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-              Demo Roles & Quick Access
-            </div>
-            <div className="grid grid-cols-3 gap-2 w-full">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin("owner")}
-                disabled={isLoading}
-                className="p-2 border border-white/5 bg-white/5 hover:bg-blue-600/10 hover:border-blue-500/20 rounded-xl text-center transition-all group disabled:opacity-50"
-              >
-                <div className="text-[10px] font-bold text-blue-400 group-hover:text-blue-300">Owner</div>
-                <div className="text-[9px] text-gray-500">owner123</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin("accountant")}
-                disabled={isLoading}
-                className="p-2 border border-white/5 bg-white/5 hover:bg-indigo-600/10 hover:border-indigo-500/20 rounded-xl text-center transition-all group disabled:opacity-50"
-              >
-                <div className="text-[10px] font-bold text-indigo-400 group-hover:text-indigo-300">Accountant</div>
-                <div className="text-[9px] text-gray-500">accountant123</div>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleQuickLogin("auditor")}
-                disabled={isLoading}
-                className="p-2 border border-white/5 bg-white/5 hover:bg-violet-600/10 hover:border-violet-500/20 rounded-xl text-center transition-all group disabled:opacity-50"
-              >
-                <div className="text-[10px] font-bold text-violet-400 group-hover:text-violet-300">Auditor</div>
-                <div className="text-[9px] text-gray-500">auditor123</div>
-              </button>
-            </div>
-          </CardFooter>
+
         </Card>
       </div>
     </div>

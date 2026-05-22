@@ -224,3 +224,17 @@ export const users = sqliteTable(
   })
 );
 
+// ─── Rate Limiter ────────────────────────────────────────────────────────────
+export const rateLimits = sqliteTable(
+  "rate_limits",
+  {
+    id: text("id").primaryKey(),
+    key: text("key").notNull(),
+    count: integer("count").notNull().default(0),
+    resetAt: integer("reset_at").notNull(),
+  },
+  (table) => ({
+    keyIdx: uniqueIndex("rate_limit_key_idx").on(table.key),
+  })
+);
+
