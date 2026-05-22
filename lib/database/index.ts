@@ -2,9 +2,14 @@ import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import * as schema from "./schema";
 
-// Ensure this environment variable is set in the consumer apps
-const url = process.env.DATABASE_URL || "file:lib/database/local.db";
-const authToken = process.env.DATABASE_AUTH_TOKEN;
+const isRemoteSync = process.env.REMOTE_SYNC_ENABLED === "true";
+const url = isRemoteSync
+  ? (process.env.REMOTE_SYNC_URL || process.env.DATABASE_URL || "file:lib/database/local.db")
+  : (process.env.DATABASE_URL || "file:lib/database/local.db");
+
+const authToken = isRemoteSync
+  ? (process.env.REMOTE_SYNC_TOKEN || process.env.DATABASE_AUTH_TOKEN)
+  : process.env.DATABASE_AUTH_TOKEN;
 
 const client = createClient({
   url,

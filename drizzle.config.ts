@@ -1,6 +1,14 @@
 import type { Config } from "drizzle-kit";
 
-const url = process.env.DATABASE_URL || "file:lib/database/local.db";
+const isRemoteSync = process.env.REMOTE_SYNC_ENABLED === "true";
+const url = isRemoteSync
+  ? (process.env.REMOTE_SYNC_URL || process.env.DATABASE_URL || "file:lib/database/local.db")
+  : (process.env.DATABASE_URL || "file:lib/database/local.db");
+
+const authToken = isRemoteSync
+  ? (process.env.REMOTE_SYNC_TOKEN || process.env.DATABASE_AUTH_TOKEN)
+  : process.env.DATABASE_AUTH_TOKEN;
+
 const isRemote = url.startsWith("libsql://") || url.startsWith("https://");
 
 const config = isRemote
@@ -10,7 +18,7 @@ const config = isRemote
       dialect: "turso",
       dbCredentials: {
         url,
-        authToken: process.env.DATABASE_AUTH_TOKEN,
+        authToken,
       },
     } satisfies Config)
   : ({

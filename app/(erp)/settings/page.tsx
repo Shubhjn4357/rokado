@@ -308,7 +308,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen p-4">
       <div className="mb-6 flex items-center justify-between">
-        <Link href="/(erp)/dashboard">
+        <Link href="/dashboard">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="w-4 h-4" />
           </Button>
