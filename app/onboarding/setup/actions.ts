@@ -1,8 +1,8 @@
 "use server";
 
-import { db, companies, ledgers, users, and, eq } from "@/lib/database";
+import { db, companies, ledgers, users, companyMembers, and, eq } from "@/lib/database";
 import { revalidatePath } from "next/cache";
-import { hashPassword, setSession } from "@/lib/auth";
+import { hashPassword, setSession, getSession } from "@/lib/auth";
 
 export async function createCompanyAndLedgersAction(data: {
   businessName: string;
@@ -91,27 +91,70 @@ export async function createCompanyAndLedgersAction(data: {
       }
     }
 
-    // Create administrative user
-    const userId = crypto.randomUUID();
-    const finalPassword = password || "owner123"; // Default safety password if none provided
-    
-    await db.insert(users).values({
-      id: userId,
-      username: username.toLowerCase().trim(),
-      passwordHash: hashPassword(finalPassword),
-      name: ownerName,
-      role: "owner",
-      companyId: company.id,
-    });
+    // Create or update administrative user
+    const session = await getSession();
+    let finalUserId = session?.id;
 
-    // Set session cookie immediately so they are logged in
-    await setSession({
-      id: userId,
-      username: username.toLowerCase().trim(),
-      name: ownerName,
-      role: "owner",
-      companyId: company.id,
-    });
+    if (session) {
+      // User is already logged in, update their active companyId and role
+      await db
+        .update(users)
+        .set({
+          companyId: company.id,
+          role: "owner",
+          updatedAt: Date.now(),
+        })
+        .where(eq(users.id, session.id));
+
+      // Insert membership record
+      await db.insert(companyMembers).values({
+        id: crypto.randomUUID(),
+        companyId: company.id,
+        userId: session.id,
+        role: "owner",
+        createdAt: Date.now(),
+      });
+
+      // Update session cookie in place
+      await setSession({
+        id: session.id,
+        username: session.username,
+        name: ownerName || session.name,
+        role: "owner",
+        companyId: company.id,
+      });
+    } else {
+      // Create new administrative user
+      finalUserId = crypto.randomUUID();
+      const finalPassword = password || "owner123";
+      
+      await db.insert(users).values({
+        id: finalUserId,
+        username: username.toLowerCase().trim(),
+        passwordHash: hashPassword(finalPassword),
+        name: ownerName,
+        role: "owner",
+        companyId: company.id,
+      });
+
+      // Insert membership record
+      await db.insert(companyMembers).values({
+        id: crypto.randomUUID(),
+        companyId: company.id,
+        userId: finalUserId,
+        role: "owner",
+        createdAt: Date.now(),
+      });
+
+      // Set session cookie
+      await setSession({
+        id: finalUserId,
+        username: username.toLowerCase().trim(),
+        name: ownerName,
+        role: "owner",
+        companyId: company.id,
+      });
+    }
 
     revalidatePath("/");
     return { success: true, companyId };
@@ -158,4 +201,13 @@ function getDefaultLedgers(companyId: string, businessType: string) {
   }
 
   return ledgersData;
+}
+
+export async function getCurrentUserAction() {
+  try {
+    const session = await getSession();
+    return session;
+  } catch (error) {
+    return null;
+  }
 }

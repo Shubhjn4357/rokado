@@ -2,7 +2,8 @@
 
 import {
   Search, Moon, Sun, Keyboard, ChevronDown, Menu,
-  User, LogOut, ShieldAlert, RefreshCw, CloudOff, Cloud
+  User, LogOut, ShieldAlert, RefreshCw, CloudOff, Cloud,
+  Building2, Plus, Settings2, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
@@ -18,6 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getUserCompaniesAction, switchActiveCompanyAction } from "@/app/(erp)/organization/actions";
+import Link from "next/link";
 
 export function TopBar() {
   const { theme, setTheme } = useTheme();
@@ -25,8 +28,16 @@ export function TopBar() {
   const { user, logout, role, name } = useAuth();
   const { isOnline, isSyncing, pendingCount, syncNow } = useOfflineSync();
 
+  const [companiesList, setCompaniesList] = useState<any[]>([]);
+  const [switching, setSwitching] = useState(false);
+
   useEffect(() => {
     setMounted(true);
+    async function loadCompanies() {
+      const list = await getUserCompaniesAction();
+      setCompaniesList(list);
+    }
+    loadCompanies();
   }, []);
 
   return (
@@ -43,10 +54,72 @@ export function TopBar() {
           <Menu className="w-4 h-4" />
         </Button>
 
-        <div className="flex flex-col leading-none">
-          <span className="font-black text-foreground text-xs tracking-tight">Shree Saree House</span>
-          <span className="text-[9px] text-muted-foreground font-medium mt-0.5">FY 2026–27</span>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-muted/30 hover:bg-muted/80 text-foreground cursor-pointer transition-all duration-200 group outline-none select-none">
+              <Building2 className="w-3.5 h-3.5 text-accent shrink-0 group-hover:scale-105 transition-transform" />
+              <div className="flex flex-col items-start leading-none">
+                <span className="font-black text-foreground text-xs tracking-tight truncate max-w-[120px]">
+                  {companiesList.find(c => c.id === user?.companyId)?.name || "Shree Saree House"}
+                </span>
+                <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 uppercase tracking-wider">
+                  {companiesList.find(c => c.id === user?.companyId)?.role || role || "Owner"}
+                </span>
+              </div>
+              <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56 rounded-xl border border-border bg-surface-elevated backdrop-blur-2xl shadow-(--shadow-elevated) p-1 font-sans text-xs">
+            <DropdownMenuLabel className="px-3 py-2 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
+              Switch Organization
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator className="bg-border" />
+            <div className="max-h-48 overflow-y-auto">
+              {companiesList.map((company) => (
+                <DropdownMenuItem
+                  key={company.id}
+                  onClick={async () => {
+                    setSwitching(true);
+                    const res = await switchActiveCompanyAction(company.id);
+                    if (res.success) {
+                      window.location.reload();
+                    } else {
+                      setSwitching(false);
+                      alert(res.error || "Failed to switch organization");
+                    }
+                  }}
+                  disabled={switching}
+                  className={`px-3 py-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between text-foreground ${
+                    company.id === user?.companyId ? "bg-accent/10 font-bold" : "hover:bg-muted"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Building2 className={`w-3.5 h-3.5 ${company.id === user?.companyId ? "text-accent" : "text-muted-foreground"}`} />
+                    <span className="truncate max-w-[120px]">{company.name}</span>
+                  </div>
+                  {company.id === user?.companyId ? (
+                    <Check className="w-3.5 h-3.5 text-accent" />
+                  ) : (
+                    <span className="text-[8px] text-muted-foreground uppercase font-bold">{company.role}</span>
+                  )}
+                </DropdownMenuItem>
+              ))}
+            </div>
+            <DropdownMenuSeparator className="bg-border" />
+            <Link href="/onboarding" className="w-full">
+              <DropdownMenuItem className="px-3 py-2 hover:bg-muted rounded-lg cursor-pointer transition-colors flex items-center gap-2 text-foreground">
+                <Plus className="w-3.5 h-3.5 text-credit" />
+                <span className="font-bold text-credit">New Organization</span>
+              </DropdownMenuItem>
+            </Link>
+            <Link href="/settings?tab=organization" className="w-full">
+              <DropdownMenuItem className="px-3 py-2 hover:bg-muted rounded-lg cursor-pointer transition-colors flex items-center gap-2 text-foreground">
+                <Settings2 className="w-3.5 h-3.5 text-muted-foreground" />
+                <span>Invite Members</span>
+              </DropdownMenuItem>
+            </Link>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Centre: search trigger — slim pill */}
@@ -91,7 +164,7 @@ export function TopBar() {
           size="icon"
           title="Keyboard shortcuts"
           onClick={() => window.dispatchEvent(new CustomEvent("erp:toggle-shortcuts-sidebar"))}
-          className="w-8 h-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+          className="hidden lg:inline-flex w-8 h-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
         >
           <Keyboard className="w-3.5 h-3.5" />
         </Button>
@@ -136,14 +209,18 @@ export function TopBar() {
                 <div className="text-[9px] text-accent font-bold uppercase tracking-widest mt-0.5">{role}</div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator className="bg-border" />
-              <DropdownMenuItem className="px-3 py-2 hover:bg-muted rounded-lg cursor-pointer transition-colors flex items-center gap-2 text-foreground">
-                <User className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>My Profile</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="px-3 py-2 hover:bg-muted rounded-lg cursor-pointer transition-colors flex items-center gap-2 text-foreground">
-                <ShieldAlert className="w-3.5 h-3.5 text-muted-foreground" />
-                <span>Security</span>
-              </DropdownMenuItem>
+              <Link href="/settings?tab=profile" className="w-full">
+                <DropdownMenuItem className="px-3 py-2 hover:bg-muted rounded-lg cursor-pointer transition-colors flex items-center gap-2 text-foreground">
+                  <User className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>My Profile</span>
+                </DropdownMenuItem>
+              </Link>
+              <Link href="/settings?tab=security" className="w-full">
+                <DropdownMenuItem className="px-3 py-2 hover:bg-muted rounded-lg cursor-pointer transition-colors flex items-center gap-2 text-foreground">
+                  <ShieldAlert className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span>Security</span>
+                </DropdownMenuItem>
+              </Link>
               <DropdownMenuSeparator className="bg-border" />
               <DropdownMenuItem
                 onClick={() => logout()}

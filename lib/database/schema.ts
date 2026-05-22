@@ -224,6 +224,21 @@ export const users = sqliteTable(
   })
 );
 
+export const companyMembers = sqliteTable(
+  "company_members",
+  {
+    id: text("id").primaryKey(),
+    companyId: text("company_id").notNull().references(() => companies.id),
+    userId: text("user_id").notNull().references(() => users.id),
+    role: text("role").notNull().default("accountant"), // "owner" | "accountant" | "auditor"
+    createdAt: integer("created_at").notNull().$defaultFn(() => Date.now()),
+  },
+  (table) => ({
+    compUserIdx: uniqueIndex("comp_user_idx").on(table.companyId, table.userId),
+  })
+);
+
+
 // ─── Rate Limiter ────────────────────────────────────────────────────────────
 export const rateLimits = sqliteTable(
   "rate_limits",

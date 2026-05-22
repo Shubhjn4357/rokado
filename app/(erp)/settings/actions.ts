@@ -1,18 +1,20 @@
 "use server";
 
 import { db, companies, eq } from "@/lib/database";
+import { getSession } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import * as fs from "fs";
 import * as path from "path";
 
 const SETTINGS_FILE_PATH = path.join(process.cwd(), "lib", "database", "settings.json");
 
-// Helper to read JSON settings
-function readJsonSettings() {
+// Helper to read JSON settings for a specific company
+function readJsonSettings(companyId: string) {
   try {
     if (fs.existsSync(SETTINGS_FILE_PATH)) {
       const data = fs.readFileSync(SETTINGS_FILE_PATH, "utf-8");
-      return JSON.parse(data);
+      const allSettings = JSON.parse(data);
+      return allSettings[companyId] || {};
     }
   } catch (err) {
     console.error("Failed to read settings.json:", err);
@@ -20,16 +22,25 @@ function readJsonSettings() {
   return {};
 }
 
-// Helper to write JSON settings
-function writeJsonSettings(settings: any) {
+// Helper to write JSON settings for a specific company
+function writeJsonSettings(companyId: string, settings: any) {
   try {
     const dir = path.dirname(SETTINGS_FILE_PATH);
     if (!fs.existsSync(dir)) {
       fs.mkdirSync(dir, { recursive: true });
     }
-    const current = readJsonSettings();
-    const updated = { ...current, ...settings };
-    fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(updated, null, 2), "utf-8");
+    let allSettings: any = {};
+    if (fs.existsSync(SETTINGS_FILE_PATH)) {
+      try {
+        const data = fs.readFileSync(SETTINGS_FILE_PATH, "utf-8");
+        allSettings = JSON.parse(data);
+      } catch (e) {
+        allSettings = {};
+      }
+    }
+    const current = allSettings[companyId] || {};
+    allSettings[companyId] = { ...current, ...settings };
+    fs.writeFileSync(SETTINGS_FILE_PATH, JSON.stringify(allSettings, null, 2), "utf-8");
     return true;
   } catch (err) {
     console.error("Failed to write settings.json:", err);
@@ -39,17 +50,23 @@ function writeJsonSettings(settings: any) {
 
 export async function getSettings() {
   try {
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return null;
+    }
+    const companyId = session.companyId;
+
     // 1. Get Company from SQLite database
     const company = await db.query.companies.findFirst({
-      where: eq(companies.id as any, "company_1"),
+      where: eq(companies.id as any, companyId),
     });
 
     // 2. Get JSON settings (financial, tax, notifications)
-    const jsonSettings = readJsonSettings();
+    const jsonSettings = readJsonSettings(companyId);
 
     return {
       companyInfo: {
-        name: company?.name ?? "Shree Saree House",
+        name: company?.name ?? "My Organization",
         gstin: company?.gstin ?? "",
         pan: company?.pan ?? "",
         address: company?.address ?? "",
@@ -99,6 +116,12 @@ export async function saveCompanySettings(data: {
   website: string;
 }) {
   try {
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated" };
+    }
+    const companyId = session.companyId;
+
     // 1. Update companies table in SQLite
     await db
       .update(companies)
@@ -114,10 +137,10 @@ export async function saveCompanySettings(data: {
         email: data.email,
         updatedAt: Date.now(),
       })
-      .where(eq(companies.id as any, "company_1"));
+      .where(eq(companies.id as any, companyId));
 
     // 2. Persist website in jsonSettings
-    writeJsonSettings({
+    writeJsonSettings(companyId, {
       companyInfo: {
         website: data.website,
       },
@@ -138,7 +161,11 @@ export async function saveFinancialSettings(data: {
   numberFormat: string;
 }) {
   try {
-    writeJsonSettings({
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated" };
+    }
+    writeJsonSettings(session.companyId, {
       financialSettings: data,
     });
     revalidatePath("/settings");
@@ -156,7 +183,11 @@ export async function saveTaxSettings(data: {
   defaultTDSRate: number;
 }) {
   try {
-    writeJsonSettings({
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated" };
+    }
+    writeJsonSettings(session.companyId, {
       taxSettings: data,
     });
     revalidatePath("/settings");
@@ -175,7 +206,11 @@ export async function saveNotificationSettings(data: {
   backupReminders: boolean;
 }) {
   try {
-    writeJsonSettings({
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated" };
+    }
+    writeJsonSettings(session.companyId, {
       notificationSettings: data,
     });
     revalidatePath("/settings");

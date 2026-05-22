@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ import {
   Users
 } from "lucide-react";
 import { formatCurrency } from "@/lib/types";
-import { createCompanyAndLedgersAction } from "./setup/actions";
+import { createCompanyAndLedgersAction, getCurrentUserAction } from "./setup/actions";
 
 type FlowState = "welcome" | "business_selector" | "setup_wizard" | "migrate";
 
@@ -55,6 +55,24 @@ export default function OnboardingPage() {
     username: "",
     password: "",
   });
+
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      const user = await getCurrentUserAction();
+      if (user) {
+        setCurrentUser(user);
+        setFormData(prev => ({
+          ...prev,
+          ownerName: user.name,
+          username: user.username,
+          password: "logged-in-user-bypass-password", // passes client validations
+        }));
+      }
+    }
+    loadUser();
+  }, []);
 
   const [showPassword, setShowPassword] = useState(false);
 
@@ -84,13 +102,15 @@ export default function OnboardingPage() {
           setError("Administrator Name is required.");
           return;
         }
-        if (!formData.username.trim()) {
-          setError("Username is required.");
-          return;
-        }
-        if (!formData.password.trim() || formData.password.length < 6) {
-          setError("Password must be at least 6 characters.");
-          return;
+        if (!currentUser) {
+          if (!formData.username.trim()) {
+            setError("Username is required.");
+            return;
+          }
+          if (!formData.password.trim() || formData.password.length < 6) {
+            setError("Password must be at least 6 characters.");
+            return;
+          }
         }
       }
       setStep(prev => Math.min(5, prev + 1));
@@ -435,55 +455,69 @@ export default function OnboardingPage() {
                   <KeyRound className="w-5 h-5 flex-shrink-0 mt-0.5" />
                   <div>
                     <strong className="block font-bold text-foreground">Tally-Vault Security Controls</strong>
-                    <span className="text-muted-foreground">Next-gen cloud-local hybrid ERP uses encrypted access passwords. Setup the primary administrative Owner account below.</span>
+                    <span className="text-muted-foreground">
+                      {currentUser 
+                        ? "You are logged in. The new organization will be associated with your active user account." 
+                        : "Next-gen cloud-local hybrid ERP uses encrypted access passwords. Setup the primary administrative Owner account below."}
+                    </span>
                   </div>
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="ownerName" className="text-foreground/75 font-semibold text-xs">Full Name *</Label>
-                  <Input
-                    id="ownerName"
-                    required
-                    placeholder="Enter owner's real name"
-                    value={formData.ownerName}
-                    onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
-                    className="border-input bg-input text-foreground rounded-xl text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="username" className="text-foreground/75 font-semibold text-xs">Owner Username *</Label>
-                  <Input
-                    id="username"
-                    required
-                    placeholder="Username (e.g. owner)"
-                    value={formData.username}
-                    onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
-                    className="border-input bg-input text-foreground rounded-xl text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="password" className="text-foreground/75 font-semibold text-xs">Password *</Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      required
-                      placeholder="•••••••• (Min 6 chars)"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="border-input bg-input text-foreground rounded-xl text-xs pr-10"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                {currentUser ? (
+                  <div className="surface-inset p-4 rounded-xl space-y-2">
+                    <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Logged In As</div>
+                    <div className="text-sm font-black text-foreground">{currentUser.name}</div>
+                    <div className="text-[10px] text-accent font-bold">@{currentUser.username} (Owner role will be assigned)</div>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="ownerName" className="text-foreground/75 font-semibold text-xs">Full Name *</Label>
+                      <Input
+                        id="ownerName"
+                        required
+                        placeholder="Enter owner's real name"
+                        value={formData.ownerName}
+                        onChange={(e) => setFormData({ ...formData, ownerName: e.target.value })}
+                        className="border-input bg-input text-foreground rounded-xl text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="username" className="text-foreground/75 font-semibold text-xs">Owner Username *</Label>
+                      <Input
+                        id="username"
+                        required
+                        placeholder="Username (e.g. owner)"
+                        value={formData.username}
+                        onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase() })}
+                        className="border-input bg-input text-foreground rounded-xl text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="password" className="text-foreground/75 font-semibold text-xs">Password *</Label>
+                      <div className="relative">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          required
+                          placeholder="•••••••• (Min 6 chars)"
+                          value={formData.password}
+                          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                          className="border-input bg-input text-foreground rounded-xl text-xs pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

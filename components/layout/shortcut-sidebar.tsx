@@ -53,7 +53,7 @@ export function ShortcutSidebar() {
   return (
     <div
       className={cn(
-        "relative h-screen border-l border-border/80 bg-card/60 dark:bg-card/30 backdrop-blur-3xl shrink-0 transition-all duration-300 ease-in-out flex flex-col font-sans select-none z-40",
+        "relative h-screen border-l border-border/80 bg-card/60 dark:bg-card/30 backdrop-blur-3xl shrink-0 transition-all duration-300 ease-in-out flex flex-col font-sans select-none z-40 lg:flex hidden",
         isOpen ? "w-64" : "w-12"
       )}
     >

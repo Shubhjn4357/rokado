@@ -31,5 +31,6 @@ export {
   syncQueue,
   users,
   rateLimits,
+  companyMembers,
 } from "./schema";
 export * from "drizzle-orm";
