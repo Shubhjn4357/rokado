@@ -1,7 +1,8 @@
 "use server";
 
-import { db, companies, ledgers, and, eq } from "@/lib/database";
+import { db, companies, ledgers, users, and, eq } from "@/lib/database";
 import { revalidatePath } from "next/cache";
+import { hashPassword, setSession } from "@/lib/auth";
 
 export async function createCompanyAndLedgersAction(data: {
   businessName: string;
@@ -15,6 +16,9 @@ export async function createCompanyAndLedgersAction(data: {
   businessType: string;
   cashInHand: number;
   bankBalance: number;
+  ownerName: string;
+  username: string;
+  password?: string; // Optional if migrating, but required for new setup
 }) {
   try {
     const {
@@ -29,6 +33,9 @@ export async function createCompanyAndLedgersAction(data: {
       businessType,
       cashInHand,
       bankBalance,
+      ownerName,
+      username,
+      password,
     } = data;
 
     const companyId = crypto.randomUUID();
@@ -83,6 +90,28 @@ export async function createCompanyAndLedgersAction(data: {
           );
       }
     }
+
+    // Create administrative user
+    const userId = crypto.randomUUID();
+    const finalPassword = password || "owner123"; // Default safety password if none provided
+    
+    await db.insert(users).values({
+      id: userId,
+      username: username.toLowerCase().trim(),
+      passwordHash: hashPassword(finalPassword),
+      name: ownerName,
+      role: "owner",
+      companyId: company.id,
+    });
+
+    // Set session cookie immediately so they are logged in
+    await setSession({
+      id: userId,
+      username: username.toLowerCase().trim(),
+      name: ownerName,
+      role: "owner",
+      companyId: company.id,
+    });
 
     revalidatePath("/");
     return { success: true, companyId };

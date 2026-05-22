@@ -3,7 +3,9 @@ import {
   companies,
   ledgers,
   inventoryItems,
+  users,
 } from "./schema";
+import { hashPassword } from "../auth";
 
 async function main() {
   console.log("🌱 Seeding ERP database with real data...");
@@ -218,10 +220,43 @@ async function main() {
     await db.insert(inventoryItems).values(item).onConflictDoNothing();
   }
 
+  // ── Users ──────────────────────────────────────────────────────────────────
+  const usersData = [
+    {
+      id: "usr_owner",
+      username: "owner",
+      passwordHash: hashPassword("owner123"),
+      name: "Shubh Owner",
+      role: "owner" as const,
+      companyId: "company_1",
+    },
+    {
+      id: "usr_accountant",
+      username: "accountant",
+      passwordHash: hashPassword("accountant123"),
+      name: "Ramesh Kumar",
+      role: "accountant" as const,
+      companyId: "company_1",
+    },
+    {
+      id: "usr_auditor",
+      username: "auditor",
+      passwordHash: hashPassword("auditor123"),
+      name: "CA Verma",
+      role: "auditor" as const,
+      companyId: "company_1",
+    },
+  ];
+
+  for (const user of usersData) {
+    await db.insert(users).values(user).onConflictDoNothing();
+  }
+
   console.log("✅ Seeding complete!");
   console.log(`   ✓ 1 company`);
   console.log(`   ✓ ${ledgerData.length} ledgers`);
   console.log(`   ✓ ${inventoryData.length} inventory items`);
+  console.log(`   ✓ ${usersData.length} users`);
 }
 
 main().catch((e) => {

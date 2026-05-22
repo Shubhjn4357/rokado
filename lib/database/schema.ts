@@ -205,3 +205,22 @@ export const syncQueue = sqliteTable(
     statusIdx: index("sync_status_idx").on(table.status),
   })
 );
+
+// ─── Users & Auth ────────────────────────────────────────────────────────────
+export const users = sqliteTable(
+  "users",
+  {
+    id: text("id").primaryKey(),
+    username: text("username").notNull(),
+    passwordHash: text("password_hash").notNull(),
+    name: text("name").notNull(),
+    role: text("role").notNull().default("accountant"), // "owner" | "accountant" | "auditor"
+    companyId: text("company_id").references(() => companies.id),
+    createdAt: integer("created_at").notNull().$defaultFn(() => Date.now()),
+    updatedAt: integer("updated_at").notNull().$defaultFn(() => Date.now()),
+  },
+  (table) => ({
+    usernameIdx: uniqueIndex("user_username_idx").on(table.username),
+  })
+);
+

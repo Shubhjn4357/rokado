@@ -19,10 +19,11 @@ import {
   Database,
   Users,
   TrendingUp,
-  FolderOpen
+  FolderOpen,
+  Tv
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 type NavItem = {
   title: string;
@@ -40,6 +41,11 @@ const NAV_GROUPS = [
         title: "Enterprise Board",
         href: "/dashboard",
         icon: LayoutDashboard,
+      },
+      {
+        title: "Showroom TV Monitor",
+        href: "/dashboard/tv",
+        icon: Tv,
       }
     ]
   },
@@ -121,12 +127,12 @@ function NavItemComponent({ item, level = 0 }: { item: NavItem; level?: number }
   const pathname = usePathname();
   const [open, setOpen] = useState(() => {
     if (item.children) {
-      return item.children.some((child) => child.href && pathname.startsWith(child.href));
+      return item.children.some((child) => child.href && pathname?.startsWith(child.href));
     }
     return false;
   });
 
-  const isActive = item.href ? pathname === item.href || pathname.startsWith(item.href + "/") : false;
+  const isActive = item.href ? pathname === item.href || (pathname && pathname.startsWith(item.href + "/")) : false;
 
   if (item.children) {
     return (
@@ -181,48 +187,77 @@ function NavItemComponent({ item, level = 0 }: { item: NavItem; level?: number }
 }
 
 export function Sidebar() {
+  const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close sidebar on page change
+  useEffect(() => {
+    setIsOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleToggle = () => setIsOpen((prev) => !prev);
+    window.addEventListener("erp:toggle-sidebar", handleToggle);
+    return () => window.removeEventListener("erp:toggle-sidebar", handleToggle);
+  }, []);
+
   return (
-    <aside className="w-64 shrink-0 h-screen flex flex-col bg-[#090e18] border-r border-slate-900 overflow-hidden font-sans text-slate-200">
-      
-      {/* Premium Business-Class App Header */}
-      <div className="flex items-center gap-3 px-4 h-14 bg-[#05080f] border-b border-slate-900 shrink-0">
-        <div className="w-8 h-8 bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center rounded-xl shadow-lg shadow-blue-500/20 border border-blue-400/20">
-          <Database className="w-4 h-4 text-white" />
-        </div>
-        <div>
-          <div className="font-extrabold text-xs tracking-wider uppercase text-white leading-none">SHREE SAREE</div>
-          <div className="text-[9px] text-slate-400 font-bold tracking-tight mt-1.5 flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block"></span>
-            Enterprise ERP Suite
+    <>
+      {/* Mobile Backdrop overlay */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden cursor-pointer animate-in fade-in duration-200"
+        />
+      )}
+
+      <aside
+        className={cn(
+          "w-64 shrink-0 h-screen flex flex-col bg-[#090e18] border-r border-slate-900 overflow-hidden font-sans text-slate-200 transition-transform duration-300 lg:translate-x-0 lg:static fixed inset-y-0 left-0 z-50",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        
+        {/* Premium Business-Class App Header */}
+        <div className="flex items-center gap-3 px-4 h-14 bg-[#05080f] border-b border-slate-900 shrink-0">
+          <div className="w-8 h-8 bg-linear-to-tr from-blue-600 to-indigo-600 flex items-center justify-center rounded-xl shadow-lg shadow-blue-500/20 border border-blue-400/20">
+            <Database className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <div className="font-extrabold text-xs tracking-wider uppercase text-white leading-none">SHREE SAREE</div>
+            <div className="text-[9px] text-slate-400 font-bold tracking-tight mt-1.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping inline-block"></span>
+              Enterprise ERP Suite
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Nav groups grouped by classic accounting master layouts */}
-      <nav className="flex-1 overflow-y-auto p-3 space-y-4">
-        {NAV_GROUPS.map((group) => (
-          <div key={group.group} className="space-y-1.5">
-            <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-3 mb-2 select-none">
-              {group.group}
+        {/* Nav groups grouped by classic accounting master layouts */}
+        <nav className="flex-1 overflow-y-auto p-3 space-y-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.group} className="space-y-1.5">
+              <div className="text-[9px] font-black text-slate-500 uppercase tracking-widest px-3 mb-2 select-none">
+                {group.group}
+              </div>
+              <div className="space-y-1">
+                {group.items.map((item) => (
+                  <NavItemComponent key={item.title} item={item} />
+                ))}
+              </div>
             </div>
-            <div className="space-y-1">
-              {group.items.map((item) => (
-                <NavItemComponent key={item.title} item={item} />
-              ))}
-            </div>
-          </div>
-        ))}
-      </nav>
+          ))}
+        </nav>
 
-      {/* Modern Active System Footer */}
-      <div className="px-4 py-3.5 border-t border-slate-900 bg-[#05080f] shrink-0 text-[10px] text-slate-400 font-semibold select-none flex justify-between items-center">
-        <span className="flex items-center gap-1">
-          Fiscal Year: <strong className="text-white font-bold">2026–27</strong>
-        </span>
-        <span className="text-emerald-400 font-bold uppercase tracking-wider text-[9px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-          ● Secure
-        </span>
-      </div>
-    </aside>
+        {/* Modern Active System Footer */}
+        <div className="px-4 py-3.5 border-t border-slate-900 bg-[#05080f] shrink-0 text-[10px] text-slate-400 font-semibold select-none flex justify-between items-center">
+          <span className="flex items-center gap-1">
+            Fiscal Year: <strong className="text-white font-bold">2026–27</strong>
+          </span>
+          <span className="text-emerald-400 font-bold uppercase tracking-wider text-[9px] bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+            ● Secure
+          </span>
+        </div>
+      </aside>
+    </>
   );
 }

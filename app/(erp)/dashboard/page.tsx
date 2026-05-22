@@ -1,20 +1,15 @@
+import { Suspense } from "react";
 import { db, ledgers, vouchers, inventoryItems, eq, sum, count, and, gte } from "@/lib/database";
 import { DashboardClient } from "@/components/dashboard/dashboard-client";
-import { formatCurrency } from "@/lib/types";
+import { DashboardSkeleton } from "@/components/ui/skeletons";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Dashboard - Shree Saree House ERP" };
 
 async function getDashboardData() {
-  const now = Date.now();
   // Start of today
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
-  // Start of fiscal year (April 1)
-  const fy = new Date();
-  if (fy.getMonth() < 3) fy.setFullYear(fy.getFullYear() - 1);
-  fy.setMonth(3, 1);
-  fy.setHours(0, 0, 0, 0);
 
   const [
     totalDebtors,
@@ -23,7 +18,6 @@ async function getDashboardData() {
     bankBalance,
     todaySales,
     totalVouchers,
-    lowStockItems,
   ] = await Promise.all([
     // Debtors total
     db
@@ -62,12 +56,6 @@ async function getDashboardData() {
 
     // Total vouchers
     db.select({ count: count() }).from(vouchers),
-
-    // Low stock items (below reorder level)
-    db
-      .select()
-      .from(inventoryItems)
-      .limit(5),
   ]);
 
   // All ledger balances for receivables/payables
@@ -103,7 +91,15 @@ async function getDashboardData() {
   };
 }
 
-export default async function DashboardPage() {
+async function DashboardContent() {
   const data = await getDashboardData();
   return <DashboardClient data={data} />;
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<DashboardSkeleton />}>
+      <DashboardContent />
+    </Suspense>
+  );
 }

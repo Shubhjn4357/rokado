@@ -24,5 +24,6 @@ export {
   stockMovements,
   auditLog,
   syncQueue,
+  users,
 } from "./schema";
 export * from "drizzle-orm";

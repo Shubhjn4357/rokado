@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,201 @@ import {
   MapPin,
   RefreshCw,
   CheckCircle2,
-  ArrowLeft
+  ArrowLeft,
+  Sparkles,
+  Layers,
+  Download,
+  AlertTriangle,
+  Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { getSettings, saveCompanySettings, saveFinancialSettings, saveTaxSettings, saveNotificationSettings } from "./actions";
 import { toast } from "@/components/ui/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { generateRandomBillAction } from "./seeder-actions";
+import { exportTallyXmlAction, exportGstr1JsonAction } from "./export-actions";
+
+function SeederConsole() {
+  const [targetAmount, setTargetAmount] = useState<number>(25000);
+  const [voucherType, setVoucherType] = useState<"sales" | "purchase">("sales");
+  const [gstPercent, setGstPercent] = useState<number>(18);
+  const [isPending, setIsPending] = useState(false);
+  const [seedResult, setSeedResult] = useState<any>(null);
+  const mountedRef = useRef(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const triggerSeed = async () => {
+    setIsPending(true);
+    setSeedResult(null);
+    try {
+      const res = await generateRandomBillAction({
+        targetAmount,
+        voucherType,
+        gstPercent,
+      });
+
+      if (mountedRef.current) {
+        if (res.success) {
+          setSeedResult(res);
+          toast({
+            title: "Random Bill Seeded!",
+            description: `Generated ₹${targetAmount.toLocaleString("en-IN")} bill successfully!`,
+          });
+        } else {
+          toast({
+            title: "Seeding Failed",
+            description: res.error || "Unknown error",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (err) {
+      if (mountedRef.current) {
+        toast({
+          title: "Error Seeding",
+          description: "Something went wrong during execution.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      if (mountedRef.current) {
+        setIsPending(false);
+      }
+    }
+  };
+
+  return (
+    <div className="space-y-6 font-sans">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-3 bg-muted/20 p-5 rounded-2xl border border-border/60">
+        <div>
+          <Label htmlFor="seed-amount" className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
+            Target Invoice Amount (₹)
+          </Label>
+          <Input
+            id="seed-amount"
+            type="number"
+            min="100"
+            max="500000"
+            value={targetAmount}
+            onChange={(e) => setTargetAmount(Math.max(1, parseFloat(e.target.value) || 0))}
+            className="h-10 text-xs font-bold bg-background/55 border-border rounded-lg"
+          />
+          <span className="text-[10px] text-muted-foreground mt-1.5 block">
+            Exact double-entry lines will resolve to this sum.
+          </span>
+        </div>
+
+        <div>
+          <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
+            Transaction Voucher Type
+          </Label>
+          <Select
+            onValueChange={(val: any) => setVoucherType(val)}
+            value={voucherType}
+          >
+            <SelectTrigger className="w-full h-10 bg-background border-border rounded-lg text-xs font-bold">
+              <SelectValue placeholder="Select Type" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="sales" className="text-xs font-semibold">Sales Invoice (F8)</SelectItem>
+              <SelectItem value="purchase" className="text-xs font-semibold">Purchase Voucher (F9)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
+            GST Duties Rate (%)
+          </Label>
+          <Select
+            onValueChange={(val: any) => setGstPercent(parseInt(val))}
+            value={String(gstPercent)}
+          >
+            <SelectTrigger className="w-full h-10 bg-background border-border rounded-lg text-xs font-bold">
+              <SelectValue placeholder="GST Bracket" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="0" className="text-xs font-semibold">0% (Exempt)</SelectItem>
+              <SelectItem value="5" className="text-xs font-semibold">5% (Handloom Sarees)</SelectItem>
+              <SelectItem value="12" className="text-xs font-semibold">12% (Standard Sarees)</SelectItem>
+              <SelectItem value="18" className="text-xs font-semibold">18% (Premium Fabrics)</SelectItem>
+              <SelectItem value="28" className="text-xs font-semibold">28% (Luxury Collection)</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex justify-end border-t border-border/30 pt-4">
+        <Button
+          type="button"
+          onClick={triggerSeed}
+          disabled={isPending || targetAmount <= 0}
+          className="rounded-xl h-10 px-6 font-bold text-xs bg-amber-500 hover:bg-amber-600 shadow-md flex items-center gap-2 cursor-pointer text-white border-none"
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Compiling Balanced Ledger Entries...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-4 h-4 text-white animate-pulse" />
+              One-Click Generate Random Bill
+            </>
+          )}
+        </Button>
+      </div>
+
+      {seedResult && (
+        <Card className="border border-emerald-500/25 bg-emerald-500/5 rounded-2xl overflow-hidden p-5 space-y-4">
+          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
+            <CheckCircle2 className="w-5 h-5 shrink-0" />
+            <span>Success! Transaction Seeded Dynamically into SQLite</span>
+          </div>
+
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 text-xs font-bold font-mono">
+            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
+              <div className="text-muted-foreground text-[10px] uppercase">Party Name (Generated Customer)</div>
+              <div className="text-primary text-sm font-extrabold">{seedResult.partyName}</div>
+            </div>
+
+            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
+              <div className="text-muted-foreground text-[10px] uppercase">Seeded Item Allocation</div>
+              <div className="text-primary text-sm font-extrabold">{seedResult.itemName} (Qty: {seedResult.quantity})</div>
+            </div>
+
+            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
+              <div className="text-muted-foreground text-[10px] uppercase">Taxable Subtotal</div>
+              <div className="text-primary text-sm">₹{seedResult.subtotal.toFixed(2)}</div>
+            </div>
+
+            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
+              <div className="text-muted-foreground text-[10px] uppercase">Duties &amp; Taxes Added ({gstPercent}%)</div>
+              <div className="text-accent text-sm">₹{seedResult.taxAmount.toFixed(2)}</div>
+            </div>
+          </div>
+
+          <div className="text-center font-bold text-xs text-muted-foreground uppercase pt-2 select-none border-t border-border/30">
+            Balanced Double-Entry Audit Posted: <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{targetAmount.toFixed(2)}</span>
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("company");
@@ -62,11 +252,14 @@ export default function SettingsPage() {
     backupReminders: true,
   });
 
+  const mountedRef = useRef(true);
+
   // Load settings on mount
   useEffect(() => {
+    mountedRef.current = true;
     async function loadSettings() {
       const settings = await getSettings();
-      if (settings) {
+      if (mountedRef.current && settings) {
         setCompanyInfo(settings.companyInfo);
         setFinancialSettings(settings.financialSettings);
         setTaxSettings(settings.taxSettings);
@@ -74,6 +267,9 @@ export default function SettingsPage() {
       }
     }
     loadSettings();
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const handleSave = async (tab: string) => {
@@ -92,6 +288,8 @@ export default function SettingsPage() {
         res = await saveNotificationSettings(notificationSettings);
         break;
     }
+
+    if (!mountedRef.current) return;
 
     if (res?.success) {
       toast({
@@ -119,22 +317,30 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="company" onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-1">
-          <TabsTrigger value="company">
-            <Building2 className="mr-3 h-4 w-4" />
-            Company Information
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 gap-2 bg-muted/60 p-1.5 rounded-xl border border-border/40 h-auto">
+          <TabsTrigger value="company" className="cursor-pointer text-xs font-bold py-2 rounded-lg">
+            <Building2 className="mr-2 h-4 w-4 text-blue-500" />
+            Company
           </TabsTrigger>
-          <TabsTrigger value="financial">
-            <DollarSign className="mr-3 h-4 w-4" />
-            Financial Settings
+          <TabsTrigger value="financial" className="cursor-pointer text-xs font-bold py-2 rounded-lg">
+            <DollarSign className="mr-2 h-4 w-4 text-emerald-500" />
+            Financials
           </TabsTrigger>
-          <TabsTrigger value="tax">
-            <Banknote className="mr-3 h-4 w-4" />
-            Tax Configuration
+          <TabsTrigger value="tax" className="cursor-pointer text-xs font-bold py-2 rounded-lg">
+            <Banknote className="mr-2 h-4 w-4 text-purple-500" />
+            Taxation
           </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <MessageCircle className="mr-3 h-4 w-4" />
-            Notifications
+          <TabsTrigger value="notifications" className="cursor-pointer text-xs font-bold py-2 rounded-lg">
+            <MessageCircle className="mr-2 h-4 w-4 text-pink-500" />
+            Alerts
+          </TabsTrigger>
+          <TabsTrigger value="ca-portal" className="cursor-pointer text-xs font-bold py-2 rounded-lg">
+            <Layers className="mr-2 h-4 w-4 text-indigo-500" />
+            CA Export
+          </TabsTrigger>
+          <TabsTrigger value="random-seeder" className="cursor-pointer text-xs font-bold py-2 rounded-lg">
+            <Sparkles className="mr-2 h-4 w-4 text-amber-500 animate-pulse" />
+            Random Seeder
           </TabsTrigger>
         </TabsList>
 
@@ -589,6 +795,114 @@ export default function SettingsPage() {
                   </Button>
                 </CardFooter>
               </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="ca-portal">
+          <Card className="w-full border-border/80 bg-card/65 dark:bg-card/45 backdrop-blur-2xl shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-indigo-500/5 via-transparent to-indigo-500/5 border-b border-border/60 py-5 px-6">
+              <CardTitle className="text-lg font-extrabold flex items-center gap-2 text-primary">
+                <Layers className="w-5 h-5 text-indigo-500" />
+                Chartered Accountant Collaboration Desk
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Generate and download balanced audit registers, tax records, and direct Tally ERP formats.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* TALLY EXPORTER */}
+                <div className="p-5 rounded-2xl border border-border/60 bg-muted/10 space-y-4 hover:border-indigo-500/35 transition-all duration-300">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-extrabold text-sm text-primary">Tally XML Ledger Exporter</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Export your entire Chart of Accounts structured to match Tally's schema for direct importing.
+                      </p>
+                    </div>
+                    <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-500/10 text-indigo-600 px-2 py-0.5 rounded shrink-0">
+                      XML FORMAT
+                    </span>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold border-border/80 hover:bg-indigo-500/10 hover:text-indigo-500 hover:border-indigo-500 transition-colors cursor-pointer"
+                    onClick={async () => {
+                      const res = await exportTallyXmlAction();
+                      if (res.success && res.content) {
+                        const blob = new Blob([res.content], { type: "text/xml" });
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(blob);
+                        link.download = res.filename;
+                        link.click();
+                        toast({ title: "Tally XML Exported", description: "Ledger XML file downloaded successfully!" });
+                      } else {
+                        toast({ title: "Export Error", description: res.error || "Unknown error", variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Tally XML ledgers
+                  </Button>
+                </div>
+
+                {/* GST EXPORTER */}
+                <div className="p-5 rounded-2xl border border-border/60 bg-muted/10 space-y-4 hover:border-indigo-500/35 transition-all duration-300">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-extrabold text-sm text-primary">GSTR-1 Sales Compliance Exporter</h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Consolidate GST transactions grouped by customers' GSTIN for quarterly tax filing preparation.
+                      </p>
+                    </div>
+                    <span className="text-[9px] uppercase tracking-wider font-extrabold bg-indigo-500/10 text-indigo-600 px-2 py-0.5 rounded shrink-0">
+                      JSON FILE
+                    </span>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold border-border/80 hover:bg-indigo-500/10 hover:text-indigo-500 hover:border-indigo-500 transition-colors cursor-pointer"
+                    onClick={async () => {
+                      const res = await exportGstr1JsonAction();
+                      if (res.success && res.content) {
+                        const blob = new Blob([res.content], { type: "application/json" });
+                        const link = document.createElement("a");
+                        link.href = URL.createObjectURL(blob);
+                        link.download = res.filename;
+                        link.click();
+                        toast({ title: "GSTR-1 JSON Generated", description: "B2B sales JSON package downloaded!" });
+                      } else {
+                        toast({ title: "Export Error", description: res.error || "Unknown error", variant: "destructive" });
+                      }
+                    }}
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Download Validated GSTR-1
+                  </Button>
+                </div>
+
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="random-seeder">
+          <Card className="w-full border-border/80 bg-card/65 dark:bg-card/45 backdrop-blur-2xl shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-amber-500/5 via-transparent to-amber-500/5 border-b border-border/60 py-5 px-6">
+              <CardTitle className="text-lg font-extrabold flex items-center gap-2 text-primary">
+                <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
+                Dynamic Demo Random Seeder Panel
+              </CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Generate highly realistic, balanced transactions on the fly to test accounting sheets, inventory triggers, and dashboard graphs.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+              <SeederConsole />
             </CardContent>
           </Card>
         </TabsContent>

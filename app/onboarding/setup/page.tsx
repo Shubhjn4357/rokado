@@ -88,6 +88,9 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
         businessType,
         cashInHand: formData.cashInHand,
         bankBalance: formData.bankBalance,
+        ownerName: "Owner",
+        username: "owner",
+        password: "owner123",
       });
 
       if (!result.success) {

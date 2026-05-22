@@ -1103,26 +1103,119 @@ export function VoucherForm({
 
         {/* DOUBLE ENTRY BALANCE TRACKER STATUS BAR */}
         {entryMode === "voucher" && (
-          <div className={cn(
-            "flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-xl gap-3 text-xs font-bold select-none transition-all",
-            isVoucherBalanced 
-              ? "border-emerald-500/25 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300"
-              : "border-amber-500/25 bg-amber-500/5 text-amber-700 dark:text-amber-300"
-          )}>
-            <div className="flex items-center gap-2">
-              {isVoucherBalanced ? (
-                <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              ) : (
-                <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 animate-bounce" />
+          <div className="relative mt-2">
+            <div
+              className={cn(
+                "group relative overflow-hidden rounded-2xl border p-4.5 transition-all duration-500 select-none shadow-xl",
+                isVoucherBalanced
+                  ? "border-emerald-500/30 bg-emerald-950/20 dark:bg-emerald-950/10 backdrop-blur-2xl text-emerald-800 dark:text-emerald-300 shadow-[0_0_25px_-5px_rgba(16,185,129,0.15)] dark:shadow-[0_0_25px_-5px_rgba(16,185,129,0.08)]"
+                  : "border-red-500/30 bg-red-950/20 dark:bg-red-950/10 backdrop-blur-2xl text-red-800 dark:text-red-300 shadow-[0_0_25px_-5px_rgba(239,68,68,0.15)] dark:shadow-[0_0_25px_-5px_rgba(239,68,68,0.08)]"
               )}
-              <span>
-                {isVoucherBalanced 
-                  ? "Double-entry books balance perfectly. Ready for posting." 
-                  : `Debit/Credit mismatch by ₹${voucherDifference.toFixed(2)}`}
-              </span>
-            </div>
-            <div className="font-mono opacity-85">
-              Mismatch Difference: ₹{voucherDifference.toFixed(2)}
+            >
+              {/* Backglow Orb Effect */}
+              <div
+                className={cn(
+                  "absolute -right-12 -top-12 w-32 h-32 rounded-full filter blur-[40px] opacity-25 dark:opacity-15 transition-colors duration-500 pointer-events-none",
+                  isVoucherBalanced ? "bg-emerald-500" : "bg-red-500"
+                )}
+              />
+
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
+                
+                {/* Left Side: Pulse Orb and Label */}
+                <div className="flex items-center gap-3.5 w-full md:w-auto">
+                  {/* Floating 3D Glowing Orb */}
+                  <div className="relative shrink-0 flex items-center justify-center">
+                    <div
+                      className={cn(
+                        "w-8 h-8 rounded-full flex items-center justify-center text-white font-extrabold shadow-md transform group-hover:scale-110 transition-transform duration-300",
+                        isVoucherBalanced
+                          ? "bg-linear-to-tr from-emerald-500 to-teal-400 shadow-emerald-500/35"
+                          : "bg-linear-to-tr from-red-500 to-rose-400 shadow-red-500/35 animate-pulse"
+                      )}
+                    >
+                      {isVoucherBalanced ? (
+                        <CheckCircle2 className="w-4 h-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
+                      ) : (
+                        <AlertTriangle className="w-4 h-4 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)]" />
+                      )}
+                    </div>
+                    {/* Ring Pulse animation around Orb */}
+                    <span
+                      className={cn(
+                        "absolute -inset-1 rounded-full animate-ping opacity-25 pointer-events-none",
+                        isVoucherBalanced ? "bg-emerald-500" : "bg-red-500"
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-[10px] font-black uppercase tracking-wider opacity-60">
+                      Ledger Verification Desk
+                    </span>
+                    <span className="text-xs md:text-sm font-black tracking-tight leading-tight">
+                      {isVoucherBalanced
+                        ? "Perfect Double-Entry Balance Achieved!"
+                        : `Voucher Out of Balance (Diff: ₹${voucherDifference.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right Side: Quick Math Visual Ledger Meter */}
+                <div className="flex items-center gap-4.5 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 border-border/50 pt-3 md:pt-0">
+                  <div className="flex items-center gap-4 text-right font-mono">
+                    <div>
+                      <span className="block text-[8px] font-black uppercase tracking-widest opacity-60">TOTAL DR</span>
+                      <span className="text-xs font-extrabold text-foreground">
+                        ₹{totalDebits.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                    <div className="h-6 w-[1px] bg-border/80 self-center" />
+                    <div>
+                      <span className="block text-[8px] font-black uppercase tracking-widest opacity-60">TOTAL CR</span>
+                      <span className="text-xs font-extrabold text-foreground">
+                        ₹{totalCredits.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Micro balance slide indicator */}
+                  <div className="hidden lg:block w-36 h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden relative border border-border/50 shadow-inner">
+                    <div
+                      className={cn(
+                        "h-full rounded-full transition-all duration-500",
+                        isVoucherBalanced 
+                          ? "w-full bg-emerald-500" 
+                          : "bg-red-500"
+                      )}
+                      style={{
+                        width: isVoucherBalanced 
+                          ? "100%" 
+                          : `${Math.max(10, Math.min(90, (totalDebits / (totalDebits + totalCredits || 1)) * 100))}%`
+                      }}
+                    />
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Collapsed breakdown panel (auto-expands on group hover) */}
+              <div className="h-0 opacity-0 overflow-hidden group-hover:h-auto group-hover:opacity-100 group-hover:mt-3.5 transition-all duration-300 border-t border-dashed border-border/60 pt-3 flex flex-col sm:flex-row justify-between gap-4 text-[10px] text-muted-foreground font-semibold">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                  <span>Lines: <strong className="text-foreground">{entries.filter(e => e.ledgerId).length} posted</strong></span>
+                  <span className="opacity-40">•</span>
+                  <span>Empty Lines: <strong className="text-foreground">{entries.filter(e => !e.ledgerId).length}</strong></span>
+                  <span className="opacity-40">•</span>
+                  <span>Rule: <span className="underline decoration-accent underline-offset-2">Debit Sum === Credit Sum</span></span>
+                </div>
+                <div>
+                  Status:{" "}
+                  <span className={cn("font-bold uppercase tracking-wider", isVoucherBalanced ? "text-emerald-500" : "text-red-500 animate-pulse")}>
+                    {isVoucherBalanced ? "Postable" : "Unbalanced"}
+                  </span>
+                </div>
+              </div>
+
             </div>
           </div>
         )}
