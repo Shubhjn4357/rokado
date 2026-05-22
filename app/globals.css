@@ -102,6 +102,13 @@
 @layer base {
   * {
     @apply border-border;
+    /* Hide scrollbar for Chrome, Safari and Opera */
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    /* Hide scrollbar for IE, Edge and Firefox */
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
   }
   body {
     @apply bg-background text-foreground antialiased font-sans text-xs selection:bg-accent/20;

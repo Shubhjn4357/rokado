@@ -126,9 +126,9 @@ export default function AuditPage() {
           <div className="flex items-center space-x-3">
             <Label className="block mb-2 font-medium">Entity Type</Label>
             <Select
-              value={entityType ?? ""}
+              value={entityType ?? "all"}
               onValueChange={(value) => {
-                setEntityType(value === "" ? null : value);
+                setEntityType(value === "all" ? null : value);
                 fetchAuditLog();
               }}
             >
@@ -136,7 +136,7 @@ export default function AuditPage() {
                 <SelectValue placeholder="All entity types" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All entity types</SelectItem>
+                <SelectItem value="all">All entity types</SelectItem>
                 <SelectItem value="companies">Companies</SelectItem>
                 <SelectItem value="ledgers">Ledgers</SelectItem>
                 <SelectItem value="vouchers">Vouchers</SelectItem>
@@ -148,9 +148,9 @@ export default function AuditPage() {
           <div className="flex items-center space-x-3">
             <Label className="block mb-2 font-medium">Action Type</Label>
             <Select
-              value={actionType ?? ""}
+              value={actionType ?? "all"}
               onValueChange={(value) => {
-                setActionType(value === "" ? null : value);
+                setActionType(value === "all" ? null : value);
                 fetchAuditLog();
               }}
             >
@@ -158,7 +158,7 @@ export default function AuditPage() {
                 <SelectValue placeholder="All actions" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">All actions</SelectItem>
+                <SelectItem value="all">All actions</SelectItem>
                 <SelectItem value="CREATE">Create</SelectItem>
                 <SelectItem value="UPDATE">Update</SelectItem>
                 <SelectItem value="DELETE">Delete</SelectItem>

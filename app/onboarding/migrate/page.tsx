@@ -10,7 +10,7 @@ export default function MigrationPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <MigrationWizard 
         onBack={() => router.push("/onboarding")} 
-        onNext={() => console.log("Next")}
+        onNext={() => {}}
         onSkip={() => router.push("/")}
       />
     </div>

@@ -17,7 +17,7 @@ export function WelcomeScreen() {
     return (
       <BusinessTypeSelector 
         onBack={() => setFlow("welcome")} 
-        onNext={() => console.log("Next")}
+        onNext={() => {}}
         selectedType={selectedType}
         onSelect={setSelectedType}
       />
@@ -28,7 +28,7 @@ export function WelcomeScreen() {
     return (
       <MigrationWizard 
         onBack={() => setFlow("welcome")} 
-        onNext={() => console.log("Next")}
+        onNext={() => {}}
         onSkip={() => setFlow("welcome")}
       />
     );
