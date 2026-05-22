@@ -90,71 +90,71 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 bg-[#030712] overflow-hidden">
+    <div className="min-h-screen relative flex items-center justify-center p-4 bg-transparent overflow-hidden">
       {/* Dynamic ambient background glows */}
-      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[60%] rounded-full bg-violet-600/10 blur-[120px] pointer-events-none" />
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[60%] rounded-full bg-accent-blue/10 blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[60%] rounded-full bg-accent-indigo/10 blur-[120px] pointer-events-none" />
 
       <div className="w-full max-w-md relative z-10 space-y-6">
         {/* Brand/Logo */}
         <div className="text-center space-y-2">
-          <div className="mx-auto bg-linear-to-br from-blue-500/20 to-violet-500/20 w-16 h-16 rounded-2xl flex items-center justify-center border border-white/10 shadow-lg shadow-black/40">
-            <Building2 className="w-8 h-8 text-blue-400" />
+          <div className="mx-auto bg-accent/15 backdrop-blur-md border border-accent/25 w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg shadow-accent/10">
+            <Building2 className="w-8 h-8 text-accent animate-pulse" />
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white mt-4 bg-clip-text bg-linear-to-r from-blue-400 to-violet-400">
+          <h1 className="text-3xl font-black mt-4 text-foreground tracking-tight select-none">
             Shree Saree House
           </h1>
-          <p className="text-sm text-gray-400 font-medium">
+          <p className="text-xs text-foreground/60 font-semibold select-none">
             Financial Core & Ledger Management
           </p>
         </div>
 
         {/* Register/Success Card */}
-        <Card className="border border-white/10 bg-slate-900/60 backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden">
+        <Card className="glass-card-premium border-none rounded-[28px] overflow-hidden shadow-xl">
           {success ? (
             <div className="p-8 text-center space-y-6">
               <div className="mx-auto bg-emerald-500/10 w-16 h-16 rounded-full flex items-center justify-center border border-emerald-500/20 shadow-lg shadow-black/20">
-                <CheckCircle2 className="w-8 h-8 text-emerald-400 animate-bounce" />
+                <CheckCircle2 className="w-8 h-8 text-emerald-500 dark:text-emerald-400 animate-bounce" />
               </div>
-              <div className="space-y-2">
-                <h2 className="text-2xl font-bold text-white">Registration Successful!</h2>
-                <p className="text-sm text-gray-400 px-4">
+              <div className="space-y-2 select-none">
+                <h2 className="text-2xl font-black text-foreground">Registration Successful!</h2>
+                <p className="text-xs text-foreground/60 font-semibold px-4">
                   Your ERP account has been created securely. You can now log in using your credentials.
                 </p>
               </div>
               <Link href="/login" className="block w-full">
-                <Button className="w-full h-11 rounded-xl text-white font-semibold text-xs bg-linear-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all">
+                <Button className="w-full h-11 rounded-xl text-white font-semibold text-xs bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-500/20 active:scale-[0.98] transition-all cursor-pointer">
                   Proceed to Login
                 </Button>
               </Link>
             </div>
           ) : (
             <>
-              <CardHeader className="space-y-1 pb-6">
-                <CardTitle className="text-xl font-semibold text-white flex items-center gap-2">
-                  <UserPlus className="w-5 h-5 text-blue-400" />
+              <CardHeader className="space-y-1 pb-6 select-none">
+                <CardTitle className="text-xl font-black text-foreground flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-accent" />
                   Create Account
                 </CardTitle>
-                <CardDescription className="text-gray-400 text-xs">
+                <CardDescription className="text-foreground/50 text-xs font-semibold">
                   Register below to create a secure employee or accountant seat.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {error && (
-                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs font-medium flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                    <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-destructive text-xs font-bold flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
                       {error}
                     </div>
                   )}
 
                   {/* Name field */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="name" className="text-gray-300 font-semibold text-xs">
+                    <Label htmlFor="name" className="text-foreground/75 font-semibold text-xs">
                       Full Name
                     </Label>
                     <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/45" />
                       <Input
                         id="name"
                         type="text"
@@ -163,18 +163,18 @@ export default function RegisterPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         disabled={isLoading}
-                        className="pl-10 h-11 border-white/10 bg-white/5 text-white placeholder-gray-500 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all text-xs"
+                        className="pl-10 h-11 border-foreground/10 bg-white/10 dark:bg-black/25 text-foreground placeholder:text-foreground/45 rounded-xl focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all text-xs"
                       />
                     </div>
                   </div>
 
                   {/* Username field */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="username" className="text-gray-300 font-semibold text-xs">
+                    <Label htmlFor="username" className="text-foreground/75 font-semibold text-xs">
                       Username
                     </Label>
                     <div className="relative">
-                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/45" />
                       <Input
                         id="username"
                         type="text"
@@ -183,18 +183,18 @@ export default function RegisterPage() {
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                         disabled={isLoading}
-                        className="pl-10 h-11 border-white/10 bg-white/5 text-white placeholder-gray-500 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all text-xs"
+                        className="pl-10 h-11 border-foreground/10 bg-white/10 dark:bg-black/25 text-foreground placeholder:text-foreground/45 rounded-xl focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all text-xs"
                       />
                     </div>
                   </div>
 
                   {/* Password field */}
                   <div className="space-y-1.5">
-                    <Label htmlFor="password" className="text-gray-300 font-semibold text-xs">
+                    <Label htmlFor="password" className="text-foreground/75 font-semibold text-xs">
                       Password
                     </Label>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground/45" />
                       <Input
                         id="password"
                         type={showPassword ? "text" : "password"}
@@ -203,12 +203,12 @@ export default function RegisterPage() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         disabled={isLoading}
-                        className="pl-10 pr-10 h-11 border-white/10 bg-white/5 text-white placeholder-gray-500 rounded-xl focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 transition-all text-xs"
+                        className="pl-10 pr-10 h-11 border-foreground/10 bg-white/10 dark:bg-black/25 text-foreground placeholder:text-foreground/45 rounded-xl focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all text-xs"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors"
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-foreground/45 hover:text-foreground transition-colors cursor-pointer"
                       >
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -218,27 +218,27 @@ export default function RegisterPage() {
                     {password && (
                       <div className="space-y-1.5 pt-1">
                         <div className="flex justify-between items-center text-[10px] font-bold">
-                          <span className="text-gray-500 uppercase tracking-wider">Password Strength</span>
+                          <span className="text-foreground/50 uppercase tracking-wider">Password Strength</span>
                           <span
                             className={
                               strengthLabel === "Strong"
-                                ? "text-emerald-400"
+                                ? "text-emerald-500 dark:text-emerald-400"
                                 : strengthLabel === "Medium"
-                                ? "text-amber-400"
-                                : "text-red-400"
+                                ? "text-amber-500 dark:text-amber-400"
+                                : "text-rose-500 dark:text-rose-400"
                             }
                           >
                             {strengthLabel}
                           </span>
                         </div>
-                        <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden flex gap-0.5">
+                        <div className="h-1 w-full bg-foreground/10 rounded-full overflow-hidden flex gap-0.5">
                           <div
                             className={`h-full transition-all duration-300 ${strengthColor}`}
                             style={{ width: `${Math.max(25, strength * 25)}%` }}
                           />
                         </div>
-                        <div className="flex items-start gap-1 text-[9px] text-gray-400 leading-normal">
-                          <Info className="w-3 h-3 text-blue-400 shrink-0 mt-0.5" />
+                        <div className="flex items-start gap-1 text-[9px] text-foreground/60 leading-normal select-none">
+                          <Info className="w-3 h-3 text-accent shrink-0 mt-0.5" />
                           <span>Must be 8+ characters, with at least one letter and one number.</span>
                         </div>
                       </div>
@@ -248,7 +248,7 @@ export default function RegisterPage() {
                   <Button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full h-11 rounded-xl text-white font-semibold text-xs bg-linear-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-lg shadow-blue-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2"
+                    className="w-full h-11 rounded-xl text-accent-foreground font-semibold text-xs bg-accent hover:bg-accent/90 shadow-lg shadow-accent/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 mt-2 cursor-pointer"
                   >
                     {isLoading ? (
                       <>
@@ -265,10 +265,10 @@ export default function RegisterPage() {
                 </form>
               </CardContent>
 
-              <CardFooter className="flex flex-col space-y-3 pt-4 border-t border-white/5 bg-slate-950/45 p-6 text-center">
-                <div className="text-xs text-gray-400">
+              <CardFooter className="flex flex-col space-y-3 pt-4 border-t border-foreground/5 bg-foreground/5 p-6 text-center">
+                <div className="text-xs text-foreground/60 font-semibold select-none">
                   Already have an account?{" "}
-                  <Link href="/login" className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">
+                  <Link href="/login" className="text-accent hover:text-accent/80 font-bold transition-colors">
                     Sign In here
                   </Link>
                 </div>

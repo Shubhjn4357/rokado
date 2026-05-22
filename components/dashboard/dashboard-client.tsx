@@ -15,7 +15,8 @@ import {
   FileCheck,
   Zap,
   TrendingUp,
-  Inbox
+  Inbox,
+  ArrowUpRightFromCircle
 } from "lucide-react";
 import { formatCurrency } from "@/lib/types";
 import type { InferSelectModel } from "@/lib/database";
@@ -40,141 +41,174 @@ interface DashboardData {
 
 export function DashboardClient({ data }: { data: DashboardData }) {
   
-  // Clean modern financial indicators
-  const stats = [
-    {
-      title: "Receivables (Sundry Debtors)",
-      value: formatCurrency(data.debtorsTotal),
-      sub: `${data.recentDebtors.length} outstanding accounts`,
-      color: "text-emerald-650 dark:text-emerald-400",
-      bg: "bg-emerald-500/5 dark:bg-emerald-500/5 border-emerald-500/10 dark:border-emerald-500/20",
-      desc: "Total due from clients"
-    },
-    {
-      title: "Payables (Sundry Creditors)",
-      value: formatCurrency(data.creditorsTotal),
-      sub: "Active liabilities in ledger",
-      color: "text-rose-600 dark:text-rose-400",
-      bg: "bg-rose-500/5 dark:bg-rose-500/5 border-rose-500/10 dark:border-rose-500/20",
-      desc: "Outstanding supplier payments"
-    },
-    {
-      title: "Cash in Hand Balance",
-      value: formatCurrency(data.cashBalance),
-      sub: "Liquid cash registry sum",
-      color: "text-indigo-600 dark:text-indigo-400",
-      bg: "bg-indigo-500/5 dark:bg-indigo-500/5 border-indigo-500/10 dark:border-indigo-500/20",
-      desc: "Petty cash account balance"
-    },
-    {
-      title: "Bank Registry Accounts",
-      value: formatCurrency(data.bankBalance),
-      sub: "Combined institutional balance",
-      color: "text-blue-600 dark:text-blue-400",
-      bg: "bg-blue-500/5 dark:bg-blue-500/5 border-blue-500/10 dark:border-blue-500/20",
-      desc: "All active bank ledgers"
-    },
-    {
-      title: "Daily Vouchers Filed",
-      value: `${data.todaySalesCount} sales bills`,
-      sub: "Transaction postings filed today",
-      color: "text-amber-600 dark:text-amber-400",
-      bg: "bg-amber-500/5 dark:bg-amber-500/5 border-amber-500/10 dark:border-amber-500/20",
-      desc: "Today's sales transactions"
-    },
-    {
-      title: "Cumulative Ledger Entries",
-      value: data.totalVouchers.toString(),
-      sub: "All-time journal postings",
-      color: "text-foreground",
-      bg: "bg-muted/30 border-border/60",
-      desc: "Total database transactions count"
-    }
-  ];
+  // Total fluid cash calculation
+  const totalLiquidCash = data.cashBalance + data.bankBalance;
 
   return (
     <div className="space-y-6 font-sans text-foreground">
       
-      {/* Elegant Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border/40 pb-4 select-none gap-4">
+      {/* Elegant low-contrast header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-foreground/5 pb-4 select-none gap-4">
         <div>
-          <h1 className="text-xl font-extrabold tracking-tight text-foreground flex items-center gap-2">
-            <Zap className="w-4 h-4 text-blue-500 animate-pulse" />
-            Financial Overview
+          <h1 className="text-2xl font-black tracking-tight text-foreground/90 flex items-center gap-2">
+            <Zap className="w-5 h-5 text-accent animate-pulse" />
+            Inventory & Ledgers overview
           </h1>
-          <p className="text-xs text-muted-foreground mt-1">
+          <p className="text-xs text-foreground/60 mt-1 font-medium">
             Active Accounting Period: FY 2026–27 · Shree Saree House
           </p>
         </div>
-        <div className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 uppercase rounded-full shrink-0">
-          ● Secure Local Database
+        <div className="text-[10px] font-bold text-emerald-650 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 uppercase rounded-full shrink-0 flex items-center gap-1.5 select-none shadow-sm">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+          Secure Local Database
         </div>
       </div>
 
-      {/* STATS MATRIX SECTION */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 select-none">
-        {stats.map((s) => (
-          <div
-            key={s.title}
-            className={`border p-4 rounded-xl transition-all shadow-sm hover:shadow-md ${s.bg}`}
-          >
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{s.title}</div>
-            <div className={`text-xl font-extrabold tracking-tight mt-1.5 font-sans ${s.color}`}>
-              {s.value}
-            </div>
-            <div className="text-xs text-muted-foreground mt-2 flex items-center justify-between font-sans">
-              <span>{s.sub}</span>
-              <span className="text-[9px] opacity-75 italic font-sans uppercase tracking-tight">{s.desc}</span>
+      {/* 3 HERO HIGH-SATURATION ACCENT PANELS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 select-none">
+        
+        {/* Panel 1: Orders / Sales Today (Vibrant Neon Yellow) */}
+        <div className="panel-yellow p-6 rounded-[var(--radius-card)] shadow-[var(--shadow-card)] relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)] group cursor-default">
+          <div className="absolute top-[-30px] right-[-20px] w-36 h-36 bg-black/5 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-60">Orders / Sales Today</span>
+            <div className="w-8 h-8 bg-black/10 rounded-full flex items-center justify-center">
+              <ReceiptText className="w-4 h-4 opacity-70" />
             </div>
           </div>
-        ))}
+          <div className="mt-8">
+            <div className="text-4xl font-black tracking-tight">{data.todaySalesCount}</div>
+            <div className="text-xs font-bold mt-1 opacity-70">Sales bills filed today</div>
+          </div>
+          <div className="mt-8 flex items-center justify-between border-t border-black/8 pt-4 text-[10px] font-bold">
+            <span className="opacity-60">Cumulative Postings</span>
+            <span className="bg-black/10 px-2 py-0.5 rounded-md font-black">{data.totalVouchers} total</span>
+          </div>
+        </div>
+
+        {/* Panel 2: Stock Alerts (Vibrant Warm Sun Orange) */}
+        <div className="panel-orange p-6 rounded-[var(--radius-card)] shadow-[var(--shadow-card)] relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[var(--shadow-elevated)] group cursor-default">
+          <div className="absolute top-[-30px] right-[-20px] w-36 h-36 bg-black/5 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-60">Stock Safety Exception</span>
+            <div className="w-8 h-8 bg-black/10 rounded-full flex items-center justify-center">
+              <Package className="w-4 h-4 opacity-70" />
+            </div>
+          </div>
+          <div className="mt-8">
+            <div className="text-4xl font-black tracking-tight">{data.lowStockItems.length}</div>
+            <div className="text-xs font-bold mt-1 opacity-70">Items below reorder limits</div>
+          </div>
+          <div className="mt-8 flex items-center justify-between border-t border-black/8 pt-4 text-[10px] font-bold">
+            <span className="opacity-60">Status Check</span>
+            <span className="bg-black/15 px-2.5 py-0.5 rounded-full font-black text-[9px] uppercase tracking-wide">
+              {data.lowStockItems.length > 0 ? "Reorder Needed" : "Healthy"}
+            </span>
+          </div>
+        </div>
+
+        {/* Panel 3: Financial Health / Liquid Cash (Deep Space Obsidian) */}
+        <div className="panel-black p-6 rounded-[var(--radius-card)] shadow-[var(--shadow-elevated)] relative overflow-hidden transition-all duration-300 hover:-translate-y-0.5 group cursor-default">
+          <div className="absolute top-[-30px] right-[-20px] w-36 h-36 bg-white/5 rounded-full blur-2xl group-hover:scale-110 transition-transform duration-500" />
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-wider opacity-50">Combined Liquid Assets</span>
+            <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center">
+              <Banknote className="w-4 h-4 text-accent" />
+            </div>
+          </div>
+          <div className="mt-8">
+            <div className="text-3xl font-black tracking-tight">{formatCurrency(totalLiquidCash)}</div>
+            <div className="text-xs font-bold mt-1 opacity-50">Cash & Bank combined registries</div>
+          </div>
+          <div className="mt-8 flex items-center gap-4 border-t border-white/10 pt-4 text-[9px] font-bold opacity-60">
+            <div className="flex-1">
+              <span>Cash in Hand</span>
+              <div className="opacity-100 font-extrabold text-[10px] mt-0.5">{formatCurrency(data.cashBalance)}</div>
+            </div>
+            <div className="w-px h-6 bg-white/10" />
+            <div className="flex-1">
+              <span>Bank Registry</span>
+              <div className="opacity-100 font-extrabold text-[10px] mt-0.5">{formatCurrency(data.bankBalance)}</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ADDITIONAL KEY ACCENT ROW: Receivables & Payables Glass Summaries */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        {/* Receivables Glass Card */}
+        <div className="surface-card p-5 rounded-[var(--radius-card)] flex items-center justify-between transition-all duration-200 hover:scale-[1.005]">
+          <div className="space-y-1">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Receivables (Sundry Debtors)</span>
+            <h3 className="text-xl font-black text-debit tracking-tight">{formatCurrency(data.debtorsTotal)}</h3>
+            <p className="text-[10px] text-muted-foreground font-semibold">{data.recentDebtors.length} outstanding active ledgers</p>
+          </div>
+          <div className="w-10 h-10 bg-debit/10 border border-debit/20 text-debit rounded-full flex items-center justify-center">
+            <TrendingDown className="w-4 h-4" />
+          </div>
+        </div>
+
+        {/* Payables Glass Card */}
+        <div className="surface-card p-5 rounded-[var(--radius-card)] flex items-center justify-between transition-all duration-200 hover:scale-[1.005]">
+          <div className="space-y-1">
+            <span className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Payables (Sundry Creditors)</span>
+            <h3 className="text-xl font-black text-credit tracking-tight">{formatCurrency(data.creditorsTotal)}</h3>
+            <p className="text-[10px] text-muted-foreground font-semibold">Active supplier payables & liabilities</p>
+          </div>
+          <div className="w-10 h-10 bg-credit/10 border border-credit/20 text-credit rounded-full flex items-center justify-center">
+            <TrendingUp className="w-4 h-4" />
+          </div>
+        </div>
+
       </div>
 
       {/* REPORTING COLUMNS (OUTSTANDING & STOCK ALERTS) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         
         {/* Receivables Master Ledger */}
-        <Card className="border border-border/60 bg-card rounded-2xl overflow-hidden shadow-sm">
-          <CardHeader className="bg-muted/10 border-b border-border/40 py-3.5 px-5 flex flex-row items-center justify-between select-none">
+        <Card className="surface-card border-none rounded-[var(--radius-xl)] overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between select-none">
             <div>
-              <CardTitle className="text-xs font-black uppercase text-foreground tracking-wider">
+              <CardTitle className="text-xs font-black uppercase text-foreground/80 tracking-wider">
                 Top Outstanding Accounts (Receivables)
               </CardTitle>
-              <CardDescription className="text-[10px] mt-1 font-sans">
-                A-group debit balances requiring immediate collection
+              <CardDescription className="text-[10px] mt-1 font-semibold text-muted-foreground">
+                A-group debit balances requiring collection
               </CardDescription>
             </div>
-            <Badge variant="outline" className="font-sans text-[9px] font-bold uppercase tracking-wider text-muted-foreground border-border bg-muted/40">
+            <Badge variant="outline" className="font-bold text-[9px] uppercase tracking-wider text-accent border-accent/30 bg-accent/8 rounded-full py-0.5 px-2.5">
               Sundry Debtors
             </Badge>
           </CardHeader>
           
           <CardContent className="p-0">
             {data.recentDebtors.length === 0 ? (
-              <div className="py-12 text-center text-xs text-muted-foreground font-sans">
-                <Inbox className="w-8 h-8 mx-auto mb-2 opacity-30" />
+              <div className="py-16 text-center text-xs text-foreground/40 font-semibold">
+                <Inbox className="w-9 h-9 mx-auto mb-2.5 opacity-30 text-foreground/50" />
                 No outstanding debtors found.
               </div>
             ) : (
               <Table className="text-xs">
-                <TableHeader className="bg-muted/20 border-b border-border/40 select-none">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="py-2 font-bold">Ledger/Particulars</TableHead>
-                    <TableHead className="py-2 font-bold w-[120px]">Phone Number</TableHead>
-                    <TableHead className="py-2 font-bold w-[120px] text-right">Debit Balance (₹)</TableHead>
+                <TableHeader className="bg-foreground/[0.02] border-b border-foreground/5 select-none">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="py-2.5 pl-6 font-bold text-foreground/50">Ledger/Particulars</TableHead>
+                    <TableHead className="py-2.5 font-bold text-foreground/50 w-[120px]">Phone Number</TableHead>
+                    <TableHead className="py-2.5 pr-6 font-bold text-foreground/50 w-[140px] text-right">Debit Balance (₹)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.recentDebtors.map((d) => (
-                    <TableRow key={d.id} className="hover:bg-muted/5 border-b border-border/20 last:border-0">
-                      <TableCell className="py-3 font-semibold text-foreground">
+                    <TableRow key={d.id} className="table-row-hover border-b border-border/60">
+                      <TableCell className="py-3.5 pl-6 font-bold text-foreground/80">
                         {d.name}
                       </TableCell>
-                      <TableCell className="py-3 font-mono text-[11px] text-muted-foreground">
+                      <TableCell className="py-3.5 font-mono text-[10px] text-muted-foreground font-semibold">
                         {d.phone ?? "—"}
                       </TableCell>
-                      <TableCell className="py-3 text-right font-extrabold text-rose-600 dark:text-rose-400 text-sm">
-                        {formatCurrency(d.openingBalance)} <span className="text-[10px] font-bold">Dr</span>
+                      <TableCell className="py-3.5 pr-6 text-right font-black text-debit text-xs">
+                        {formatCurrency(d.openingBalance)} <span className="text-[8px] font-black uppercase text-debit/70 bg-debit/8 border border-debit/15 py-0.5 px-1.5 rounded ml-1">Dr</span>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -185,52 +219,52 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </Card>
 
         {/* Inventory Stock Exception Alerts */}
-        <Card className="border border-border/60 bg-card rounded-2xl overflow-hidden shadow-sm">
-          <CardHeader className="bg-muted/10 border-b border-border/40 py-3.5 px-5 flex flex-row items-center justify-between select-none">
+        <Card className="surface-card border-none rounded-[var(--radius-xl)] overflow-hidden">
+          <CardHeader className="bg-muted/30 border-b border-border py-4 px-6 flex flex-row items-center justify-between select-none">
             <div>
-              <CardTitle className="text-xs font-black uppercase text-foreground tracking-wider">
-                Critical Inventory Shortfall & Reorder Alerts
+              <CardTitle className="text-xs font-black uppercase text-foreground/80 tracking-wider">
+                Critical Stock Shortfalls & Alerts
               </CardTitle>
-              <CardDescription className="text-[10px] mt-1 font-sans">
-                Sarees and items running below safety stock margins
+              <CardDescription className="text-[10px] mt-1 font-semibold text-muted-foreground">
+                Sarees and items running below safety margins
               </CardDescription>
             </div>
-            <Badge variant="destructive" className="font-sans text-[9px] font-bold uppercase tracking-wider bg-rose-600 text-white border-none">
+            <Badge className="font-bold text-[9px] uppercase tracking-wider panel-orange border-none rounded-full py-0.5 px-2.5">
               {data.lowStockItems.length} Exceptions
             </Badge>
           </CardHeader>
           
           <CardContent className="p-0">
             {data.lowStockItems.length === 0 ? (
-              <div className="py-12 text-center text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/5 font-sans">
-                <FileCheck className="w-8 h-8 mx-auto mb-2 opacity-40 text-emerald-500" />
+              <div className="py-16 text-center text-xs text-credit font-semibold">
+                <FileCheck className="w-9 h-9 mx-auto mb-2.5 opacity-40 text-credit" />
                 All stock levels healthy. No reorders needed!
               </div>
             ) : (
               <Table className="text-xs">
-                <TableHeader className="bg-muted/20 border-b border-border/40 select-none">
-                  <TableRow className="hover:bg-transparent">
-                    <TableHead className="py-2 font-bold">Saree Item / Code</TableHead>
-                    <TableHead className="py-2 font-bold w-[100px] text-center">Location</TableHead>
-                    <TableHead className="py-2 font-bold w-[120px] text-right">In Stock</TableHead>
+                <TableHeader className="bg-muted/30 border-b border-border select-none">
+                  <TableRow className="hover:bg-transparent border-none">
+                    <TableHead className="py-2.5 pl-6 font-bold text-muted-foreground">Saree Item / Code</TableHead>
+                    <TableHead className="py-2.5 font-bold text-muted-foreground w-[100px] text-center">Location</TableHead>
+                    <TableHead className="py-2.5 pr-6 font-bold text-muted-foreground w-[120px] text-right">In Stock</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.lowStockItems.map((item) => (
-                    <TableRow key={item.id} className="hover:bg-muted/5 border-b border-border/20 last:border-0">
-                      <TableCell className="py-3">
-                        <div className="font-semibold text-foreground">{item.name}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase mt-1 font-sans">{item.category} • #{item.designNo}</div>
+                  {data.lowStockItems.slice(0, 5).map((item) => (
+                    <TableRow key={item.id} className="table-row-hover border-b border-border/60">
+                      <TableCell className="py-3.5 pl-6">
+                        <div className="font-bold text-foreground/80">{item.name}</div>
+                        <div className="text-[9px] text-muted-foreground uppercase mt-1 font-bold tracking-tight">{item.category} • #{item.designNo}</div>
                       </TableCell>
-                      <TableCell className="py-3 text-center font-mono font-bold text-foreground/80">
+                      <TableCell className="py-3.5 text-center font-mono font-bold text-foreground/75">
                         {item.rackLocation ?? "—"}
                       </TableCell>
-                      <TableCell className="py-3 text-right">
-                        <span className="font-extrabold text-rose-600 dark:text-rose-400 text-sm">
+                      <TableCell className="py-3.5 pr-6 text-right">
+                        <span className="font-black text-debit text-xs">
                           {item.stockQuantity} {item.unit}
                         </span>
-                        <div className="text-[10px] text-muted-foreground mt-1 flex items-center gap-0.5 justify-end font-sans">
-                          <AlertTriangle className="w-3 h-3 text-amber-600 shrink-0" />
+                        <div className="text-[9px] text-muted-foreground mt-1 flex items-center gap-0.5 justify-end font-semibold">
+                          <AlertTriangle className="w-3 h-3 text-panel-orange shrink-0" />
                           <span>Reorder: {item.reorderLevel ?? 10}</span>
                         </div>
                       </TableCell>

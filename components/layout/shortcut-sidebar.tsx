@@ -16,7 +16,7 @@ interface ShortcutItem {
 export function ShortcutSidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Listen to a custom event to toggle the sidebar from the TopBar
   useEffect(() => {

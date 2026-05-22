@@ -665,7 +665,7 @@ export function VoucherForm({
               className={cn(
                 "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 cursor-pointer",
                 entryMode === "voucher"
-                  ? "bg-[#2563eb] text-white shadow-sm"
+                  ? "bg-accent text-accent-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -679,7 +679,7 @@ export function VoucherForm({
               className={cn(
                 "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 disabled:opacity-40 disabled:pointer-events-none cursor-pointer",
                 entryMode === "invoice"
-                  ? "bg-[#2563eb] text-white shadow-sm"
+                  ? "bg-accent text-accent-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >

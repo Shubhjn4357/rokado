@@ -1,116 +1,319 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────
+   TAILWIND v4 THEME EXTENSION
+   Maps CSS custom properties → Tailwind color/radius utilities
+───────────────────────────────────────────────────────── */
 @theme {
-  --radius-xl: 24px;
-  --blur-glass: 18px;
+  /* Radii */
+  --radius-sm:   10px;
+  --radius-md:   14px;
+  --radius-lg:   18px;
+  --radius-xl:   22px;
+  --radius-2xl:  26px;
+  --radius-card: 24px;
+  --radius-pill: 9999px;
 
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Semantic color bridge (Tailwind uses these via bg-*, text-*, etc.) */
+  --color-background:         var(--background);
+  --color-foreground:         var(--foreground);
 
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
+  --color-surface:            var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-elevated:   var(--surface-elevated);
 
-  --color-popover: var(--popover);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--card-foreground);
+
+  --color-popover:            var(--popover);
   --color-popover-foreground: var(--popover-foreground);
 
-  --color-primary: var(--primary);
+  --color-primary:            var(--primary);
   --color-primary-foreground: var(--primary-foreground);
 
-  --color-secondary: var(--secondary);
+  --color-secondary:          var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
 
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
+  --color-muted:              var(--muted);
+  --color-muted-foreground:   var(--muted-foreground);
 
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+  --color-accent:             var(--accent);
+  --color-accent-foreground:  var(--accent-foreground);
 
-  --color-destructive: var(--destructive);
+  --color-destructive:        var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+  --color-border:             var(--border);
+  --color-input:              var(--input);
+  --color-ring:               var(--ring);
+
+  /* Vivid accent panels (Yellow / Orange / Black) */
+  --color-panel-yellow:          var(--panel-yellow);
+  --color-panel-yellow-fg:       var(--panel-yellow-fg);
+  --color-panel-orange:          var(--panel-orange);
+  --color-panel-orange-fg:       var(--panel-orange-fg);
+  --color-panel-black:           var(--panel-black);
+  --color-panel-black-fg:        var(--panel-black-fg);
+
+  /* Semantic debit / credit colours (accounting) */
+  --color-debit:                 var(--debit);
+  --color-debit-foreground:      var(--debit-foreground);
+  --color-credit:                var(--credit);
+  --color-credit-foreground:     var(--credit-foreground);
 }
 
+
+/* ─────────────────────────────────────────────────────────
+   DESIGN TOKENS  — LIGHT MODE
+───────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    --background: #f8fafc; /* Elegant light slate white */
-    --foreground: #0f172a; /* Clean dark slate */
+    /* Body — transparent so the gradient on <html> shows through */
+    --background:            transparent;
+    --foreground:            hsl(220 15% 14%);
 
-    --card: rgba(255, 255, 255, 0.75); /* Soft glass card surface */
-    --card-foreground: #0f172a;
+    /* Card / Surface layers */
+    --surface:               hsl(0 0% 100% / 0.80);
+    --surface-foreground:    hsl(220 15% 14%);
+    --surface-elevated:      hsl(0 0% 100% / 0.96);
 
-    --popover: #ffffff;
-    --popover-foreground: #0f172a;
+    --card:                  hsl(0 0% 100% / 0.80);
+    --card-foreground:       hsl(220 15% 14%);
 
-    --primary: #0f2238; /* Deep corporate navy blue */
-    --primary-foreground: #ffffff;
+    --popover:               hsl(0 0% 100% / 0.97);
+    --popover-foreground:    hsl(220 15% 14%);
 
-    --secondary: #f1f5f9; /* Slate secondary */
-    --secondary-foreground: #0f2238;
+    /* Interactive */
+    --primary:               hsl(220 15% 10%);
+    --primary-foreground:    hsl(0 0% 100%);
 
-    --muted: #f8fafc;
-    --muted-foreground: #64748b;
+    --secondary:             hsl(220 12% 95%);
+    --secondary-foreground:  hsl(220 15% 20%);
 
-    --accent: #2563eb; /* Luxury Sapphire Blue */
-    --accent-foreground: #ffffff;
+    --muted:                 hsl(220 10% 94%);
+    --muted-foreground:      hsl(220 10% 50%);
 
-    --destructive: #dc2626; /* Crimson Red */
-    --destructive-foreground: #ffffff;
+    /* Accent — Royal Indigo */
+    --accent:                hsl(241 78% 65%);
+    --accent-foreground:     hsl(0 0% 100%);
 
-    --border: #e2e8f0; /* Soft grid border */
-    --input: #e2e8f0;
-    --ring: #2563eb;
+    /* Danger */
+    --destructive:           hsl(4 88% 56%);
+    --destructive-foreground: hsl(0 0% 100%);
 
-    --radius: 0.75rem; /* Elegant rounded corners */
+    /* Structural */
+    --border:                hsl(220 14% 90%);
+    --input:                 hsl(220 14% 92%);
+    --ring:                  hsl(241 78% 65%);
+
+    /* Base radius (shadcn primitives pick this up) */
+    --radius:                18px;
+
+    /* ── Vivid Accent Panels ── */
+    --panel-yellow:          hsl(65 94% 59%);   /* #EBF53B neon yellow   */
+    --panel-yellow-fg:       hsl(220 15% 8%);   /* near-black on yellow  */
+    --panel-orange:          hsl(24 100% 61%);  /* #FF8C37 sun orange    */
+    --panel-orange-fg:       hsl(220 15% 8%);   /* near-black on orange  */
+    --panel-black:           hsl(0 0% 6%);      /* #0F0F0F jet black     */
+    --panel-black-fg:        hsl(0 0% 97%);     /* near-white on black   */
+
+    /* ── Accounting semantics ── */
+    --debit:                 hsl(353 72% 52%);  /* warm rose for debits  */
+    --debit-foreground:      hsl(0 0% 100%);
+    --credit:                hsl(152 55% 42%);  /* emerald for credits   */
+    --credit-foreground:     hsl(0 0% 100%);
+
+    /* ── Shadows (used via custom CSS, not Tailwind) ── */
+    --shadow-card:     0 2px 12px -2px hsl(220 30% 60% / 0.10),
+                       0 1px 3px hsl(220 30% 60% / 0.06);
+    --shadow-elevated: 0 8px 32px -6px hsl(220 30% 50% / 0.14),
+                       0 2px 8px hsl(220 30% 60% / 0.08);
+    --shadow-glow-accent: 0 0 20px -4px hsl(241 78% 65% / 0.25);
   }
 
+
+/* ─────────────────────────────────────────────────────────
+   DESIGN TOKENS  — DARK MODE
+───────────────────────────────────────────────────────── */
   .dark {
-    --background: #070c15; /* Sleek high-end space-dark blue background */
-    --foreground: #f1f5f9;
+    --background:            transparent;
+    --foreground:            hsl(220 15% 92%);
 
-    --card: rgba(15, 23, 42, 0.75); /* Dark elegant glass card surface */
-    --card-foreground: #f1f5f9;
+    --surface:               hsl(220 20% 10% / 0.80);
+    --surface-foreground:    hsl(220 15% 92%);
+    --surface-elevated:      hsl(220 20% 12% / 0.96);
 
-    --popover: #0f172a;
-    --popover-foreground: #f1f5f9;
+    --card:                  hsl(220 20% 10% / 0.80);
+    --card-foreground:       hsl(220 15% 92%);
 
-    --primary: #3b82f6; /* Modern active sapphire */
-    --primary-foreground: #ffffff;
+    --popover:               hsl(220 20% 9% / 0.97);
+    --popover-foreground:    hsl(220 15% 92%);
 
-    --secondary: #1e293b;
-    --secondary-foreground: #f1f5f9;
+    --primary:               hsl(220 15% 92%);
+    --primary-foreground:    hsl(220 15% 8%);
 
-    --muted: #1e293b;
-    --muted-foreground: #94a3b8;
+    --secondary:             hsl(220 15% 16%);
+    --secondary-foreground:  hsl(220 15% 85%);
 
-    --accent: #2563eb;
-    --accent-foreground: #ffffff;
+    --muted:                 hsl(220 15% 14%);
+    --muted-foreground:      hsl(220 10% 55%);
 
-    --destructive: #ef4444;
-    --destructive-foreground: #ffffff;
+    --accent:                hsl(241 78% 68%);
+    --accent-foreground:     hsl(0 0% 100%);
 
-    --border: #1e293b;
-    --input: #1e293b;
-    --ring: #2563eb;
+    --destructive:           hsl(4 80% 55%);
+    --destructive-foreground: hsl(0 0% 100%);
 
-    --radius: 0.75rem;
+    --border:                hsl(220 15% 22%);
+    --input:                 hsl(220 15% 18%);
+    --ring:                  hsl(241 78% 68%);
+
+    --radius:                18px;
+
+    /* Vivid panels stay vivid in dark mode — slightly adjusted */
+    --panel-yellow:          hsl(63 90% 55%);
+    --panel-yellow-fg:       hsl(220 15% 8%);
+    --panel-orange:          hsl(22 98% 56%);
+    --panel-orange-fg:       hsl(220 15% 8%);
+    --panel-black:           hsl(0 0% 4%);
+    --panel-black-fg:        hsl(0 0% 97%);
+
+    --debit:                 hsl(353 72% 62%);
+    --debit-foreground:      hsl(0 0% 100%);
+    --credit:                hsl(152 55% 52%);
+    --credit-foreground:     hsl(0 0% 100%);
+
+    --shadow-card:     0 2px 16px -2px hsl(220 30% 4% / 0.40),
+                       0 1px 4px hsl(220 30% 4% / 0.25);
+    --shadow-elevated: 0 8px 40px -8px hsl(220 30% 4% / 0.55),
+                       0 2px 10px hsl(220 30% 4% / 0.30);
+    --shadow-glow-accent: 0 0 20px -4px hsl(241 78% 68% / 0.30);
   }
 }
 
+
+/* ─────────────────────────────────────────────────────────
+   GLOBAL BASE RESETS
+───────────────────────────────────────────────────────── */
 @layer base {
   * {
     @apply border-border;
-    /* Hide scrollbar for Chrome, Safari and Opera */
-    &::-webkit-scrollbar {
-      display: none;
-    }
-    /* Hide scrollbar for IE, Edge and Firefox */
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    /* Hide scrollbars everywhere */
+    &::-webkit-scrollbar { display: none; }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
+
+  html {
+    /* Warm sand light gradient — pure CSS variable expressions would require
+       registered custom properties, so we use CSS calc-friendly hsl() directly
+       from the tokens defined above via a body class swap if needed.
+       The gradient is defined once here and toggled via .dark on <html>. */
+    background-image: linear-gradient(
+      145deg,
+      hsl(48 30% 92%) 0%,
+      hsl(34 38% 91%) 50%,
+      hsl(44 24% 90%) 100%
+    );
+    background-attachment: fixed;
+    min-height: 100%;
+  }
+
+  html.dark {
+    background-image: linear-gradient(
+      145deg,
+      hsl(222 42% 7%)  0%,
+      hsl(226 45% 10%) 50%,
+      hsl(222 42% 7%)  100%
+    );
+  }
+
   body {
-    @apply bg-background text-foreground antialiased font-sans text-xs selection:bg-accent/20;
+    @apply text-foreground antialiased font-sans text-xs;
+    @apply selection:bg-accent/20 selection:text-foreground;
+    background: transparent;
   }
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   SURFACE UTILITY CLASSES
+   Use these instead of hardcoded glass/slate/white classes
+───────────────────────────────────────────────────────── */
+
+/* Standard card surface — the main building block */
+.surface-card {
+  background: var(--surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+/* Elevated surface — popovers, dropdowns, modals */
+.surface-elevated {
+  background: var(--surface-elevated);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-elevated);
+}
+
+/* Inset / muted panel — info boxes, step panels */
+.surface-inset {
+  background: var(--muted);
+  border: 1px solid var(--border);
+}
+
+/* Table row hover utility */
+.table-row-hover {
+  transition: background 0.15s ease;
+}
+.table-row-hover:hover {
+  background: color-mix(in srgb, var(--muted) 60%, transparent);
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   ACCENT PANEL UTILITIES  (Yellow / Orange / Black)
+   These render the hero stat cards visible in Image 1
+───────────────────────────────────────────────────────── */
+.panel-yellow {
+  background: var(--panel-yellow);
+  color: var(--panel-yellow-fg);
+}
+.panel-orange {
+  background: var(--panel-orange);
+  color: var(--panel-orange-fg);
+}
+.panel-black {
+  background: var(--panel-black);
+  color: var(--panel-black-fg);
+}
+
+
+/* ─────────────────────────────────────────────────────────
+   LEGACY ALIASES  (keep old class names working during migration)
+───────────────────────────────────────────────────────── */
+.glass-card-premium {
+  background: var(--surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.glass-container {
+  background: var(--surface);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-card);
+}
+
+.glass-table-row {
+  transition: background 0.15s ease;
+}
+.glass-table-row:hover {
+  background: color-mix(in srgb, var(--muted) 80%, transparent);
 }
