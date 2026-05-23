@@ -1,11 +1,11 @@
-# Shree Saree House - Complete ERP System
+#   House - Complete ERP System
 
 > Built for Indian wholesale textile businesses. Inspired by Tally, polished like Linear, reliable like banking software.
 > Following /system-build rules: TypeScript, Tailwind, shadcn/ui, Lucide, Next.js Server Components, real data only, no `any`, dark/light mode.
 
 ## Overview
 
-This is a complete ERP (Enterprise Resource Planning) system designed specifically for Indian wholesale textile businesses like Shree Saree House. The system includes:
+This is a complete ERP (Enterprise Resource Planning) system designed specifically for Indian wholesale textile businesses like   House. The system includes:
 
 - **Double-entry accounting** with voucher-based transactions
 - **GST compliance** with automatic calculation (CGST/SGST/IGST)
@@ -146,9 +146,9 @@ REMOTE_SYNC_TOKEN=""            # Turso remote sync token (when enabled)
 ## Database Initialization
 
 The system automatically initializes the database with:
-- 1 company (Shree Saree House)
+- 1 company (  House)
 - 18 ledgers (including Capital, Bank, Cash, Sundry Debtors, Sundry Creditors, etc.)
-- 10 inventory items (sample saree inventory)
+- 10 inventory items (sample  inventory)
 
 To reset and reseed the database:
 ```bash

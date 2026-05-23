@@ -4,7 +4,7 @@ import { db, inventoryItems } from "@/lib/database";
 import { FormSkeleton } from "@/components/ui/skeletons";
 
 export const metadata = {
-  title: "POS Billing - Shree Saree House ERP",
+  title: "POS Billing -  ERP",
 };
 
 export const dynamic = "force-dynamic";

@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 // export const dynamic = "force-dynamic";
-// export const metadata = { title: "Outstanding Report - Shree Saree House ERP" };
+// export const metadata = { title: "Outstanding Report -  ERP" };
 
 export default function OutstandingPage() {
   const [date, setDate] = useState<string | null>(null);
@@ -73,9 +74,14 @@ export default function OutstandingPage() {
 
       <div className="grid gap-6">
         {/* Debtors */}
-        <Card className="col-span-1">
-          <CardHeader>
+        <Card className="col-span-1" id="debtors-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Sundry Debtors (Amount Receivable)</CardTitle>
+            <ReportExportButtons
+              tableId="debtors-table"
+              elementId="debtors-card"
+              filename={`sundry-debtors_${date || "as-of-date"}`}
+            />
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -87,7 +93,7 @@ export default function OutstandingPage() {
                 No debtor ledgers found.
               </div>
             ) : (
-              <Table>
+              <Table id="debtors-table">
                 <thead>
                   <tr>
                     <th className="text-left px-6 py-3">Customer</th>
@@ -150,9 +156,14 @@ export default function OutstandingPage() {
         </Card>
 
         {/* Creditors */}
-        <Card className="col-span-1">
-          <CardHeader>
+        <Card className="col-span-1" id="creditors-card">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Sundry Creditors (Amount Payable)</CardTitle>
+            <ReportExportButtons
+              tableId="creditors-table"
+              elementId="creditors-card"
+              filename={`sundry-creditors_${date || "as-of-date"}`}
+            />
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -164,7 +175,7 @@ export default function OutstandingPage() {
                 No creditor ledgers found.
               </div>
             ) : (
-              <Table>
+              <Table id="creditors-table">
                 <thead>
                   <tr>
                     <th className="text-left px-6 py-3">Supplier</th>

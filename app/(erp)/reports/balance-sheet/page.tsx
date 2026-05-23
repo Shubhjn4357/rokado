@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 export const dynamic = "force-dynamic";
-// export const metadata = { title: "Balance Sheet - Shree Saree House ERP" };
+// export const metadata = { title: "Balance Sheet -  ERP" };
 
 export default function BalanceSheetPage() {
   const [date, setDate] = useState<string | null>(null);
@@ -63,13 +64,19 @@ export default function BalanceSheetPage() {
               />
             </div>
           </div>
-          <Button onClick={() => fetchBalanceSheet()} className="h-10">
+          <Button onClick={() => fetchBalanceSheet()} className="h-10 cursor-pointer">
             Refresh
           </Button>
+          <ReportExportButtons
+            tableId=""
+            elementId="balance-sheet-report"
+            filename={`balance-sheet_${date}`}
+            className="sm:mt-0"
+          />
         </div>
       </div>
 
-      <Card className="w-full">
+      <Card id="balance-sheet-report" className="w-full">
         <CardHeader>
           <CardTitle>Balance Sheet</CardTitle>
         </CardHeader>

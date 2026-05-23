@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 // export const dynamic = "force-dynamic";
-// export const metadata = { title: "Trial Balance - Shree Saree House ERP" };
+// export const metadata = { title: "Trial Balance -  ERP" };
 
 export default function TrialBalancePage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
@@ -96,13 +97,19 @@ export default function TrialBalancePage() {
               />
             </div>
           </div>
-          <Button onClick={() => fetchTrialBalance()} className="h-10">
+          <Button onClick={() => fetchTrialBalance()} className="h-10 cursor-pointer">
             Refresh
           </Button>
+          <ReportExportButtons
+            tableId="trial-balance-table"
+            elementId="trial-balance-report"
+            filename={`trial-balance_${dateFrom}_to_${dateTo}`}
+            className="sm:mt-0"
+          />
         </div>
       </div>
 
-      <Card className="w-full">
+      <Card id="trial-balance-report" className="w-full">
         <CardHeader>
           <CardTitle>Trial Balance</CardTitle>
         </CardHeader>
@@ -116,7 +123,7 @@ export default function TrialBalancePage() {
               No data found for the selected period.
             </div>
           ) : (
-            <Table>
+            <Table id="trial-balance-table">
               <thead>
                 <tr>
                   <th className="text-left px-6 py-3">Ledger</th>

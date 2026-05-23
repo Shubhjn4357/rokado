@@ -34,7 +34,7 @@ function useCommandItems(router: ReturnType<typeof useRouter>): CommandItem[] {
     { id: "dashboard", label: "Go to Dashboard", icon: LayoutDashboard, action: () => router.push("/dashboard"), keywords: ["home", "overview"] },
     { id: "ledgers", label: "All Ledgers", icon: BookOpen, action: () => router.push("/ledgers"), keywords: ["accounts", "party"] },
     { id: "vouchers", label: "All Vouchers", icon: FileText, action: () => router.push("/vouchers"), keywords: ["entries", "transactions"] },
-    { id: "inventory", label: "Inventory", icon: Package, action: () => router.push("/inventory"), keywords: ["stock", "items", "saree"] },
+    { id: "inventory", label: "Inventory", icon: Package, action: () => router.push("/inventory"), keywords: ["stock", "items", ""] },
     { id: "pos", label: "POS Billing", icon: Calculator, action: () => router.push("/pos"), keywords: ["billing", "sell", "invoice"] },
     { id: "settings", label: "Settings", icon: Settings, action: () => router.push("/settings"), keywords: ["config", "preferences"] },
     // Quick create

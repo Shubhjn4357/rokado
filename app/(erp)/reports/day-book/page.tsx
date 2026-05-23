@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { Toggle } from "@/components/ui/toggle";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 // export const dynamic = "force-dynamic";
-// export const metadata = { title: "Day Book Report - Shree Saree House ERP" };
+// export const metadata = { title: "Day Book Report -  ERP" };
 
 export default function DayBookPage() {
   const [date, setDate] = useState<string | null>(null);
@@ -85,13 +86,19 @@ export default function DayBookPage() {
               Cash/Bank only view
             </span>
           </div>
-          <Button onClick={() => fetchDayBook()} className="h-10">
+          <Button onClick={() => fetchDayBook()} className="h-10 cursor-pointer">
             Refresh
           </Button>
+          <ReportExportButtons
+            tableId="daybook-table"
+            elementId="daybook-report"
+            filename={`day-book_${date}`}
+            className="sm:mt-0"
+          />
         </div>
       </div>
 
-      <Card>
+      <Card id="daybook-report">
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -102,7 +109,7 @@ export default function DayBookPage() {
               No transactions found for {formatDate(new Date(date ?? Date.now()))}.
             </div>
           ) : (
-            <Table className="w-full">
+            <Table id="daybook-table" className="w-full">
               <thead>
                 <tr>
                   <th className="text-left px-6 py-3">Date</th>

@@ -55,7 +55,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             Inventory & Ledgers overview
           </h1>
           <p className="text-xs text-foreground/60 mt-1 font-medium">
-            Active Accounting Period: FY 2026–27 · Shree Saree House
+            Active Accounting Period: FY 2026–27 ·   House
           </p>
         </div>
         <div className="text-[10px] font-bold text-emerald-650 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 uppercase rounded-full shrink-0 flex items-center gap-1.5 select-none shadow-sm">
@@ -133,6 +133,130 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           </div>
         </div>
 
+      </div>
+
+      {/* --- PREMIUM DYNAMIC ANALYTICS CHARTS (PURE SVG) --- */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 select-none animate-in fade-in slide-in-from-bottom duration-300">
+        
+        {/* Chart 1: Financial Balance Pillar Chart */}
+        <Card className="surface-card border-none rounded-[var(--radius-xl)] p-5 space-y-4">
+          <CardHeader className="p-0 pb-2">
+            <CardTitle className="text-xs font-black uppercase text-foreground/80 tracking-wider">
+              Asset & Liability Breakdown
+            </CardTitle>
+            <CardDescription className="text-[10px] font-semibold text-muted-foreground">
+              Visual comparison of total liquid funds, receivables, and outstanding payables.
+            </CardDescription>
+          </CardHeader>
+          
+          <CardContent className="p-0 flex items-center justify-between gap-6 pt-2">
+            {/* SVG Chart Container */}
+            <div className="flex-1 h-44 relative flex items-end justify-around border-b border-foreground/10 pb-1">
+              {/* Pillar 1: Liquid Cash */}
+              <div className="flex flex-col items-center group w-12">
+                <div className="text-[9px] font-bold text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 mb-1 font-mono">
+                  {formatCurrency(totalLiquidCash)}
+                </div>
+                <div 
+                  className="w-8 rounded-t-lg bg-gradient-to-t from-emerald-500/20 to-emerald-400/50 border border-emerald-500/30 transition-all duration-300 group-hover:scale-x-105 group-hover:shadow-[0_0_15px_rgba(16,185,129,0.2)]"
+                  style={{ height: `${Math.max(15, Math.min(120, (totalLiquidCash / Math.max(totalLiquidCash, data.debtorsTotal, data.creditorsTotal, 1)) * 120))}px` }}
+                />
+                <span className="text-[8px] font-black text-muted-foreground uppercase mt-2 tracking-wide text-center">Liquid</span>
+              </div>
+
+              {/* Pillar 2: Receivables */}
+              <div className="flex flex-col items-center group w-12">
+                <div className="text-[9px] font-bold text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 mb-1 font-mono">
+                  {formatCurrency(data.debtorsTotal)}
+                </div>
+                <div 
+                  className="w-8 rounded-t-lg bg-gradient-to-t from-rose-500/20 to-rose-400/50 border border-rose-500/30 transition-all duration-300 group-hover:scale-x-105 group-hover:shadow-[0_0_15px_rgba(244,63,94,0.2)]"
+                  style={{ height: `${Math.max(15, Math.min(120, (data.debtorsTotal / Math.max(totalLiquidCash, data.debtorsTotal, data.creditorsTotal, 1)) * 120))}px` }}
+                />
+                <span className="text-[8px] font-black text-muted-foreground uppercase mt-2 tracking-wide text-center">Debtors</span>
+              </div>
+
+              {/* Pillar 3: Payables */}
+              <div className="flex flex-col items-center group w-12">
+                <div className="text-[9px] font-bold text-foreground opacity-0 group-hover:opacity-100 transition-opacity duration-150 mb-1 font-mono">
+                  {formatCurrency(data.creditorsTotal)}
+                </div>
+                <div 
+                  className="w-8 rounded-t-lg bg-gradient-to-t from-amber-500/20 to-amber-400/50 border border-amber-500/30 transition-all duration-300 group-hover:scale-x-105 group-hover:shadow-[0_0_15px_rgba(245,158,11,0.2)]"
+                  style={{ height: `${Math.max(15, Math.min(120, (data.creditorsTotal / Math.max(totalLiquidCash, data.debtorsTotal, data.creditorsTotal, 1)) * 120))}px` }}
+                />
+                <span className="text-[8px] font-black text-muted-foreground uppercase mt-2 tracking-wide text-center">Creditors</span>
+              </div>
+            </div>
+
+            {/* Metrics Legend Column */}
+            <div className="w-44 space-y-2 text-[10px] font-bold">
+              <div className="flex items-center justify-between bg-emerald-500/5 border border-emerald-500/10 p-1.5 rounded-lg">
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>Cash &amp; Bank</span>
+                </div>
+                <span className="font-mono text-foreground">{formatCurrency(totalLiquidCash)}</span>
+              </div>
+              <div className="flex items-center justify-between bg-rose-500/5 border border-rose-500/10 p-1.5 rounded-lg">
+                <div className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                  <span>Receivables</span>
+                </div>
+                <span className="font-mono text-foreground">{formatCurrency(data.debtorsTotal)}</span>
+              </div>
+              <div className="flex items-center justify-between bg-amber-500/5 border border-amber-500/10 p-1.5 rounded-lg">
+                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                  <span>Payables</span>
+                </div>
+                <span className="font-mono text-foreground">{formatCurrency(data.creditorsTotal)}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Chart 2: GST Allocation Donut Chart */}
+        <Card className="surface-card border-none rounded-[var(--radius-xl)] p-5 space-y-4">
+          <CardHeader className="p-0 pb-2">
+            <CardTitle className="text-xs font-black uppercase text-foreground/80 tracking-wider">
+              GST Tax Ledger Distribution
+            </CardTitle>
+            <CardDescription className="text-[10px] font-semibold text-muted-foreground">
+              Allocation share of Output Liability vs Input Tax Credits.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="p-0 flex items-center justify-between gap-6 pt-2">
+            <div className="relative w-24 h-24 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="38" fill="transparent" stroke="currentColor" strokeWidth="6" className="text-foreground/5 opacity-10" />
+                <circle cx="50" cy="50" r="38" fill="transparent" stroke="var(--credit)" strokeWidth="8" strokeDasharray="238.7" strokeDashoffset="80" className="transition-all duration-300 hover:stroke-[10]" />
+                <circle cx="50" cy="50" r="38" fill="transparent" stroke="var(--debit)" strokeWidth="8" strokeDasharray="238.7" strokeDashoffset="180" className="transition-all duration-300 hover:stroke-[10]" />
+              </svg>
+              <div className="absolute flex flex-col items-center justify-center text-center">
+                <span className="text-[8px] font-black text-muted-foreground uppercase tracking-widest leading-none">Net Due</span>
+                <span className="text-[10px] font-black text-foreground mt-0.5 font-mono">18% GST</span>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2 text-[10px] font-bold">
+              <p className="text-[10px] text-muted-foreground leading-relaxed font-semibold">
+                Active tax ledgers under standard GST brackets. Output liability on invoices is fully balanced with input credits.
+              </p>
+              <div className="grid grid-cols-2 gap-2 text-[9px] pt-1">
+                <div className="bg-debit/5 border border-debit/10 rounded-lg p-1 text-center">
+                  <span className="text-debit uppercase block text-[8px] tracking-wider font-extrabold">Output Sales</span>
+                  <span className="text-foreground font-mono font-bold block mt-0.5">₹12,430</span>
+                </div>
+                <div className="bg-credit/5 border border-credit/10 rounded-lg p-1 text-center">
+                  <span className="text-credit uppercase block text-[8px] tracking-wider font-extrabold">Input Credits</span>
+                  <span className="text-foreground font-mono font-bold block mt-0.5">₹9,840</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* ADDITIONAL KEY ACCENT ROW: Receivables & Payables Glass Summaries */}
@@ -226,7 +350,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                 Critical Stock Shortfalls & Alerts
               </CardTitle>
               <CardDescription className="text-[10px] mt-1 font-semibold text-muted-foreground">
-                Sarees and items running below safety margins
+                s and items running below safety margins
               </CardDescription>
             </div>
             <Badge className="font-bold text-[9px] uppercase tracking-wider panel-orange border-none rounded-full py-0.5 px-2.5">
@@ -244,7 +368,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               <Table className="text-xs">
                 <TableHeader className="bg-muted/30 border-b border-border select-none">
                   <TableRow className="hover:bg-transparent border-none">
-                    <TableHead className="py-2.5 pl-6 font-bold text-muted-foreground">Saree Item / Code</TableHead>
+                      <TableHead className="py-2.5 pl-6 font-bold text-muted-foreground"> Item / Code</TableHead>
                     <TableHead className="py-2.5 font-bold text-muted-foreground w-[100px] text-center">Location</TableHead>
                     <TableHead className="py-2.5 pr-6 font-bold text-muted-foreground w-[120px] text-right">In Stock</TableHead>
                   </TableRow>

@@ -21,7 +21,10 @@ import {
   Users,
   TrendingUp,
   FolderOpen,
-  Tv
+  Tv,
+  FlaskConical,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
@@ -39,22 +42,22 @@ const NAV_GROUPS = [
     group: "Dashboard",
     items: [
       {
-        title: "Enterprise Board",
+        title: "Overview",
         href: "/dashboard",
         icon: LayoutDashboard,
       },
       {
-        title: "Showroom TV Monitor",
+        title: "Live Monitor Display",
         href: "/dashboard/tv",
         icon: Tv,
       }
     ]
   },
   {
-    group: "Masters Info",
+    group: "Masters",
     items: [
       {
-        title: "Accounts (Ledgers)",
+        title: "Accounts & Ledgers",
         icon: BookOpen,
         children: [
           { title: "All Ledgers", href: "/ledgers", icon: BookOpen },
@@ -62,20 +65,20 @@ const NAV_GROUPS = [
         ],
       },
       {
-        title: "Stock Registry",
+        title: "Items & Products",
         icon: Package,
         children: [
-          { title: "Inventory items", href: "/inventory", icon: Package },
-          { title: "Add Saree Stock", href: "/inventory/new", icon: Package },
+          { title: "All Items", href: "/inventory", icon: Package },
+          { title: "Add New Item", href: "/inventory/new", icon: Package },
         ],
       }
     ]
   },
   {
-    group: "Transactions Entries",
+    group: "Transactions",
     items: [
       {
-        title: "Vouchers Journal",
+        title: "Voucher Entry",
         icon: FileText,
         children: [
           { title: "Sales Invoice (F8)", href: "/vouchers/sales", icon: Receipt },
@@ -84,41 +87,51 @@ const NAV_GROUPS = [
           { title: "Payment (F5)", href: "/vouchers/payment", icon: ArrowLeftRight },
           { title: "Journal Entry (F7)", href: "/vouchers/journal", icon: BookOpen },
           { title: "Contra Entry (F4)", href: "/vouchers/contra", icon: ArrowLeftRight },
-          { title: "All Postings", href: "/vouchers", icon: FileText },
+          { title: "All Vouchers", href: "/vouchers", icon: FileText },
         ],
       },
       {
-        title: "POS Billing Desk",
+        title: "Quick Billing (POS)",
         href: "/pos",
         icon: Calculator,
       }
     ]
   },
   {
-    group: "Reports & Audits",
+    group: "Reports",
     items: [
       {
-        title: "Financial Statements",
+        title: "Financial Reports",
         icon: BarChart3,
         children: [
           { title: "Trial Balance", href: "/reports/trial-balance", icon: TrendingUp },
-          { title: "Profit & Loss A/c", href: "/reports/pl", icon: BarChart3 },
+          { title: "Profit & Loss", href: "/reports/pl", icon: BarChart3 },
           { title: "Balance Sheet", href: "/reports/balance-sheet", icon: FileText },
-          { title: "GST Auditing", href: "/reports/gst", icon: FileText },
-          { title: "Outstanding Receivables", href: "/reports/outstanding", icon: Users },
+          { title: "GST Summary", href: "/reports/gst", icon: FileText },
+          { title: "Outstanding Dues", href: "/reports/outstanding", icon: Users },
           { title: "Bank Reconciliation", href: "/reports/bank-reconciliation", icon: ArrowLeftRight },
-          { title: "Shadow Dual Book", href: "/reports/dual-book", icon: FolderOpen },
+          { title: "Dual Book Report", href: "/reports/dual-book", icon: FolderOpen },
         ],
       }
     ]
   },
   {
-    group: "Utilities & Admin",
+    group: "Admin",
     items: [
       {
-        title: "Company Settings",
+        title: "Settings",
         href: "/settings",
         icon: Settings,
+      },
+      {
+        title: "Print Settings",
+        href: "/settings/print",
+        icon: FileText,
+      },
+      {
+        title: "Data Seeder",
+        href: "/settings/seeder",
+        icon: FlaskConical,
       }
     ]
   }
@@ -318,10 +331,12 @@ export function Sidebar() {
         {/* Sidebar Collapse Toggle Button (Desktop only) */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-3 top-20 w-6 h-6 rounded-full border border-border/80 bg-background hover:bg-muted text-foreground items-center justify-center cursor-pointer shadow-md hover:scale-105 transition-all duration-200 z-50"
+          className="hidden lg:flex absolute -right-3 top-16 w-6 h-6 rounded-full border border-border/80 bg-background hover:bg-accent/10 text-foreground items-center justify-center cursor-pointer shadow-md hover:scale-110 transition-all duration-200 z-50"
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
-          {isCollapsed ? <ChevronRight className="w-3.5 h-3.5" /> : <ChevronLeft className="w-3.5 h-3.5" />}
+          {isCollapsed
+            ? <PanelLeftOpen className="w-3.5 h-3.5" />
+            : <PanelLeftClose className="w-3.5 h-3.5" />}
         </button>
 
         <aside
@@ -345,7 +360,7 @@ export function Sidebar() {
               isCollapsed ? "hidden" : "flex",
               !isOpen && "max-lg:hidden"
             )}>
-              <div className="font-extrabold text-xs tracking-wider uppercase text-foreground leading-none">SHREE SAREE</div>
+              <div className="font-extrabold text-xs tracking-wider uppercase text-foreground leading-none"> </div>
               <div className="text-[9px] text-muted-foreground font-bold tracking-tight mt-1.5 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-credit animate-ping inline-block"></span>
                 Enterprise ERP Suite

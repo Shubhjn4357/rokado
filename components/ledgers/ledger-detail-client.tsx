@@ -19,13 +19,26 @@ import {
   ChevronRight,
   TrendingUp,
   SlidersHorizontal,
-  FolderLock
+  FolderLock,
+  Trash2,
+  Edit,
+  Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate, LEDGER_GROUP_LABELS, type LedgerGroup } from "@/lib/types";
 import type { InferSelectModel } from "@/lib/database";
 import type { ledgers as ledgersTable } from "@/lib/database";
 import { cn } from "@/lib/utils";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { updateLedgerAction, deleteLedgerAction } from "@/app/(erp)/ledgers/actions";
 
 type Ledger = InferSelectModel<typeof ledgersTable>;
 type EntryRow = {
@@ -50,6 +63,75 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
   const [isDetailed, setIsDetailed] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
   
+  // Edit & Delete state
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: ledger.name,
+    group: ledger.group,
+    gstNumber: ledger.gstNumber || "",
+    pan: ledger.pan || "",
+    phone: ledger.phone || "",
+    address: ledger.address || "",
+    creditLimit: ledger.creditLimit || 0,
+    openingBalance: ledger.openingBalance || 0,
+    balanceType: ledger.balanceType || "dr",
+  });
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingEdit(true);
+    const res = await updateLedgerAction(ledger.id, {
+      name: editForm.name,
+      group: editForm.group as any,
+      gstNumber: editForm.gstNumber,
+      pan: editForm.pan,
+      phone: editForm.phone,
+      address: editForm.address,
+      creditLimit: Number(editForm.creditLimit) || 0,
+      openingBalance: Number(editForm.openingBalance) || 0,
+      balanceType: editForm.balanceType as any,
+    });
+    setIsSubmittingEdit(false);
+    if (res.success) {
+      toast({
+        title: "Ledger Updated",
+        description: "Successfully updated ledger details.",
+      });
+      setIsEditDialogOpen(false);
+      router.refresh();
+    } else {
+      toast({
+        title: "Update Failed",
+        description: res.error,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirm = window.confirm(`WARNING: Are you sure you want to permanently delete the ledger "${ledger.name}"?`);
+    if (!confirm) return;
+
+    setIsDeleting(true);
+    const res = await deleteLedgerAction(ledger.id);
+    setIsDeleting(false);
+    if (res.success) {
+      toast({
+        title: "Ledger Deleted",
+        description: `Successfully deleted "${ledger.name}".`,
+      });
+      router.push("/ledgers");
+    } else {
+      toast({
+        title: "Delete Failed",
+        description: res.error,
+        variant: "destructive",
+      });
+    }
+  };
+
   // Date filtering state
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -125,7 +207,7 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
             <span>K: Keyboard</span>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-accent-yellow">Shree Saree House</span>
+            <span className="text-accent-yellow">  House</span>
             <span className="text-[10px] bg-accent-indigo text-white px-2 py-0.5 rounded">Tally Prime v4.0</span>
           </div>
         </div>
@@ -134,8 +216,24 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
         <div className="bg-card/60 backdrop-blur-md border-b border-border/80 px-6 py-3.5 flex items-center justify-between gap-4 shrink-0 text-sm font-bold">
           <div>
             <div className="text-[10px] text-muted-foreground tracking-wider uppercase">Ledger Account Display</div>
-            <h1 className="text-lg font-extrabold uppercase mt-0.5 tracking-tight flex items-center gap-2">
+            <h1 className="text-lg font-extrabold uppercase mt-0.5 tracking-tight flex items-center gap-3">
               Ledger: <span className="underline decoration-2 underline-offset-4">{ledger.name}</span>
+              <div className="flex items-center gap-1.5 ml-2 normal-case shrink-0">
+                <Button
+                  onClick={() => setIsEditDialogOpen(true)}
+                  className="h-6 px-2.5 rounded-lg text-[10px] font-bold bg-accent/15 text-accent hover:bg-accent/25 border border-accent/20 cursor-pointer flex items-center gap-1 transition-all"
+                >
+                  <Edit className="w-3 h-3" /> Edit
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                  variant="destructive"
+                  className="h-6 px-2.5 rounded-lg text-[10px] font-bold bg-destructive/10 hover:bg-destructive/20 text-destructive border border-destructive/20 cursor-pointer flex items-center gap-1 transition-all"
+                >
+                  <Trash2 className="w-3 h-3" /> Delete
+                </Button>
+              </div>
             </h1>
           </div>
 
@@ -438,6 +536,158 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
           <span>Gateway exit</span>
         </button>
       </div>
+
+      {/* Edit Ledger Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto rounded-2xl bg-card border border-border shadow-2xl backdrop-blur-3xl font-sans text-xs p-6 text-foreground">
+          <DialogHeader className="border-b border-border/40 pb-3">
+            <DialogTitle className="text-sm font-black text-primary flex items-center gap-2">
+              <Edit className="w-4 h-4 text-accent" />
+              Edit Ledger: {ledger.name}
+            </DialogTitle>
+            <DialogDescription className="text-[10px] text-muted-foreground mt-0.5">
+              Modify account attributes and credit parameters. Fields marked with * are required.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditSubmit} className="space-y-4 mt-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-name" className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">Ledger Name *</Label>
+              <Input
+                id="edit-name"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                required
+                className="h-9 rounded-xl bg-background/55 border-border text-xs"
+              />
+            </div>
+
+            <div className="grid gap-3 grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-group" className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">Accounting Group *</Label>
+                <select
+                  id="edit-group"
+                  value={editForm.group}
+                  onChange={(e) => setEditForm({ ...editForm, group: e.target.value })}
+                  className="w-full h-9 rounded-xl border border-border bg-background px-3 text-xs font-semibold text-foreground"
+                >
+                  <option value="cash">Cash-In-Hand</option>
+                  <option value="bank">Bank Accounts</option>
+                  <option value="sundry_debtors">Sundry Debtors</option>
+                  <option value="sundry_creditors">Sundry Creditors</option>
+                  <option value="sales">Sales Accounts</option>
+                  <option value="purchase">Purchase Accounts</option>
+                  <option value="duties_taxes">Duties & Taxes</option>
+                  <option value="expenses">Expenses</option>
+                  <option value="capital">Capital Account</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-phone" className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">Contact Phone</Label>
+                <Input
+                  id="edit-phone"
+                  value={editForm.phone}
+                  onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                  className="h-9 rounded-xl bg-background/55 border-border text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-3 grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-gst" className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">GSTIN (Optional)</Label>
+                <Input
+                  id="edit-gst"
+                  placeholder="e.g. 27AAACS1429B1ZB"
+                  value={editForm.gstNumber}
+                  onChange={(e) => setEditForm({ ...editForm, gstNumber: e.target.value.toUpperCase() })}
+                  className="h-9 rounded-xl bg-background/55 border-border text-xs font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-pan" className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">PAN (Optional)</Label>
+                <Input
+                  id="edit-pan"
+                  placeholder="e.g. AAACS1429B"
+                  value={editForm.pan}
+                  onChange={(e) => setEditForm({ ...editForm, pan: e.target.value.toUpperCase() })}
+                  className="h-9 rounded-xl bg-background/55 border-border text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-address" className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">Physical Address</Label>
+              <Input
+                id="edit-address"
+                value={editForm.address}
+                onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                className="h-9 rounded-xl bg-background/55 border-border text-xs"
+              />
+            </div>
+
+            <div className="grid gap-3 grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="edit-limit" className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">Credit Limit (₹)</Label>
+                <Input
+                  id="edit-limit"
+                  type="number"
+                  value={editForm.creditLimit || ""}
+                  onChange={(e) => setEditForm({ ...editForm, creditLimit: parseFloat(e.target.value) || 0 })}
+                  className="h-9 rounded-xl bg-background/55 border-border text-xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-foreground/75 font-semibold text-[10px] uppercase tracking-wider">Opening Balance (₹)</Label>
+                <div className="flex gap-1">
+                  <Input
+                    type="number"
+                    value={editForm.openingBalance || ""}
+                    onChange={(e) => setEditForm({ ...editForm, openingBalance: parseFloat(e.target.value) || 0 })}
+                    className="h-9 rounded-xl bg-background/55 border-border text-xs flex-1"
+                  />
+                  <select
+                    value={editForm.balanceType}
+                    onChange={(e) => setEditForm({ ...editForm, balanceType: e.target.value as any })}
+                    className="h-9 rounded-xl border border-border bg-background px-2 text-xs font-bold w-16 text-foreground"
+                  >
+                    <option value="dr">DR</option>
+                    <option value="cr">CR</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="border-t border-border/30 pt-4 flex gap-2 justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditDialogOpen(false)}
+                className="h-9 rounded-xl text-xs font-bold px-4 border-border hover:bg-muted cursor-pointer"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmittingEdit}
+                className="h-9 rounded-xl text-xs font-bold px-5 bg-accent hover:bg-accent/90 text-white cursor-pointer"
+              >
+                {isSubmittingEdit ? (
+                  <>
+                    <Loader2 className="w-3 h-3 animate-spin mr-1 inline" />
+                    Updating...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

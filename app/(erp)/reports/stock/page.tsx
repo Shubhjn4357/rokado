@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 // export const dynamic = "force-dynamic";
-// export const metadata = { title: "Stock Summary Report - Shree Saree House ERP" };
+// export const metadata = { title: "Stock Summary Report -  ERP" };
 
 export default function StockPage() {
   const [date, setDate] = useState<string | null>(null);
@@ -66,10 +67,16 @@ export default function StockPage() {
           <Button onClick={() => fetchStockSummary()} className="h-10">
             Refresh
           </Button>
+          <ReportExportButtons
+            tableId="stock-table"
+            elementId="stock-report"
+            filename={`stock-summary_${date || "as-of-date"}`}
+            className="sm:mt-0"
+          />
         </div>
       </div>
 
-      <Card className="w-full">
+      <Card id="stock-report" className="w-full">
         <CardHeader>
           <CardTitle>Stock Position</CardTitle>
         </CardHeader>
@@ -83,7 +90,7 @@ export default function StockPage() {
               No inventory items found.
             </div>
           ) : (
-            <Table>
+            <Table id="stock-table">
               <thead>
                 <tr>
                   <th className="text-left px-6 py-3">Item Name</th>

@@ -7,6 +7,8 @@ import { hashPassword, setSession, getSession } from "@/lib/auth";
 export async function createCompanyAndLedgersAction(data: {
   businessName: string;
   gstin: string;
+  pan?: string;
+  startingCapital?: number;
   businessAddress: string;
   businessCity: string;
   businessState: string;
@@ -24,6 +26,8 @@ export async function createCompanyAndLedgersAction(data: {
     const {
       businessName,
       gstin,
+      pan,
+      startingCapital,
       businessAddress,
       businessCity,
       businessState,
@@ -47,6 +51,7 @@ export async function createCompanyAndLedgersAction(data: {
         id: companyId,
         name: businessName,
         gstin: gstin,
+        pan: pan || null,
         address: `${businessAddress}, ${businessCity}, ${businessState} - ${businessPincode}`,
         phone: businessPhone,
         email: businessEmail,
@@ -58,7 +63,8 @@ export async function createCompanyAndLedgersAction(data: {
     if (!company) throw new Error("Failed to create company");
 
     // Create default ledgers based on business type
-    const defaultLedgers = getDefaultLedgers(company.id, businessType);
+    const initialCapital = startingCapital != null ? startingCapital : (cashInHand + bankBalance);
+    const defaultLedgers = getDefaultLedgers(company.id, businessType, initialCapital);
     await db.insert(ledgers).values(defaultLedgers as any);
 
     // Set opening balances if provided
@@ -167,7 +173,7 @@ export async function createCompanyAndLedgersAction(data: {
   }
 }
 
-function getDefaultLedgers(companyId: string, businessType: string) {
+function getDefaultLedgers(companyId: string, businessType: string, initialCapital: number) {
   const ledgersData: Array<Partial<typeof ledgers.$inferSelect>> = [
     // Cash & Bank
     { id: crypto.randomUUID(), companyId, name: "Cash", group: "cash", openingBalance: 0, balanceType: "dr" as const },
@@ -187,13 +193,44 @@ function getDefaultLedgers(companyId: string, businessType: string) {
     { id: crypto.randomUUID(), companyId, name: "Sundry Creditors", group: "sundry_creditors", openingBalance: 0, balanceType: "cr" as const },
 
     // Expenses
-    { id: crypto.randomUUID(), companyId, name: "Expenses", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+    { id: crypto.randomUUID(), companyId, name: "General Expenses", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
 
     // Capital
-    { id: crypto.randomUUID(), companyId, name: "Capital Account", group: "capital", openingBalance: 0, balanceType: "cr" as const },
+    { id: crypto.randomUUID(), companyId, name: "Capital Account", group: "capital", openingBalance: initialCapital, balanceType: "cr" as const },
   ];
 
-  if (businessType === "wholesale_saree" || businessType === "textile_retail") {
+  if (businessType === "retail_store") {
+    ledgersData.push(
+      { id: crypto.randomUUID(), companyId, name: "Shop Rent", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Electricity & Utilities", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Inventory Shrinkage", group: "expenses", openingBalance: 0, balanceType: "dr" as const }
+    );
+  } else if (businessType === "wholesale_dist") {
+    ledgersData.push(
+      { id: crypto.randomUUID(), companyId, name: "Transport & Freight", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Warehouse Rent", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Sales Commission", group: "expenses", openingBalance: 0, balanceType: "dr" as const }
+    );
+  } else if (businessType === "general_services") {
+    ledgersData.push(
+      { id: crypto.randomUUID(), companyId, name: "Software & SaaS Subscriptions", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Professional & Legal Fees", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Office Expenses", group: "expenses", openingBalance: 0, balanceType: "dr" as const }
+    );
+  } else if (businessType === "apparel_garment") {
+    ledgersData.push(
+      { id: crypto.randomUUID(), companyId, name: "Fabric Dyeing & Printing", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Transport & Freight", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Showroom Rent", group: "expenses", openingBalance: 0, balanceType: "dr" as const }
+    );
+  } else if (businessType === "manufacturing") {
+    ledgersData.push(
+      { id: crypto.randomUUID(), companyId, name: "Factory Power & Fuel", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Direct Labour Charges", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
+      { id: crypto.randomUUID(), companyId, name: "Machinery Maintenance", group: "expenses", openingBalance: 0, balanceType: "dr" as const }
+    );
+  } else {
+  // Custom / Default /  Wholesale style
     ledgersData.push(
       { id: crypto.randomUUID(), companyId, name: "Transport & Freight", group: "expenses", openingBalance: 0, balanceType: "dr" as const },
       { id: crypto.randomUUID(), companyId, name: "Shop Rent", group: "expenses", openingBalance: 0, balanceType: "dr" as const }

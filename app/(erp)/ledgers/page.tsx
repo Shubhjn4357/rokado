@@ -4,7 +4,7 @@ import { LedgerListClient } from "@/components/ledgers/ledger-list-client";
 import { TableSkeleton } from "@/components/ui/skeletons";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Ledgers - Shree Saree House ERP" };
+export const metadata = { title: "Ledgers -  ERP" };
 
 async function getLedgersData() {
   return await db

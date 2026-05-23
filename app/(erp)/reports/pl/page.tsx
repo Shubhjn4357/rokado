@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 // export const dynamic = "force-dynamic";
-// export const metadata = { title: "Profit & Loss Statement - Shree Saree House ERP" };
+// export const metadata = { title: "Profit & Loss Statement -  ERP" };
 
 export default function PLPage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
@@ -18,7 +19,10 @@ export default function PLPage() {
   const [prevDateFrom, setPrevDateFrom] = useState<string | null>(null);
   const [prevDateTo, setPrevDateTo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [plData, setPLData] = useState<any>({});
+  const [plData, setPLData] = useState<any>({
+    current: { sales: 0, purchase: 0, grossProfit: 0, expenses: [], otherIncome: 0, netProfit: 0 },
+    previous: { sales: 0, purchase: 0, grossProfit: 0, expenses: [], otherIncome: 0, netProfit: 0 }
+  });
 
   // Default to current fiscal year to date
   const fyStart = () => {
@@ -118,13 +122,19 @@ export default function PLPage() {
               />
             </div>
           </div>
-          <Button onClick={() => fetchPL()} className="h-10">
+          <Button onClick={() => fetchPL()} className="h-10 cursor-pointer">
             Refresh
           </Button>
+          <ReportExportButtons
+            tableId="pl-table"
+            elementId="pl-report"
+            filename={`pl-statement_${dateFrom}_to_${dateTo}`}
+            className="sm:mt-0"
+          />
         </div>
       </div>
 
-      <Card className="w-full">
+      <Card id="pl-report" className="w-full">
         <CardHeader>
           <CardTitle>Profit & Loss Statement</CardTitle>
         </CardHeader>
@@ -140,7 +150,7 @@ export default function PLPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <Table>
+                <Table id="pl-table">
                   <thead>
                     <tr>
                       <th className="text-left px-6 py-3">Particulars</th>

@@ -137,8 +137,8 @@ export default function VoucherPrintPage({ params }: { params: Promise<{ id: str
         igstAmount={0}
         totalAmount={totalAmount}
         amountInWords={amountInWords}
-        companyName="Shree Saree House"
-        companyAddress="145, Saree Market, Chandni Chowk, Delhi 110006"
+        companyName="  House"
+        companyAddress="145,  Market, Chandni Chowk, Delhi 110006"
         companyGstin="27AAACS1429B1ZB"
         companyPan="AAACS1429B"
       />

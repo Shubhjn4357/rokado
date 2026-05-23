@@ -7,5 +7,13 @@
       "moneyPaid": 0,
       "notes": "Verified credit sales match physical diary records."
     }
+  },
+  "a14c1e14-49b7-4399-ab4f-d1ceaebaea9b": {
+    "taxSettings": {
+      "gstApplicable": true,
+      "defaultGstRate": 5,
+      "TDSApplicable": false,
+      "defaultTDSRate": 10
+    }
   }
 }

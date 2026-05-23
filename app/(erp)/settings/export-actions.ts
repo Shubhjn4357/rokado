@@ -35,7 +35,7 @@ export async function exportTallyXmlAction() {
     xml += `      <REQUESTDESC>\n`;
     xml += `        <REPORTNAME>All Masters</REPORTNAME>\n`;
     xml += `        <STATICVARIABLES>\n`;
-    xml += `          <SVCURRENTCOMPANY>Shree Saree House</SVCURRENTCOMPANY>\n`;
+    xml += `          <SVCURRENTCOMPANY>  House</SVCURRENTCOMPANY>\n`;
     xml += `        </STATICVARIABLES>\n`;
     xml += `      </REQUESTDESC>\n`;
     xml += `      <REQUESTDATA>\n`;
@@ -134,7 +134,7 @@ export async function exportGstr1JsonAction() {
     }
 
     const gstr1Payload = {
-      gstin: "27SHREESAREESHOUSE1Z5", // Mock company GSTIN
+      gstin: "27SHOUSE1Z5", // Mock company GSTIN
       fp: "052026", // May 2026
       gt: 2450000.0, // Mock gross turnover
       cur_gt: 480000.0,

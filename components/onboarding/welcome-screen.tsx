@@ -11,7 +11,7 @@ type FlowState = "welcome" | "new_business" | "migrate" | "backup";
 
 export function WelcomeScreen() {
   const [flow, setFlow] = useState<FlowState>("welcome");
-  const [selectedType, setSelectedType] = useState<string>("wholesale_saree");
+  const [selectedType, setSelectedType] = useState<string>("wholesale_");
 
   if (flow === "new_business") {
     return (

@@ -24,6 +24,7 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { formatCurrency } from "@/lib/types";
 import { getDailyComparisonData, saveManualBookEntry } from "@/app/(erp)/reports/actions";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 export default function DualBookPage() {
   const [date, setDate] = useState<string>("");
@@ -192,13 +193,20 @@ export default function DualBookPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-border/60 rounded-2xl bg-card/60 backdrop-blur overflow-hidden">
-          <CardHeader className="bg-muted/10 border-b border-border/40 pb-4">
-            <CardTitle className="text-base font-semibold">Side-by-Side Verification</CardTitle>
-            <CardDescription>Comparison table for selected date.</CardDescription>
+        <Card className="lg:col-span-2 border-border/60 rounded-2xl bg-card/60 backdrop-blur overflow-hidden" id="dual-book-report">
+          <CardHeader className="bg-muted/10 border-b border-border/40 pb-4 flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="text-base font-semibold">Side-by-Side Verification</CardTitle>
+              <CardDescription>Comparison table for selected date.</CardDescription>
+            </div>
+            <ReportExportButtons
+              tableId="dual-book-table"
+              elementId="dual-book-report"
+              filename={`dual-book-comparison_${date || "date"}`}
+            />
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+            <Table id="dual-book-table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>

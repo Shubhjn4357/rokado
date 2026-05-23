@@ -2,12 +2,18 @@ import { Suspense } from "react";
 import { db, ledgers, vouchers, voucherEntries, inventoryItems, eq, and, sum, count, gte, desc } from "@/lib/database";
 import { TVClient } from "@/components/dashboard/tv-client";
 import { TVSkeleton } from "@/components/ui/skeletons";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Showroom TV Monitor - Shree Saree House ERP" };
+export const metadata = { title: "Live TV Monitor - Rokado ERP" };
 
 async function getTvDashboardData() {
-  const companyId = "company_1";
+  const session = await getSession();
+  if (!session || !session.companyId) {
+    redirect("/login");
+  }
+  const companyId = session.companyId;
 
   // Start of today timestamp
   const todayStart = new Date();

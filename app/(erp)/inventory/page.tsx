@@ -1,15 +1,19 @@
 import { Suspense } from "react";
-import { db, inventoryItems, desc } from "@/lib/database";
+import { db, inventoryItems, desc, eq } from "@/lib/database";
 import { InventoryClient } from "@/components/inventory/inventory-client";
 import { TableSkeleton } from "@/components/ui/skeletons";
+import { getSession } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Inventory - Shree Saree House ERP" };
+export const metadata = { title: "Inventory -  ERP" };
 
 async function getInventoryData() {
+  const session = await getSession();
+  if (!session || !session.companyId) return [];
   return await db
     .select()
     .from(inventoryItems)
+    .where(eq(inventoryItems.companyId, session.companyId))
     .orderBy(desc(inventoryItems.stockQuantity));
 }
 
@@ -37,7 +41,7 @@ export default function InventoryPage() {
             <h1 className="text-2xl font-bold tracking-tight">Inventory</h1>
             <p className="text-muted-foreground text-sm mt-1">Calculating stock metrics...</p>
           </div>
-          <TableSkeleton headers={["Item Code", "Saree Category", "Rack Location", "Stock Level", "Actions"]} />
+          <TableSkeleton headers={["Item Code", " Category", "Rack Location", "Stock Level", "Actions"]} />
         </div>
       }
     >

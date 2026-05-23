@@ -16,11 +16,20 @@ import {
   lt,
   or
 } from "@/lib/database";
+import { getSession } from "@/lib/auth";
+
+async function getCompanyId(): Promise<string> {
+  const session = await getSession();
+  if (!session || !session.companyId) {
+    throw new Error("Not authenticated or no active organization");
+  }
+  return session.companyId;
+}
 
 // ─── TRIAL BALANCE ─────────────────────────────────────────────────────────────
 export async function getTrialBalanceReportData(dateFrom?: string | null, dateTo?: string | null) {
   try {
-    const companyId = "company_1";
+    const companyId = await getCompanyId();
     const dateFromParam = dateFrom ? new Date(dateFrom).getTime() : undefined;
     const dateToParam = dateTo ? new Date(dateTo).getTime() : undefined;
 
@@ -127,6 +136,7 @@ export async function getTrialBalanceReportData(dateFrom?: string | null, dateTo
 // ─── DAY BOOK ─────────────────────────────────────────────────────────────────
 export async function getDayBookReportData(date?: string | null, cashBankOnly?: boolean) {
   try {
+    const companyId = await getCompanyId();
     const dateParam = date ? new Date(date).getTime() : undefined;
     if (!dateParam) {
       return { entries: [], openingBalance: 0 };
@@ -137,7 +147,7 @@ export async function getDayBookReportData(date?: string | null, cashBankOnly?: 
       .from(ledgers)
       .where(
         and(
-          eq(ledgers.companyId as any, "company_1"),
+          eq(ledgers.companyId as any, companyId),
           eq(ledgers.isActive as any, true),
           sql`${ledgers.group} IN ('cash', 'bank')`
         )
@@ -164,7 +174,7 @@ export async function getDayBookReportData(date?: string | null, cashBankOnly?: 
         .innerJoin(ledgers, eq(voucherEntries.ledgerId as any, ledgers.id as any))
         .where(
           and(
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             lt(vouchers.date as any, dateParam),
             eq(ledgers.isActive as any, true),
             sql`${ledgers.group} IN ('cash', 'bank')`
@@ -178,7 +188,7 @@ export async function getDayBookReportData(date?: string | null, cashBankOnly?: 
         .from(ledgers)
         .where(
           and(
-            eq(ledgers.companyId as any, "company_1"),
+            eq(ledgers.companyId as any, companyId),
             eq(ledgers.isActive as any, true),
             sql`${ledgers.group} IN ('cash', 'bank')`
           )
@@ -207,7 +217,7 @@ export async function getDayBookReportData(date?: string | null, cashBankOnly?: 
       .innerJoin(ledgers, eq(voucherEntries.ledgerId as any, ledgers.id as any))
       .where(
         and(
-          eq(vouchers.companyId as any, "company_1"),
+          eq(vouchers.companyId as any, companyId),
           eq(vouchers.date as any, dateParam),
           eq(ledgers.isActive as any, true)
         )
@@ -243,10 +253,10 @@ export async function getDayBookReportData(date?: string | null, cashBankOnly?: 
     return { entries: [], openingBalance: 0 };
   }
 }
-
 // ─── GST REPORT ────────────────────────────────────────────────────────────────
 export async function getGSTReportData(dateFrom?: string | null, dateTo?: string | null) {
   try {
+    const companyId = await getCompanyId();
     const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
     const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
 
@@ -256,7 +266,7 @@ export async function getGSTReportData(dateFrom?: string | null, dateTo?: string
         .from(vouchers)
         .where(
           and(
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             eq(vouchers.type, "sales"),
             fromDate ? gte(vouchers.date, fromDate) : undefined,
             toDate ? lte(vouchers.date, toDate) : undefined
@@ -267,7 +277,7 @@ export async function getGSTReportData(dateFrom?: string | null, dateTo?: string
         .from(vouchers)
         .where(
           and(
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             eq(vouchers.type, "purchase"),
             fromDate ? gte(vouchers.date, fromDate) : undefined,
             toDate ? lte(vouchers.date, toDate) : undefined
@@ -278,7 +288,7 @@ export async function getGSTReportData(dateFrom?: string | null, dateTo?: string
         .from(vouchers)
         .where(
           and(
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             eq(vouchers.type as any, "journal"),
             fromDate ? gte(vouchers.date, fromDate) : undefined,
             toDate ? lte(vouchers.date, toDate) : undefined
@@ -311,6 +321,7 @@ export async function getPLReportData(
   prevDateTo?: string | null
 ) {
   try {
+    const companyId = await getCompanyId();
     const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
     const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
     const prevFromDate = prevDateFrom ? new Date(prevDateFrom).getTime() : undefined;
@@ -319,19 +330,19 @@ export async function getPLReportData(
     const [salesLedger] = await db
       .select()
       .from(ledgers)
-      .where(and(eq(ledgers.group as any, "sales"), eq(ledgers.companyId as any, "company_1")))
+      .where(and(eq(ledgers.group as any, "sales"), eq(ledgers.companyId as any, companyId)))
       .limit(1);
 
     const [purchaseLedger] = await db
       .select()
       .from(ledgers)
-      .where(and(eq(ledgers.group as any, "purchase"), eq(ledgers.companyId as any, "company_1")))
+      .where(and(eq(ledgers.group as any, "purchase"), eq(ledgers.companyId as any, companyId)))
       .limit(1);
 
     const expenseLedgers = await db
       .select({ id: ledgers.id, name: ledgers.name })
       .from(ledgers)
-      .where(and(eq(ledgers.group as any, "expenses"), eq(ledgers.companyId as any, "company_1")))
+      .where(and(eq(ledgers.group as any, "expenses"), eq(ledgers.companyId as any, companyId)))
       .orderBy(ledgers.name);
 
     const otherIncomeLedgers = await db
@@ -340,12 +351,12 @@ export async function getPLReportData(
       .where(
         and(
           or(eq(ledgers.group as any, "other_income"), eq(ledgers.group as any, "interest_income")),
-          eq(ledgers.companyId as any, "company_1")
+          eq(ledgers.companyId as any, companyId)
         )
       )
       .orderBy(ledgers.name);
 
-    const [salesResult, purchaseResult, expenseResults, otherIncomeResults] = await Promise.all([
+    const results = await Promise.all([
       db
         .select({ total: sum(voucherEntries.amount) })
         .from(voucherEntries)
@@ -353,7 +364,7 @@ export async function getPLReportData(
         .where(
           and(
             eq(voucherEntries.ledgerId as any, salesLedger?.id ?? ""),
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             eq(voucherEntries.type as any, "cr"),
             fromDate ? gte(vouchers.date as any, fromDate) : undefined,
             toDate ? lte(vouchers.date as any, toDate) : undefined
@@ -366,7 +377,7 @@ export async function getPLReportData(
         .where(
           and(
             eq(voucherEntries.ledgerId as any, purchaseLedger?.id ?? ""),
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             eq(voucherEntries.type as any, "dr"),
             fromDate ? gte(vouchers.date as any, fromDate) : undefined,
             toDate ? lte(vouchers.date as any, toDate) : undefined
@@ -380,7 +391,7 @@ export async function getPLReportData(
           .where(
             and(
               eq(voucherEntries.ledgerId as any, ledger.id),
-              eq(vouchers.companyId as any, "company_1"),
+              eq(vouchers.companyId as any, companyId),
               eq(voucherEntries.type as any, "dr"),
               fromDate ? gte(vouchers.date as any, fromDate) : undefined,
               toDate ? lte(vouchers.date as any, toDate) : undefined
@@ -395,7 +406,7 @@ export async function getPLReportData(
           .where(
             and(
               eq(voucherEntries.ledgerId as any, ledger.id),
-              eq(vouchers.companyId as any, "company_1"),
+              eq(vouchers.companyId as any, companyId),
               eq(voucherEntries.type as any, "cr"),
               fromDate ? gte(vouchers.date as any, fromDate) : undefined,
               toDate ? lte(vouchers.date as any, toDate) : undefined
@@ -403,6 +414,11 @@ export async function getPLReportData(
           )
       )
     ]);
+
+    const salesResult = results[0];
+    const purchaseResult = results[1];
+    const expenseResults = results.slice(2, 2 + expenseLedgers.length);
+    const otherIncomeResults = results.slice(2 + expenseLedgers.length);
 
     const salesTotal = Number(salesResult[0]?.total ?? 0);
     const purchaseTotal = Number(purchaseResult[0]?.total ?? 0);
@@ -419,7 +435,7 @@ export async function getPLReportData(
     const netProfit = grossProfit - totalExpenses + otherIncomeTotal;
 
     // Previous year period
-    const [prevSalesResult, prevPurchaseResult, prevExpenseResults, prevOtherIncomeResults] = await Promise.all([
+    const prevResults = await Promise.all([
       db
         .select({ total: sum(voucherEntries.amount) })
         .from(voucherEntries)
@@ -427,7 +443,7 @@ export async function getPLReportData(
         .where(
           and(
             eq(voucherEntries.ledgerId as any, salesLedger?.id ?? ""),
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             eq(voucherEntries.type as any, "cr"),
             prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
             prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
@@ -440,7 +456,7 @@ export async function getPLReportData(
         .where(
           and(
             eq(voucherEntries.ledgerId as any, purchaseLedger?.id ?? ""),
-            eq(vouchers.companyId as any, "company_1"),
+            eq(vouchers.companyId as any, companyId),
             eq(voucherEntries.type as any, "dr"),
             prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
             prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
@@ -454,7 +470,7 @@ export async function getPLReportData(
           .where(
             and(
               eq(voucherEntries.ledgerId as any, ledger.id),
-              eq(vouchers.companyId as any, "company_1"),
+              eq(vouchers.companyId as any, companyId),
               eq(voucherEntries.type as any, "dr"),
               prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
               prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
@@ -469,7 +485,7 @@ export async function getPLReportData(
           .where(
             and(
               eq(voucherEntries.ledgerId as any, ledger.id),
-              eq(vouchers.companyId as any, "company_1"),
+              eq(vouchers.companyId as any, companyId),
               eq(voucherEntries.type as any, "cr"),
               prevFromDate ? gte(vouchers.date as any, prevFromDate) : undefined,
               prevToDate ? lte(vouchers.date as any, prevToDate) : undefined
@@ -477,6 +493,11 @@ export async function getPLReportData(
           )
       )
     ]);
+
+    const prevSalesResult = prevResults[0];
+    const prevPurchaseResult = prevResults[1];
+    const prevExpenseResults = prevResults.slice(2, 2 + expenseLedgers.length);
+    const prevOtherIncomeResults = prevResults.slice(2 + expenseLedgers.length);
 
     const prevSalesTotal = Number(prevSalesResult[0]?.total ?? 0);
     const prevPurchaseTotal = Number(prevPurchaseResult[0]?.total ?? 0);
@@ -510,13 +531,29 @@ export async function getPLReportData(
     };
   } catch (err) {
     console.error("Failed to fetch P&L report data:", err);
-    return {};
+    return {
+      salesTotal: 0,
+      purchaseTotal: 0,
+      expenseTotals: [],
+      otherIncomeTotal: 0,
+      totalExpenses: 0,
+      grossProfit: 0,
+      netProfit: 0,
+      prevSalesTotal: 0,
+      prevPurchaseTotal: 0,
+      prevExpenseTotals: [],
+      prevOtherIncomeTotal: 0,
+      prevTotalExpenses: 0,
+      prevGrossProfit: 0,
+      prevNetProfit: 0,
+    };
   }
 }
 
 // ─── BALANCE SHEET ─────────────────────────────────────────────────────────────
 export async function getBalanceSheetReportData(date?: string | null) {
   try {
+    const companyId = await getCompanyId();
     const dateParam = date ? new Date(date).getTime() : undefined;
 
     const allLedgers = await db
@@ -528,7 +565,7 @@ export async function getBalanceSheetReportData(date?: string | null) {
         balanceType: ledgers.balanceType,
       })
       .from(ledgers)
-      .where(eq(ledgers.companyId as any, "company_1"))
+      .where(eq(ledgers.companyId as any, companyId))
       .orderBy(ledgers.name);
 
     const ledgerBalancesList = await Promise.all(
@@ -541,7 +578,7 @@ export async function getBalanceSheetReportData(date?: string | null) {
             .where(
               and(
                 eq(voucherEntries.ledgerId as any, ledger.id),
-                eq(vouchers.companyId as any, "company_1"),
+                eq(vouchers.companyId as any, companyId),
                 dateParam ? lte(vouchers.date as any, dateParam) : undefined,
                 eq(voucherEntries.type as any, "dr")
               )
@@ -553,7 +590,7 @@ export async function getBalanceSheetReportData(date?: string | null) {
             .where(
               and(
                 eq(voucherEntries.ledgerId as any, ledger.id),
-                eq(vouchers.companyId as any, "company_1"),
+                eq(vouchers.companyId as any, companyId),
                 dateParam ? lte(vouchers.date as any, dateParam) : undefined,
                 eq(voucherEntries.type as any, "cr")
               )
@@ -664,6 +701,7 @@ export async function getBalanceSheetReportData(date?: string | null) {
 // ─── STOCK SUMMARY ─────────────────────────────────────────────────────────────
 export async function getStockReportData(date?: string | null) {
   try {
+    const companyId = await getCompanyId();
     const dateParam = date ? new Date(date).getTime() : undefined;
 
     const items = await db
@@ -675,7 +713,7 @@ export async function getStockReportData(date?: string | null) {
         openingStock: inventoryItems.stockQuantity,
       })
       .from(inventoryItems)
-      .where(eq(inventoryItems.companyId as any, "company_1"))
+      .where(eq(inventoryItems.companyId as any, companyId))
       .orderBy(inventoryItems.name);
 
     const stockSummary = await Promise.all(
@@ -699,7 +737,7 @@ export async function getStockReportData(date?: string | null) {
             .where(
               and(
                 eq(stockMovements.itemId, item.id),
-                eq(vouchers.companyId, "company_1"),
+                eq(vouchers.companyId, companyId),
                 lt(vouchers.date, dateParam)
               )
             );
@@ -714,7 +752,7 @@ export async function getStockReportData(date?: string | null) {
           .where(
             and(
               eq(stockMovements.itemId, item.id),
-              eq(vouchers.companyId, "company_1"),
+              eq(vouchers.companyId, companyId),
               dateParam ? lte(vouchers.date, dateParam) : undefined,
               eq(stockMovements.type, "in")
             )
@@ -727,7 +765,7 @@ export async function getStockReportData(date?: string | null) {
           .where(
             and(
               eq(stockMovements.itemId, item.id),
-              eq(vouchers.companyId, "company_1"),
+              eq(vouchers.companyId, companyId),
               dateParam ? lte(vouchers.date, dateParam) : undefined,
               eq(stockMovements.type, "out")
             )
@@ -760,12 +798,13 @@ export async function getStockReportData(date?: string | null) {
 // ─── BANK RECONCILIATION ────────────────────────────────────────────────────────
 export async function getBankLedgersOptions() {
   try {
+    const companyId = await getCompanyId();
     return await db
       .select({ id: ledgers.id, name: ledgers.name })
       .from(ledgers)
       .where(
         and(
-          eq(ledgers.companyId as any, "company_1"),
+          eq(ledgers.companyId as any, companyId),
           eq(ledgers.isActive as any, true),
           eq(ledgers.group as any, "bank")
         )
@@ -779,8 +818,9 @@ export async function getBankLedgersOptions() {
 
 export async function getBankBalances(bankLedgerId: string) {
   try {
+    const companyId = await getCompanyId();
     const ledger = await db.query.ledgers.findFirst({
-      where: eq(ledgers.id as any, bankLedgerId),
+      where: and(eq(ledgers.id as any, bankLedgerId), eq(ledgers.companyId as any, companyId)),
       columns: { openingBalance: true, balanceType: true }
     });
 
@@ -796,7 +836,7 @@ export async function getBankBalances(bankLedgerId: string) {
       .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
       .where(and(
         eq(voucherEntries.ledgerId as any, bankLedgerId),
-        eq(vouchers.companyId as any, "company_1")
+        eq(vouchers.companyId as any, companyId)
       ));
 
     let totalDr = 0;
@@ -829,6 +869,7 @@ export async function getBankReconciliationData(
   dateTo?: string | null
 ) {
   try {
+    const companyId = await getCompanyId();
     const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
     const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
 
@@ -847,7 +888,7 @@ export async function getBankReconciliationData(
       .innerJoin(vouchers, eq(voucherEntries.voucherId as any, vouchers.id as any))
       .where(and(
         eq(voucherEntries.ledgerId as any, bankLedgerId),
-        eq(vouchers.companyId as any, "company_1"),
+        eq(vouchers.companyId as any, companyId),
         fromDate ? gte(vouchers.date as any, fromDate) : undefined,
         toDate ? lte(vouchers.date as any, toDate) : undefined
       ))
@@ -874,6 +915,7 @@ export async function getBankReconciliationData(
 // ─── OUTSTANDING REPORT ─────────────────────────────────────────────────────────
 export async function getOutstandingReportData(date?: string | null) {
   try {
+    const companyId = await getCompanyId();
     const dateParam = date ? new Date(date).getTime() : undefined;
 
     const debtorLedgers = await db
@@ -889,7 +931,7 @@ export async function getOutstandingReportData(date?: string | null) {
       .from(ledgers)
       .where(
         and(
-          eq(ledgers.companyId as any, "company_1"),
+          eq(ledgers.companyId as any, companyId),
           eq(ledgers.isActive as any, true),
           eq(ledgers.group as any, "sundry_debtors")
         )
@@ -909,7 +951,7 @@ export async function getOutstandingReportData(date?: string | null) {
       .from(ledgers)
       .where(
         and(
-          eq(ledgers.companyId as any, "company_1"),
+          eq(ledgers.companyId as any, companyId),
           eq(ledgers.isActive as any, true),
           eq(ledgers.group as any, "sundry_creditors")
         )
@@ -927,7 +969,7 @@ export async function getOutstandingReportData(date?: string | null) {
               .where(
                 and(
                   eq(voucherEntries.ledgerId, ledger.id),
-                  eq(vouchers.companyId, "company_1"),
+                  eq(vouchers.companyId, companyId),
                   dateParam ? lte(vouchers.date, dateParam) : undefined,
                   eq(voucherEntries.type, "dr")
                 )
@@ -939,7 +981,7 @@ export async function getOutstandingReportData(date?: string | null) {
               .where(
                 and(
                   eq(voucherEntries.ledgerId, ledger.id),
-                  eq(vouchers.companyId, "company_1"),
+                  eq(vouchers.companyId, companyId),
                   dateParam ? lte(vouchers.date, dateParam) : undefined,
                   eq(voucherEntries.type, "cr")
                 )
@@ -1017,6 +1059,7 @@ function writeJsonSettings(settings: any) {
 
 export async function getDailyComparisonData(dateStr: string) {
   try {
+    const companyId = await getCompanyId();
     const selectedDate = new Date(dateStr);
     const startOfDay = new Date(selectedDate.setHours(0, 0, 0, 0)).getTime();
     const endOfDay = new Date(selectedDate.setHours(23, 59, 59, 999)).getTime();
@@ -1031,7 +1074,7 @@ export async function getDailyComparisonData(dateStr: string) {
       })
       .from(vouchers)
       .where(and(
-        eq(vouchers.companyId as any, "company_1"),
+        eq(vouchers.companyId as any, companyId),
         gte(vouchers.date as any, startOfDay),
         lte(vouchers.date as any, endOfDay)
       ));

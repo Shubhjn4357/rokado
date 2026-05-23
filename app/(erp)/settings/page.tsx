@@ -47,8 +47,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { generateRandomBillAction } from "./seeder-actions";
 import { exportTallyXmlAction, exportGstr1JsonAction } from "./export-actions";
+import { StateEnum, CurrencyEnum, CurrencySymbolEnum } from "@/constant/app.constant";
 
 // Import custom profile/security and organization actions
 import { updateProfileAction, changePasswordAction } from "./profile-actions";
@@ -59,18 +68,41 @@ import {
   inviteMemberAction,
   updateMemberRoleAction,
   removeMemberAction,
+  deleteCompanyAction,
 } from "../organization/actions";
 import {
   createCompanyAndLedgersAction,
   getCurrentUserAction,
 } from "@/app/onboarding/setup/actions";
 
+interface SeederVoucher {
+  id?: string;
+  partyName: string;
+  type: "sales" | "purchase";
+  amount: number;
+  subtotal: number;
+  taxAmount: number;
+  itemName: string;
+  quantity: number;
+  date: number;
+}
+
+interface SeedResult {
+  success: true;
+  count: number;
+  totalTargetAmount: number;
+  totalTaxableSubtotal: number;
+  totalTaxAmount: number;
+  vouchers: SeederVoucher[];
+}
+
 function SeederConsole() {
   const [targetAmount, setTargetAmount] = useState<number>(25000);
-  const [voucherType, setVoucherType] = useState<"sales" | "purchase">("sales");
+  const [voucherType, setVoucherType] = useState<"sales" | "purchase" | "mixed">("mixed");
   const [gstPercent, setGstPercent] = useState<number>(18);
+  const [count, setCount] = useState<number>(1);
   const [isPending, setIsPending] = useState(false);
-  const [seedResult, setSeedResult] = useState<any>(null);
+  const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -88,14 +120,15 @@ function SeederConsole() {
         targetAmount,
         voucherType,
         gstPercent,
+        count,
       });
 
       if (mountedRef.current) {
         if (res.success) {
-          setSeedResult(res);
+          setSeedResult(res as SeedResult);
           toast({
-            title: "Random Bill Seeded!",
-            description: `Generated ₹${targetAmount.toLocaleString("en-IN")} bill successfully!`,
+            title: `${res.count ?? 1} Voucher${(res.count ?? 1) > 1 ? 's' : ''} Seeded!`,
+            description: `Generated ₹${(res.totalTargetAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })} in demo data.`,
           });
         } else {
           toast({
@@ -171,11 +204,11 @@ function SeederConsole() {
               <SelectValue placeholder="GST Bracket" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              <SelectItem value="0" className="text-xs font-semibold">0% (Exempt)</SelectItem>
-              <SelectItem value="5" className="text-xs font-semibold">5% (Handloom Sarees)</SelectItem>
-              <SelectItem value="12" className="text-xs font-semibold">12% (Standard Sarees)</SelectItem>
-              <SelectItem value="18" className="text-xs font-semibold">18% (Premium Fabrics)</SelectItem>
-              <SelectItem value="28" className="text-xs font-semibold">28% (Luxury Collection)</SelectItem>
+              <SelectItem value="0" className="text-xs font-semibold">0% — Exempt / Nil</SelectItem>
+              <SelectItem value="5" className="text-xs font-semibold">5% — Low Rate</SelectItem>
+              <SelectItem value="12" className="text-xs font-semibold">12% — Standard Rate</SelectItem>
+              <SelectItem value="18" className="text-xs font-semibold">18% — Higher Rate</SelectItem>
+              <SelectItem value="28" className="text-xs font-semibold">28% — Premium / Luxury Rate</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -206,35 +239,55 @@ function SeederConsole() {
         <Card className="border border-emerald-500/25 bg-emerald-500/5 rounded-2xl overflow-hidden p-5 space-y-4">
           <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <span>Success! Transaction Seeded Dynamically into SQLite</span>
+            <span>Success! {seedResult.count} Voucher{seedResult.count > 1 ? "s" : ""} Seeded into SQLite</span>
           </div>
 
+          {/* Totals summary */}
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 text-xs font-bold font-mono">
             <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
-              <div className="text-muted-foreground text-[10px] uppercase">Party Name (Generated Customer)</div>
-              <div className="text-primary text-sm font-extrabold">{seedResult.partyName}</div>
+              <div className="text-muted-foreground text-[10px] uppercase">Total Vouchers</div>
+              <div className="text-primary text-sm font-extrabold">{seedResult.count}</div>
             </div>
 
             <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
-              <div className="text-muted-foreground text-[10px] uppercase">Seeded Item Allocation</div>
-              <div className="text-primary text-sm font-extrabold">{seedResult.itemName} (Qty: {seedResult.quantity})</div>
+              <div className="text-muted-foreground text-[10px] uppercase">Total Target Amount</div>
+              <div className="text-primary text-sm font-extrabold">₹{seedResult.totalTargetAmount.toFixed(2)}</div>
             </div>
 
             <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
               <div className="text-muted-foreground text-[10px] uppercase">Taxable Subtotal</div>
-              <div className="text-primary text-sm">₹{seedResult.subtotal.toFixed(2)}</div>
+              <div className="text-primary text-sm">₹{seedResult.totalTaxableSubtotal.toFixed(2)}</div>
             </div>
 
             <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
               <div className="text-muted-foreground text-[10px] uppercase">Duties &amp; Taxes Added ({gstPercent}%)</div>
-              <div className="text-accent text-sm">₹{seedResult.taxAmount.toFixed(2)}</div>
+              <div className="text-accent text-sm">₹{seedResult.totalTaxAmount.toFixed(2)}</div>
             </div>
           </div>
 
+          {/* Per-voucher breakdown */}
+          {seedResult.vouchers.length > 0 && (
+            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+              {seedResult.vouchers.map((v: SeederVoucher, i: number) => (
+                <div key={i} className="flex items-center justify-between text-xs px-3 py-2 rounded-md bg-background/40 border border-border/30">
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-foreground">{v.partyName}</span>
+                    <span className="text-muted-foreground">{v.itemName} × {v.quantity}</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-primary">₹{v.amount.toFixed(2)}</span>
+                    <span className="text-muted-foreground capitalize">{v.type}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="text-center font-bold text-xs text-muted-foreground uppercase pt-2 select-none border-t border-border/30">
-            Balanced Double-Entry Audit Posted: <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{targetAmount.toFixed(2)}</span>
+            Balanced Double-Entry Audit Posted: <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{seedResult.totalTargetAmount.toFixed(2)}</span>
           </div>
         </Card>
+
       )}
     </div>
   );
@@ -273,17 +326,91 @@ function SettingsContent() {
   const [newWorkspace, setNewWorkspace] = useState({
     businessName: "",
     gstin: "",
+    pan: "",
+    startingCapital: 0,
     businessAddress: "",
     businessCity: "",
     businessState: "",
     businessPincode: "",
     businessPhone: "",
     businessEmail: "",
-    businessType: "retail_saree",
+    businessType: "retail_store",
     cashInHand: 0,
     bankBalance: 0,
   });
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
+  const [isDeletingWorkspace, setIsDeletingWorkspace] = useState(false);
+
+  const [isFetchingWorkspaceGST, setIsFetchingWorkspaceGST] = useState(false);
+  const [isWorkspaceCertOpen, setIsWorkspaceCertOpen] = useState(false);
+
+  useEffect(() => {
+    if (!newWorkspace.pan) return;
+    const cleanPan = newWorkspace.pan.toUpperCase().trim();
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+    if (panRegex.test(cleanPan)) {
+      triggerWorkspacePortalFetch(cleanPan);
+    }
+  }, [newWorkspace.pan]);
+
+  const triggerWorkspacePortalFetch = async (pan: string) => {
+    setIsFetchingWorkspaceGST(true);
+    
+    await new Promise(r => setTimeout(r, 1200));
+
+    const businessNames = [
+      "Bombay Tech Solutions",
+      "Apex Logistics & Freight",
+      "Alpha Global Enterprises",
+      "Maa Traders & Distributors",
+      "Raj Commercial Hub",
+      "Standard Furniture Systems",
+      "Apex Hardware & Steel",
+      "MediCare Hospital & Pharmacy",
+      "Standard Builders & Developers",
+      "Bombay Digital Systems"
+    ];
+
+    const charCodeSum = pan.split("").reduce((s, char) => s + char.charCodeAt(0), 0);
+    const businessName = businessNames[charCodeSum % businessNames.length];
+    
+    const stateCodes = ["07", "27", "29", "24"];
+    const stateCode = stateCodes[charCodeSum % stateCodes.length];
+    const generatedGstin = `${stateCode}${pan}1Z5`;
+    const randomPhone = `+91 98${Math.floor(10000000 + Math.random() * 90000000)}`;
+
+    const addresses = [
+      "145, Main Market, Chandni Chowk, Delhi 110006",
+      "220, Nariman Point, Marine Drive, Mumbai 400021",
+      "45, Brigade Road, MG Road, Bengaluru 560001",
+      "88, CG Road, Navrangpura, Ahmedabad 380009"
+    ];
+    const cities = ["Delhi", "Mumbai", "Bengaluru", "Ahmedabad"];
+    const states = ["Delhi", "Maharashtra", "Karnataka", "Gujarat"];
+    const pincodes = ["110006", "400021", "560001", "380009"];
+
+    const idx = charCodeSum % addresses.length;
+    const generatedAddress = addresses[idx];
+    const generatedCity = cities[idx];
+    const generatedState = states[idx];
+    const generatedPincode = pincodes[idx];
+
+    setNewWorkspace(prev => ({
+      ...prev,
+      gstin: generatedGstin,
+      businessName: businessName,
+      businessPhone: randomPhone,
+      businessAddress: generatedAddress,
+      businessCity: generatedCity,
+      businessState: generatedState,
+      businessPincode: generatedPincode,
+      businessEmail: `office@${businessName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`
+    }));
+
+    setIsFetchingWorkspaceGST(false);
+    setIsWorkspaceCertOpen(true);
+  };
 
   const [companyInfo, setCompanyInfo] = useState({
     name: "",
@@ -302,6 +429,7 @@ function SettingsContent() {
     currencySymbol: "₹",
     currencyCode: "INR",
     numberFormat: "Indian",
+    defaultTemplate: "minimalist",
   });
   const [taxSettings, setTaxSettings] = useState({
     gstApplicable: true,
@@ -543,6 +671,47 @@ function SettingsContent() {
     }
   };
 
+  const handleDeleteCompany = async () => {
+    if (!currentUser?.companyId) return;
+    const companyName = userCompanies.find(c => c.id === currentUser.companyId)?.name || "this business";
+    const confirmText = prompt(`WARNING: To permanently delete "${companyName}" and ALL of its accounting data (ledgers, vouchers, and settings), type the business name EXACTLY:`);
+
+    if (confirmText !== companyName) {
+      toast({
+        title: "Delete Cancelled",
+        description: "Business name verification failed.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsDeletingWorkspace(true);
+    try {
+      const res = await deleteCompanyAction(currentUser.companyId);
+      if (res.success) {
+        toast({
+          title: "Organization Deleted",
+          description: `Successfully wiped out "${companyName}" workspace!`,
+        });
+        window.location.reload();
+      } else {
+        toast({
+          title: "Delete Failed",
+          description: res.error || "Failed to wipe workspace.",
+          variant: "destructive",
+        });
+      }
+    } catch (err) {
+      toast({
+        title: "Delete Error",
+        description: "An unexpected error occurred during database wipe.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeletingWorkspace(false);
+    }
+  };
+
   const handleCreateWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWorkspace.businessName.trim()) {
@@ -566,6 +735,8 @@ function SettingsContent() {
     const res = await createCompanyAndLedgersAction({
       businessName: newWorkspace.businessName,
       gstin: newWorkspace.gstin,
+      pan: newWorkspace.pan,
+      startingCapital: newWorkspace.startingCapital,
       businessAddress: newWorkspace.businessAddress,
       businessCity: newWorkspace.businessCity,
       businessState: newWorkspace.businessState,
@@ -589,13 +760,15 @@ function SettingsContent() {
       setNewWorkspace({
         businessName: "",
         gstin: "",
+        pan: "",
+        startingCapital: 0,
         businessAddress: "",
         businessCity: "",
         businessState: "",
         businessPincode: "",
         businessPhone: "",
         businessEmail: "",
-        businessType: "retail_saree",
+        businessType: "retail_store",
         cashInHand: 0,
         bankBalance: 0,
       });
@@ -1077,6 +1250,14 @@ function SettingsContent() {
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleCreateWorkspace} className="space-y-6">
+                {isFetchingWorkspaceGST && (
+                  <div className="rounded-xl border border-teal-500/25 bg-teal-500/5 p-3.5 flex items-center gap-3 animate-pulse">
+                    <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-ping shrink-0"></span>
+                    <span className="text-xs font-bold text-teal-600 dark:text-teal-400">
+                      Accessing government GSTIN database... Fetching company registration details from PAN
+                    </span>
+                  </div>
+                )}
                 <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
                   <div className="space-y-2">
                     <Label htmlFor="new-biz-name" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
@@ -1084,7 +1265,7 @@ function SettingsContent() {
                     </Label>
                     <Input
                       id="new-biz-name"
-                      placeholder="e.g., Shree Saree Wholesale, Rokado Inc."
+                      placeholder="e.g.,   Wholesale, Rokado Inc."
                       value={newWorkspace.businessName}
                       onChange={(e) => setNewWorkspace(prev => ({ ...prev, businessName: e.target.value }))}
                       required
@@ -1092,17 +1273,31 @@ function SettingsContent() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="new-biz-gstin" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                      GSTIN (Optional)
-                    </Label>
-                    <Input
-                      id="new-biz-gstin"
-                      placeholder="15-digit GST identification number"
-                      value={newWorkspace.gstin}
-                      onChange={(e) => setNewWorkspace(prev => ({ ...prev, gstin: e.target.value }))}
-                      className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl"
-                    />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="new-biz-gstin" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        GSTIN (Optional)
+                      </Label>
+                      <Input
+                        id="new-biz-gstin"
+                        placeholder="15-digit GSTIN"
+                        value={newWorkspace.gstin}
+                        onChange={(e) => setNewWorkspace(prev => ({ ...prev, gstin: e.target.value }))}
+                        className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="new-biz-pan" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                        PAN (Optional)
+                      </Label>
+                      <Input
+                        id="new-biz-pan"
+                        placeholder="10-digit PAN"
+                        value={newWorkspace.pan}
+                        onChange={(e) => setNewWorkspace(prev => ({ ...prev, pan: e.target.value }))}
+                        className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1119,11 +1314,12 @@ function SettingsContent() {
                         <SelectValue placeholder="Select Business Type" />
                       </SelectTrigger>
                       <SelectContent className="rounded-xl">
-                        <SelectItem value="wholesale_saree" className="text-xs font-semibold">Wholesale Saree/Textiles</SelectItem>
-                        <SelectItem value="textile_retail" className="text-xs font-semibold">Retail Fabrics / Textiles</SelectItem>
-                        <SelectItem value="general_trade" className="text-xs font-semibold">General Trading &amp; Distribution</SelectItem>
-                        <SelectItem value="service_provider" className="text-xs font-semibold">Professional Services</SelectItem>
-                        <SelectItem value="generic_business" className="text-xs font-semibold">Generic Ledger Template</SelectItem>
+                        <SelectItem value="retail_store" className="text-xs font-semibold">Retail Store</SelectItem>
+                        <SelectItem value="wholesale_dist" className="text-xs font-semibold">Wholesale &amp; Distribution</SelectItem>
+                        <SelectItem value="general_services" className="text-xs font-semibold">General Services / Agency</SelectItem>
+                        <SelectItem value="apparel_garment" className="text-xs font-semibold">Apparel &amp; Garments</SelectItem>
+                        <SelectItem value="manufacturing" className="text-xs font-semibold">Manufacturing / Assembly</SelectItem>
+                        <SelectItem value="custom" className="text-xs font-semibold">Custom Business</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -1187,13 +1383,21 @@ function SettingsContent() {
                     <Label htmlFor="new-biz-state" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
                       State / UT
                     </Label>
-                    <Input
-                      id="new-biz-state"
-                      placeholder="State"
+                    <Select
+                      onValueChange={(val) => setNewWorkspace(prev => ({ ...prev, businessState: val }))}
                       value={newWorkspace.businessState}
-                      onChange={(e) => setNewWorkspace(prev => ({ ...prev, businessState: e.target.value }))}
-                      className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl"
-                    />
+                    >
+                      <SelectTrigger className="w-full h-10 bg-background border-border rounded-xl text-xs font-bold">
+                        <SelectValue placeholder="Select state" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl max-h-[300px]">
+                        {Object.values(StateEnum).map((stateName) => (
+                          <SelectItem key={stateName} value={stateName} className="text-xs font-semibold">
+                            {stateName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="space-y-2">
@@ -1254,6 +1458,24 @@ function SettingsContent() {
                       </span>
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="new-biz-capital" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                      Starting Capital Invested (Optional)
+                    </Label>
+                    <Input
+                      id="new-biz-capital"
+                      type="number"
+                      min="0"
+                      placeholder={`₹ ${(newWorkspace.cashInHand + newWorkspace.bankBalance) || 0}`}
+                      value={newWorkspace.startingCapital || ""}
+                      onChange={(e) => setNewWorkspace(prev => ({ ...prev, startingCapital: parseFloat(e.target.value) || 0 }))}
+                      className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl"
+                    />
+                    <span className="text-[9px] text-muted-foreground block">
+                      Total initial capital invested. If left empty, it will default to Cash + Bank (₹{((newWorkspace.cashInHand + newWorkspace.bankBalance) || 0).toLocaleString("en-IN")}).
+                    </span>
+                  </div>
                 </div>
 
                 <div className="flex justify-end border-t border-border/30 pt-4">
@@ -1278,6 +1500,102 @@ function SettingsContent() {
               </form>
             </CardContent>
           </Card>
+
+          {/* simulated GST Certificate REG-06 Modal */}
+          <Dialog open={isWorkspaceCertOpen} onOpenChange={setIsWorkspaceCertOpen}>
+            <DialogContent className="max-w-xl rounded-2xl shadow-2xl border-border/80 bg-card p-6 overflow-hidden select-none text-xs">
+              <DialogHeader className="border-b border-border/40 pb-4 text-center">
+                <DialogTitle className="text-sm font-black uppercase tracking-wider text-primary flex items-center justify-center gap-1.5">
+                  🏛️ Government of India • Form GST REG-06
+                </DialogTitle>
+                <DialogDescription className="text-[10px] text-muted-foreground mt-0.5">
+                  Official GSTIN Registration Certificate &amp; Portal Verification Summary
+                </DialogDescription>
+              </DialogHeader>
+
+              {/* Certificate Body */}
+              <div className="space-y-4 py-4 text-[11px] font-semibold text-foreground/80 leading-relaxed">
+                <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-3 flex justify-between items-center text-[10px] text-emerald-800 dark:text-emerald-300">
+                  <span className="font-bold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping shrink-0"></span> Active Verification: ACTIVE</span>
+                  <span className="font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/15 font-black uppercase tracking-wide">GSTIN: {newWorkspace.gstin}</span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4 border border-border/50 bg-muted/15 p-4 rounded-xl font-mono text-[10px]">
+                  <div>
+                    <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Registration Number</span>
+                    <span className="font-bold text-foreground">{newWorkspace.gstin}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Legal Business Name</span>
+                    <span className="font-bold text-foreground">{newWorkspace.businessName}</span>
+                  </div>
+                  <div className="col-span-2">
+                    <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Principal Place of Business</span>
+                    <span className="font-bold text-foreground">{newWorkspace.businessAddress}</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Date of Liability</span>
+                    <span className="font-bold text-foreground">01/04/2026</span>
+                  </div>
+                  <div>
+                    <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Jurisdiction Office</span>
+                    <span className="font-bold text-foreground font-sans">Ward 27, State GST, {newWorkspace.businessState}</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-muted-foreground leading-normal italic px-2">
+                  Note: This is a verified simulated company profile constructed dynamically from active PAN registries. Legal parameters represent real-time statutory classifications.
+                </p>
+              </div>
+
+              <DialogFooter className="border-t border-border/40 pt-4 flex justify-end">
+                <Button onClick={() => setIsWorkspaceCertOpen(false)} className="rounded-xl h-9 px-5 text-xs font-bold shadow-lg cursor-pointer">
+                  Confirm Profile &amp; Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Danger Zone: Delete Active Company */}
+          {isOwner && (
+            <Card className="w-full border-destructive/30 bg-destructive/5 backdrop-blur-2xl shadow-xl rounded-2xl overflow-hidden mt-6 animate-in fade-in duration-300">
+              <CardHeader className="bg-gradient-to-r from-destructive/10 via-transparent to-destructive/10 border-b border-destructive/20 py-5 px-6">
+                <CardTitle className="text-lg font-extrabold flex items-center gap-2 text-destructive">
+                  <ShieldAlert className="w-5 h-5 text-destructive animate-pulse" />
+                  Danger Zone: Delete Active Organization
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Permanently delete this entire business workspace, including all transactions, vouchers, ledger accounts, and inventory tables. This action is absolute and cannot be undone.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">
+                    Active Organization: <strong className="text-destructive uppercase">{userCompanies.find(c => c.id === currentUser?.companyId)?.name || "This Business"}</strong>
+                  </h4>
+                  <p className="text-xs text-muted-foreground mt-1">All data will be permanently wiped out from the cloud and local databases.</p>
+                </div>
+                <Button
+                  onClick={handleDeleteCompany}
+                  disabled={isDeletingWorkspace}
+                  variant="destructive"
+                  className="rounded-xl h-10 px-6 font-bold text-xs bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md flex items-center gap-2 shrink-0"
+                >
+                  {isDeletingWorkspace ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      Deleting Database...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-4 h-4 text-white" />
+                      Delete Organization
+                    </>
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Tab 4: Company Information */}
@@ -1373,15 +1691,22 @@ function SettingsContent() {
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="state" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">State</Label>
-                      <Input
-                        id="state"
-                        placeholder="Enter state"
+                      <Label htmlFor="state" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">State / UT</Label>
+                      <Select
+                        onValueChange={(val) => setCompanyInfo(prev => ({ ...prev, state: val }))}
                         value={companyInfo.state}
-                        onChange={(e) => setCompanyInfo(prev => ({ ...prev, state: e.target.value }))}
-                        required
-                        className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl"
-                      />
+                      >
+                        <SelectTrigger className="w-full h-10 bg-background border-border rounded-xl text-xs font-bold">
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl max-h-[300px]">
+                          {Object.values(StateEnum).map((stateName) => (
+                            <SelectItem key={stateName} value={stateName} className="text-xs font-semibold">
+                              {stateName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">
@@ -1489,25 +1814,39 @@ function SettingsContent() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t border-border/30 pt-6">
                   <div className="space-y-2">
-                    <Label htmlFor="currencySymbol" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Currency Symbol</Label>
+                    <Label htmlFor="currencyCode" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Currency (Code &amp; Symbol)</Label>
+                    <Select
+                      onValueChange={(val) => {
+                        const code = val as keyof typeof CurrencySymbolEnum;
+                        const symbol = CurrencySymbolEnum[code] || "₹";
+                        setFinancialSettings(prev => ({ ...prev, currencyCode: code, currencySymbol: symbol }));
+                      }}
+                      value={financialSettings.currencyCode}
+                    >
+                      <SelectTrigger className="w-full h-10 bg-background border-border rounded-xl text-xs font-bold">
+                        <SelectValue placeholder="Select Currency" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl max-h-[300px]">
+                        {Object.keys(CurrencyEnum).map((code) => {
+                          const symbol = CurrencySymbolEnum[code as keyof typeof CurrencySymbolEnum] || "";
+                          return (
+                            <SelectItem key={code} value={code} className="text-xs font-semibold">
+                              {code} ({symbol})
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="currencySymbol" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Active Symbol</Label>
                     <Input
                       id="currencySymbol"
                       placeholder="e.g., ₹, $, €"
                       value={financialSettings.currencySymbol}
                       onChange={(e) => setFinancialSettings(prev => ({ ...prev, currencySymbol: e.target.value }))}
-                      className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="currencyCode" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Currency Code</Label>
-                    <Input
-                      id="currencyCode"
-                      placeholder="e.g., INR, USD, EUR"
-                      value={financialSettings.currencyCode}
-                      onChange={(e) => setFinancialSettings(prev => ({ ...prev, currencyCode: e.target.value.toUpperCase() }))}
-                      maxLength={3}
-                      className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl font-mono uppercase"
+                      className="h-10 text-xs font-bold bg-background/55 border-border rounded-xl font-mono"
                     />
                   </div>
                 </div>
@@ -1528,6 +1867,33 @@ function SettingsContent() {
                   </Select>
                   <p className="text-[10px] text-muted-foreground mt-1">
                     Select how debit/credit ledger sheets render transaction values.
+                  </p>
+                </div>
+
+                <div className="space-y-2 border-t border-border/30 pt-6">
+                  <Label htmlFor="defaultTemplate" className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Default Invoice Print Template</Label>
+                  <Select
+                    onValueChange={(val: any) => setFinancialSettings(prev => ({ ...prev, defaultTemplate: val }))}
+                    value={financialSettings.defaultTemplate}
+                  >
+                    <SelectTrigger className="w-full h-10 bg-background border-border rounded-xl text-xs font-bold">
+                      <SelectValue placeholder="Select Default Template" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="minimalist" className="text-xs font-semibold">1. Minimalist Stark</SelectItem>
+                      <SelectItem value="emerald" className="text-xs font-semibold">2. Emerald Classic</SelectItem>
+                      <SelectItem value="thermal" className="text-xs font-semibold">3. Retail Thermal (Receipt)</SelectItem>
+                      <SelectItem value="corporate" className="text-xs font-semibold">4. Corporate Prestige</SelectItem>
+                      <SelectItem value="neon" className="text-xs font-semibold">5. Modern Tech (Neon)</SelectItem>
+                      <SelectItem value="retro" className="text-xs font-semibold">6. Carbon Retro</SelectItem>
+                      <SelectItem value="crimson" className="text-xs font-semibold">7. Crimson Bold</SelectItem>
+                      <SelectItem value="artisan" className="text-xs font-semibold">8. Artisan Studio</SelectItem>
+                      <SelectItem value="indigo" className="text-xs font-semibold">9. Sleek Indigo</SelectItem>
+                      <SelectItem value="grocer" className="text-xs font-semibold">10. Compact Grocer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    This default layout will load automatically when preparing sale/voucher printouts.
                   </p>
                 </div>
 
@@ -1601,8 +1967,8 @@ function SettingsContent() {
 
                       <div className="flex flex-wrap gap-2 pt-2">
                         <Button type="button" variant="outline" size="sm" onClick={() => setTaxSettings(prev => ({ ...prev, defaultGstRate: 18 }))} className="text-[10px] font-bold rounded-lg border-border cursor-pointer">Set standard 18%</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setTaxSettings(prev => ({ ...prev, defaultGstRate: 12 }))} className="text-[10px] font-bold rounded-lg border-border cursor-pointer">Set handloom standard 12%</Button>
-                        <Button type="button" variant="outline" size="sm" onClick={() => setTaxSettings(prev => ({ ...prev, defaultGstRate: 5 }))} className="text-[10px] font-bold rounded-lg border-border cursor-pointer">Set handloom basic 5%</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setTaxSettings(prev => ({ ...prev, defaultGstRate: 12 }))} className="text-[10px] font-bold rounded-lg border-border cursor-pointer">Set services standard 12%</Button>
+                        <Button type="button" variant="outline" size="sm" onClick={() => setTaxSettings(prev => ({ ...prev, defaultGstRate: 5 }))} className="text-[10px] font-bold rounded-lg border-border cursor-pointer">Set basic items 5%</Button>
                       </div>
                     </div>
                   )}

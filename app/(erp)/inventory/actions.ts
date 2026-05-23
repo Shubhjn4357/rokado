@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { eq, and, sql, desc } from "drizzle-orm";
 import type { InventoryItem, InventoryCategory } from "@/lib/types";
+import { getSession } from "@/lib/auth";
 
 export interface CreateInventoryItemInput {
   name: string;
@@ -44,13 +45,19 @@ export async function createInventoryItem(input: CreateInventoryItemInput): Prom
       return { success: false, error: "Name and category are required" };
     }
 
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated or no active organization" };
+    }
+    const companyId = session.companyId;
+
     const itemId = randomUUID();
 
     await db.transaction(async (tx) => {
       // Insert inventory item
       await tx.insert(inventoryItems).values({
         id: itemId,
-        companyId: "company_1",
+        companyId: companyId,
         name: input.name,
         category: input.category,
         designNo: input.designNo ?? null,
@@ -106,6 +113,12 @@ export async function updateInventoryItem(input: UpdateInventoryItemInput): Prom
       return { success: false, error: "Item ID is required" };
     }
 
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated or no active organization" };
+    }
+    const companyId = session.companyId;
+
     await db.transaction(async (tx) => {
       // Update inventory item
       await tx.update(inventoryItems)
@@ -125,7 +138,7 @@ export async function updateInventoryItem(input: UpdateInventoryItemInput): Prom
         })
         .where(and(
           eq(inventoryItems.id as any, input.id),
-          eq(inventoryItems.companyId as any, "company_1")
+          eq(inventoryItems.companyId as any, companyId)
         ));
 
       // Append audit log
@@ -155,6 +168,12 @@ export async function updateInventoryItem(input: UpdateInventoryItemInput): Prom
 
 export async function deleteInventoryItem(itemId: string): Promise<{ success: true } | { success: false; error: string }> {
   try {
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated or no active organization" };
+    }
+    const companyId = session.companyId;
+
     await db.transaction(async (tx) => {
       // Check if item has stock movements
       const movements = await tx
@@ -171,7 +190,7 @@ export async function deleteInventoryItem(itemId: string): Promise<{ success: tr
       await tx.delete(inventoryItems)
         .where(and(
           eq(inventoryItems.id as any, itemId),
-          eq(inventoryItems.companyId as any, "company_1")
+          eq(inventoryItems.companyId as any, companyId)
         ));
 
       // Append audit log
@@ -204,6 +223,12 @@ export interface AdjustStockInput {
 
 export async function adjustStock(input: AdjustStockInput): Promise<{ success: true } | { success: false; error: string }> {
   try {
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated or no active organization" };
+    }
+    const companyId = session.companyId;
+
     await db.transaction(async (tx) => {
       // Get current item to verify existence and get purchase rate if rate not provided
       const [item] = await tx
@@ -211,7 +236,7 @@ export async function adjustStock(input: AdjustStockInput): Promise<{ success: t
         .from(inventoryItems)
         .where(and(
           eq(inventoryItems.id as any, input.itemId),
-          eq(inventoryItems.companyId as any, "company_1")
+          eq(inventoryItems.companyId as any, companyId)
         ));
 
       if (!item) {
@@ -228,7 +253,7 @@ export async function adjustStock(input: AdjustStockInput): Promise<{ success: t
         })
         .where(and(
           eq(inventoryItems.id as any, input.itemId),
-          eq(inventoryItems.companyId as any, "company_1")
+          eq(inventoryItems.companyId as any, companyId)
         ));
 
       // Record stock movement
@@ -309,6 +334,12 @@ export async function getItemDetailsAction(itemId: string) {
 
 export async function getInventoryItemsOptions() {
   try {
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return [];
+    }
+    const companyId = session.companyId;
+
     const items = await db
       .select({
         id: inventoryItems.id,
@@ -320,7 +351,7 @@ export async function getInventoryItemsOptions() {
         unit: inventoryItems.unit,
       })
       .from(inventoryItems)
-      .where(eq(inventoryItems.companyId as any, "company_1"))
+      .where(eq(inventoryItems.companyId as any, companyId))
       .orderBy(inventoryItems.name);
     return items;
   } catch (err) {

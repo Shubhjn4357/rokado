@@ -99,3 +99,47 @@ export async function updateLedgerBalancesForVoucher(
     throw error;
   }
 }
+
+/**
+ * Reverse ledger balances after a voucher is deleted or modified
+ * Called within the same transaction as voucher operations
+ */
+export async function reverseLedgerBalancesForVoucher(
+  tx: any,
+  voucherDate: number, // Unix ms timestamp
+  ledgerEffects: Array<{ ledgerId: string; debit: number; credit: number }>
+) {
+  try {
+    // Aggregate effects by ledger
+    const effectsByLedger = new Map<string, { debit: number; credit: number }>();
+    for (const effect of ledgerEffects) {
+      const current = effectsByLedger.get(effect.ledgerId) || { debit: 0, credit: 0 };
+      effectsByLedger.set(effect.ledgerId, {
+        debit: current.debit + effect.debit,
+        credit: current.credit + effect.credit
+      });
+    }
+
+    // Get fiscal year and month from voucher date
+    const { fiscalYear, month } = getFiscalYearAndMonth(voucherDate);
+
+    // Process each ledger
+    for (const [ledgerId, { debit: voucherDebit, credit: voucherCredit }] of effectsByLedger) {
+      // Subtract voucherDebit and voucherCredit to reverse effects
+      await tx.update(ledgerBalances)
+        .set({
+          debit: sql`${ledgerBalances.debit} - ${voucherDebit}`,
+          credit: sql`${ledgerBalances.credit} - ${voucherCredit}`,
+          closing: sql`${ledgerBalances.closing} - ${voucherDebit} + ${voucherCredit}`
+        })
+        .where(and(
+          eq(ledgerBalances.ledgerId, ledgerId),
+          eq(ledgerBalances.fiscalYear, fiscalYear),
+          eq(ledgerBalances.month, month)
+        ));
+    }
+  } catch (error) {
+    console.error("Error reversing ledger balances:", error);
+    throw error;
+  }
+}

@@ -4,7 +4,7 @@ import { DashboardClient } from "@/components/dashboard/dashboard-client";
 import { DashboardSkeleton } from "@/components/ui/skeletons";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Dashboard - Shree Saree House ERP" };
+export const metadata = { title: "Dashboard - ERP" };
 
 async function getDashboardData() {
   // Start of today

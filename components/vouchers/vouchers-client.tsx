@@ -37,6 +37,10 @@ import {
   CheckCircle2,
   ArrowUpDown,
   Search,
+  MoreVertical,
+  Eye,
+  Edit,
+  Loader2,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -44,7 +48,20 @@ import {
   VOUCHER_TYPE_LABELS,
   type VoucherType,
 } from "@/lib/types";
-import { createVoucher, type VoucherEntryLine } from "@/app/(erp)/vouchers/actions";
+import {
+  createVoucher,
+  updateVoucherAction,
+  deleteVoucherAction,
+  getVoucherDetailAction,
+  type VoucherEntryLine,
+} from "@/app/(erp)/vouchers/actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation";
 
 type VoucherRow = {
   id: string;
@@ -321,9 +338,20 @@ export function VouchersClient({
   vouchers: VoucherRow[];
   ledgers: LedgerOption[];
 }) {
+  const router = useRouter();
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // View detail states
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [voucherDetail, setVoucherDetail] = useState<any>(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+
+  // Delete states
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [voucherToDelete, setVoucherToDelete] = useState<VoucherRow | null>(null);
+  const [deletingPending, startDeleteTransition] = useTransition();
 
   const filtered = vouchers.filter((v) => {
     const matchType = typeFilter === "all" || v.type === typeFilter;
@@ -333,6 +361,37 @@ export function VouchersClient({
       (v.narration && v.narration.toLowerCase().includes(search.toLowerCase()));
     return matchType && matchSearch;
   });
+
+  const handleViewDetails = async (id: string) => {
+    setLoadingDetail(true);
+    setDetailModalOpen(true);
+    try {
+      const data = await getVoucherDetailAction(id);
+      setVoucherDetail(data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const handleConfirmDelete = () => {
+    if (!voucherToDelete) return;
+    startDeleteTransition(async () => {
+      try {
+        const res = await deleteVoucherAction(voucherToDelete.id);
+        if (res.success) {
+          setDeleteConfirmOpen(false);
+          setVoucherToDelete(null);
+          router.refresh();
+        } else {
+          console.error(res.error);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -374,7 +433,10 @@ export function VouchersClient({
             </DialogHeader>
             <VoucherEntryForm
               ledgers={ledgers}
-              onSuccess={() => setDialogOpen(false)}
+              onSuccess={() => {
+                setDialogOpen(false);
+                router.refresh();
+              }}
             />
           </DialogContent>
         </Dialog>
@@ -390,19 +452,20 @@ export function VouchersClient({
               <TableHead>Type</TableHead>
               <TableHead>Narration</TableHead>
               <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="text-right">Status</TableHead>
+              <TableHead className="text-right font-semibold">Status</TableHead>
+              <TableHead className="w-12 text-center">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground py-16">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-16">
                   No vouchers found. Click &ldquo;New Voucher&rdquo; to create your first entry.
                 </TableCell>
               </TableRow>
             ) : (
               filtered.map((v) => (
-                <TableRow key={v.id} className="hover:bg-muted/20 cursor-pointer transition-colors">
+                <TableRow key={v.id} className="hover:bg-muted/20 transition-colors group">
                   <TableCell className="text-sm text-muted-foreground">{formatDate(v.date)}</TableCell>
                   <TableCell className="font-mono text-sm font-semibold">{v.number ?? "—"}</TableCell>
                   <TableCell>
@@ -421,15 +484,185 @@ export function VouchersClient({
                       {v.status}
                     </span>
                   </TableCell>
+                  <TableCell className="text-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="w-8 h-8 rounded-lg">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="rounded-xl border border-border/80 bg-background/95">
+                        <DropdownMenuItem
+                          onClick={() => handleViewDetails(v.id)}
+                          className="text-xs font-semibold gap-2 rounded-lg cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> View Journal Entries
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setVoucherToDelete(v);
+                            setDeleteConfirmOpen(true);
+                          }}
+                          className="text-xs font-semibold text-destructive gap-2 rounded-lg cursor-pointer focus:text-destructive focus:bg-destructive/10"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Safe Delete Entry
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))
             )}
           </TableBody>
         </Table>
       </div>
-      <div className="text-xs text-muted-foreground text-right">
+
+      <div className="text-xs text-muted-foreground text-right select-none">
         Showing {filtered.length} of {vouchers.length} vouchers
       </div>
+
+      {/* VIEW DETAILS DIALOG */}
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-border/80">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-accent animate-pulse" /> Voucher Details - {voucherDetail?.voucher?.number || "—"}
+            </DialogTitle>
+            <DialogDescription>
+              Double-entry logs and stock movements registered in the core journal database
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingDetail ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <Loader2 className="w-8 h-8 animate-spin text-accent" />
+              <span className="text-xs font-bold text-muted-foreground">Reading ledger sheets...</span>
+            </div>
+          ) : voucherDetail ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-muted/20 p-4 rounded-xl border border-border/60">
+                <div>
+                  <span className="block text-[10px] text-muted-foreground uppercase font-bold tracking-wide">Voucher No.</span>
+                  <span className="text-xs font-mono font-bold text-primary">{voucherDetail.voucher.number || "—"}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-muted-foreground uppercase font-bold tracking-wide">Type</span>
+                  <span className="text-xs font-semibold capitalize text-primary">{voucherDetail.voucher.type}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-muted-foreground uppercase font-bold tracking-wide">Date</span>
+                  <span className="text-xs font-semibold text-primary">{formatDate(voucherDetail.voucher.date)}</span>
+                </div>
+                <div>
+                  <span className="block text-[10px] text-muted-foreground uppercase font-bold tracking-wide">Total Amount</span>
+                  <span className="text-xs font-mono font-black text-emerald-600">{formatCurrency(voucherDetail.voucher.grandTotal)}</span>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <span className="text-[11px] uppercase tracking-wider font-bold text-accent block">Journal Postings Ledger</span>
+                <div className="rounded-xl border border-border/60 overflow-hidden">
+                  <Table>
+                    <TableHeader className="bg-muted/40">
+                      <TableRow className="hover:bg-transparent">
+                        <TableHead className="py-2">Ledger Account</TableHead>
+                        <TableHead className="py-2 text-center w-24">Posting</TableHead>
+                        <TableHead className="py-2 text-right w-32">Debit (₹)</TableHead>
+                        <TableHead className="py-2 text-right w-32">Credit (₹)</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {voucherDetail.entries.map((entry: any, index: number) => (
+                        <TableRow key={index} className="hover:bg-muted/5 font-semibold">
+                          <TableCell className="py-3">
+                            <div className="text-xs">{entry.ledgerName}</div>
+                            {entry.inventoryItemId && (
+                              <div className="text-[10px] text-accent mt-0.5 font-normal">
+                                ↳ Allocation: {entry.quantity} units @ {formatCurrency(entry.rate)}
+                              </div>
+                            )}
+                            {entry.narration && (
+                              <div className="text-[10px] text-muted-foreground/80 mt-0.5 font-normal italic">
+                                &ldquo;{entry.narration}&rdquo;
+                              </div>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center py-3">
+                            <Badge variant="outline" className={`text-[10px] uppercase font-mono ${entry.type === 'dr' ? 'text-blue-500 bg-blue-500/5' : 'text-rose-500 bg-rose-500/5'}`}>
+                              {entry.type}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right py-3 font-mono text-xs">
+                            {entry.type === 'dr' ? formatCurrency(entry.amount) : "—"}
+                          </TableCell>
+                          <TableCell className="text-right py-3 font-mono text-xs">
+                            {entry.type === 'cr' ? formatCurrency(entry.amount) : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {voucherDetail.voucher.narration && (
+                <div className="bg-accent/5 p-4 rounded-xl border border-accent/15 space-y-1">
+                  <span className="block text-[10px] text-accent uppercase font-black tracking-wide">Global Narration</span>
+                  <p className="text-xs text-muted-foreground italic font-semibold">&ldquo;{voucherDetail.voucher.narration}&rdquo;</p>
+                </div>
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* DELETE CONFIRM DIALOG */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md rounded-2xl border border-border/80 bg-background/95">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="w-5 h-5" /> Reverse & Delete Voucher Entry?
+            </DialogTitle>
+            <DialogDescription>
+              This action will permanently reverse all double-entry ledger balances and item stock movements associated with this voucher cleanly.
+            </DialogDescription>
+          </DialogHeader>
+
+          {voucherToDelete && (
+            <div className="bg-destructive/5 p-4 rounded-xl border border-destructive/15 space-y-2 font-semibold">
+              <div className="text-xs text-muted-foreground">Voucher details to be deleted:</div>
+              <div className="text-xs text-primary flex items-center justify-between">
+                <span>Number: <span className="font-mono">{voucherToDelete.number || "—"}</span></span>
+                <span>Amount: <span className="font-mono text-destructive">{formatCurrency(voucherToDelete.grandTotal)}</span></span>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)} className="rounded-xl text-xs font-bold h-9">
+              Keep Voucher
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deletingPending}
+              className="rounded-xl text-xs font-bold h-9 gap-1.5"
+            >
+              {deletingPending ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-3.5 h-3.5" /> Revert & Delete
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+

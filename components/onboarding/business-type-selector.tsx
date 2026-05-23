@@ -15,7 +15,7 @@ interface Props {
 }
 
 const BUSINESS_TYPES = [
-  { id: "wholesale_saree", title: "Saree Wholesale", icon: Shirt, description: "Bulk sales, transport tracking, design catalogs" },
+  { id: "wholesale_", title: " Wholesale", icon: Shirt, description: "Bulk sales, transport tracking, design catalogs" },
   { id: "textile_retail", title: "Textile Retail", icon: Store, description: "Fast POS, barcode scanning, shift management" },
   { id: "garment_store", title: "Garment Store", icon: ShoppingBag, description: "Sizes, colors, multi-warehouse" },
   { id: "distributor", title: "Distributor", icon: Factory, description: "Credit limits, route planning, bulk discounts" },

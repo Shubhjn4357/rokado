@@ -202,7 +202,7 @@ export function Notifications() {
 
         {/* Footer */}
         <div className="px-4 py-2 border-t border-border/60 bg-muted/40 text-[9px] text-center text-muted-foreground font-bold tracking-tight select-none">
-          Active Co: SHREE SAREE HOUSE ERP SUITE
+          Active Co:  ERP SUITE
         </div>
       </PopoverContent>
     </Popover>

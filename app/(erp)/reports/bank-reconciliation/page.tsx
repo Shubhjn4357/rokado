@@ -15,9 +15,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectLa
 import { X } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { toast } from "@/components/ui/use-toast";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 // export const dynamic = "force-dynamic";
-// export const metadata = { title: "Bank Reconciliation - Shree Saree House ERP" };
+// export const metadata = { title: "Bank Reconciliation -  ERP" };
 
 export default function BankReconciliationPage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
@@ -242,25 +243,45 @@ export default function BankReconciliationPage() {
     bankStatementData.forEach(bankEntry => {
       if (bankEntry.matched) return;
 
-      // Find best match in books: same amount, closest date within 2 days
+      // Find best match in books: same amount, closest date within 5 days OR matching reference/VPA narrations
       let bestMatchId: string | null = null;
-      let bestMatchDiff = Infinity;
+      let bestScore = -1;
 
       reconciliationData.forEach(booksEntry => {
         if (booksEntry.matched) return;
         if (Math.abs(booksEntry.amount - bankEntry.amount) > 0.01) return;
 
         const dateDiff = Math.abs(booksEntry.date - bankEntry.date);
-        const twoDays = 2 * 24 * 60 * 60 * 1000;
-        if (dateDiff > twoDays) return;
+        const maxMatchDays = 5 * 24 * 60 * 60 * 1000; // 5 days window
+        if (dateDiff > maxMatchDays) return;
 
-        if (dateDiff < bestMatchDiff) {
-          bestMatchDiff = dateDiff;
+        // Base score inversely proportional to date difference (0 to 10 points)
+        let score = ((maxMatchDays - dateDiff) / maxMatchDays) * 10;
+
+        // Fuzzy narration keyword check
+        const bankDesc = bankEntry.description.toLowerCase();
+        const booksDesc = (booksEntry.voucherNumber + " " + booksEntry.narration).toLowerCase();
+
+        // Exact match on Voucher/Reference Number
+        if (booksEntry.voucherNumber && bankDesc.includes(booksEntry.voucherNumber.toLowerCase())) {
+          score += 50; // High confidence
+        }
+
+        // Common transaction keywords intersection (UPI, NEFT, Cheque)
+        const commonWords = ["payment", "receipt", "neft", "rtgs", "upi", "transfer", "chq", "cheque"];
+        commonWords.forEach(word => {
+          if (bankDesc.includes(word) && booksDesc.includes(word)) {
+            score += 5;
+          }
+        });
+
+        if (score > bestScore) {
+          bestScore = score;
           bestMatchId = booksEntry.id;
         }
       });
 
-      if (bestMatchId) {
+      if (bestMatchId && bestScore > 0) {
         newMatched.add(bestMatchId);
       }
     });
@@ -438,9 +459,14 @@ export default function BankReconciliationPage() {
       </Card>
 
       {bankLedgerId && (
-        <Card className="w-full">
-          <CardHeader>
+        <Card className="w-full" id="reconciliation-report">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <CardTitle>Reconciliation</CardTitle>
+            <ReportExportButtons
+              tableId="reconciliation-books-table"
+              elementId="reconciliation-report"
+              filename={`bank-reconciliation_${dateFrom}_to_${dateTo}`}
+            />
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -501,7 +527,7 @@ export default function BankReconciliationPage() {
                     {reconciliationData.length === 0 ? (
                       <p className="text-muted-foreground">No transactions found.</p>
                     ) : (
-                      <Table className="w-full">
+                      <Table id="reconciliation-books-table" className="w-full">
                         <thead>
                           <tr>
                             <th className="text-left px-4 py-2">Date</th>

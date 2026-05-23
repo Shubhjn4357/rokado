@@ -10,6 +10,14 @@ import { Shirt, CreditCard, Building2, Truck, Settings, CircleCheck, FileText, U
 import { z } from "zod";
 import { formatCurrency } from "@/lib/types";
 import { createCompanyAndLedgersAction } from "./actions";
+import { StateEnum } from "@/constant/app.constant";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Props {
   businessType: string;
@@ -37,7 +45,7 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
   });
 
   const businessTypeConfig: Record<string, { title: string; defaultGst: number }> = {
-    wholesale_saree: { title: "Saree Wholesale", defaultGst: 5 },
+    wholesale_: { title: " Wholesale", defaultGst: 5 },
     textile_retail: { title: "Textile Retail", defaultGst: 5 },
     garment_store: { title: "Garment Store", defaultGst: 5 },
     distributor: { title: "Distributor", defaultGst: 12 },
@@ -150,12 +158,21 @@ export function BusinessSetupWizard({ businessType, onComplete, onBack }: Props)
               </div>
               <div>
                 <Label className="block mb-2 font-medium">State</Label>
-                <Input
-                  placeholder="State"
+                <Select
                   value={formData.businessState}
-                  onChange={(e) => setFormData({ ...formData, businessState: e.target.value })}
-                  className="mb-2"
-                />
+                  onValueChange={(val) => setFormData({ ...formData, businessState: val })}
+                >
+                  <SelectTrigger className="w-full bg-background border-border rounded-xl font-bold">
+                    <SelectValue placeholder="Select state" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl max-h-[250px] border border-border/80">
+                    {Object.values(StateEnum).map((stateName) => (
+                      <SelectItem key={stateName} value={stateName} className="text-xs font-semibold">
+                        {stateName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -334,7 +351,7 @@ export default function OnboardingSetupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-muted/50 to-background">
       <BusinessSetupWizard 
-        businessType="wholesale_saree" 
+        businessType="wholesale_" 
         onComplete={() => window.location.href = "/"}
         onBack={() => window.location.href = "/onboarding"}
       />

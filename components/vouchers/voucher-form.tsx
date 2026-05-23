@@ -38,6 +38,9 @@ import {
   DollarSign
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { DatePicker } from "@/components/ui/date-picker";
+import { GST_RATE_LABELS } from "@/constant/app.constant";
 
 // --- PARTY AUTOCOMPLETE COMPONENT ---
 interface PartyAutocompleteProps {
@@ -60,13 +63,13 @@ export function PartyAutocomplete({
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastValueRef = useRef(value);
 
   useEffect(() => {
-    const selected = ledgers.find((l) => l.id === value);
-    if (selected) {
-      setQuery(selected.name);
-    } else {
-      setQuery("");
+    if (value !== lastValueRef.current) {
+      lastValueRef.current = value;
+      const selected = ledgers.find((l) => l.id === value);
+      setQuery(selected ? selected.name : "");
     }
   }, [value, ledgers]);
 
@@ -136,48 +139,59 @@ export function PartyAutocomplete({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
-      <Input
-        ref={inputRef}
-        type="text"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setIsOpen(true);
-          setHighlightedIndex(0);
-        }}
-        onFocus={() => setIsOpen(true)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="w-full bg-background/50 border-border/85 pr-8 font-medium text-xs rounded-lg h-9 focus:bg-background shadow-inner transition-all duration-200"
-      />
-      <div className="absolute right-2.5 top-2.5 flex items-center pointer-events-none text-muted-foreground/60">
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </div>
-
-      {isOpen && filtered.length > 0 && (
-        <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-xl py-1">
-          {filtered.map((item, idx) => (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <div ref={containerRef} className={cn("relative w-full", className)}>
+          <Input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsOpen(true);
+              setHighlightedIndex(0);
+            }}
+            onFocus={() => setIsOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            className="w-full bg-background/50 border-border/85 pr-8 font-medium text-xs rounded-lg h-9 focus:bg-background shadow-inner transition-all duration-200"
+          />
+          <div className="absolute right-2.5 top-2.5 flex items-center pointer-events-none text-muted-foreground/60">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+        </div>
+      </PopoverTrigger>
+      
+      <PopoverContent
+        className="p-0 z-50 w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-xl py-1"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        {filtered.length > 0 ? (
+          filtered.map((item, idx) => (
             <button
               key={item.id}
               type="button"
               onClick={() => selectItem(item)}
               className={cn(
-                "w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors rounded-none",
-                idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70"
+                "w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors rounded-none border-none",
+                idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70 bg-transparent text-foreground"
               )}
             >
               <span className="truncate pr-2 font-medium">{item.name}</span>
-              <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-70 bg-muted px-2 py-0.5 rounded">
+              <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-70 bg-muted px-2 py-0.5 rounded shrink-0">
                 {item.group.replace("_", " ")}
               </span>
             </button>
-          ))}
-        </div>
-      )}
-    </div>
+          ))
+        ) : (
+          <div className="py-2 text-center text-xs text-muted-foreground">No matches found</div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -204,13 +218,13 @@ export function ItemAutocomplete({
   const [highlightedIndex, setHighlightedIndex] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const lastValueRef = useRef(value);
 
   useEffect(() => {
-    const selected = items.find((i) => i.id === value);
-    if (selected) {
-      setQuery(selected.name);
-    } else {
-      setQuery("");
+    if (value !== lastValueRef.current) {
+      lastValueRef.current = value;
+      const selected = items.find((i) => i.id === value);
+      setQuery(selected ? selected.name : "");
     }
   }, [value, items]);
 
@@ -283,51 +297,62 @@ export function ItemAutocomplete({
   };
 
   return (
-    <div ref={containerRef} className={cn("relative w-full", className)}>
-      <Input
-        ref={inputRef}
-        type="text"
-        value={query}
-        onChange={(e) => {
-          setQuery(e.target.value);
-          setIsOpen(true);
-          setHighlightedIndex(0);
-        }}
-        onFocus={() => setIsOpen(true)}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="w-full bg-background/50 border-border/85 pr-8 font-medium text-xs rounded-lg h-9 focus:bg-background shadow-inner transition-all duration-200"
-      />
-      <div className="absolute right-2.5 top-2.5 flex items-center pointer-events-none text-muted-foreground/60">
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      </div>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <div ref={containerRef} className={cn("relative w-full", className)}>
+          <Input
+            ref={inputRef}
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setIsOpen(true);
+              setHighlightedIndex(0);
+            }}
+            onFocus={() => setIsOpen(true)}
+            onKeyDown={handleKeyDown}
+            placeholder={placeholder}
+            className="w-full bg-background/50 border-border/85 pr-8 font-medium text-xs rounded-lg h-9 focus:bg-background shadow-inner transition-all duration-200"
+          />
+          <div className="absolute right-2.5 top-2.5 flex items-center pointer-events-none text-muted-foreground/60">
+            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+        </div>
+      </PopoverTrigger>
 
-      {isOpen && filtered.length > 0 && (
-        <div className="absolute left-0 right-0 z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-xl py-1">
-          {filtered.map((item, idx) => (
+      <PopoverContent
+        className="p-0 z-50 w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-xl py-1"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+      >
+        {filtered.length > 0 ? (
+          filtered.map((item, idx) => (
             <button
               key={item.id}
               type="button"
               onClick={() => selectItem(item)}
               className={cn(
-                "w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors rounded-none",
-                idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70"
+                "w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors rounded-none border-none",
+                idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70 bg-transparent text-foreground"
               )}
             >
               <div className="truncate pr-2">
-                <span className="font-semibold block">{item.name}</span>
-                <span className="text-[10px] text-muted-foreground">Cat: {item.category} • Rate: ₹{item.saleRate}</span>
+                <span className="font-semibold block text-left">{item.name}</span>
+                <span className="text-[10px] text-muted-foreground block text-left">Cat: {item.category} • Rate: ₹{item.saleRate}</span>
               </div>
               <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-80 bg-accent/10 text-accent px-1.5 py-0.5 rounded shrink-0">
                 {item.gstPercent}% GST
               </span>
             </button>
-          ))}
-        </div>
-      )}
-    </div>
+          ))
+        ) : (
+          <div className="py-2 text-center text-xs text-muted-foreground">No matches found</div>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -357,7 +382,6 @@ export function VoucherForm({
     { ledgerId: "", type: "dr", amount: "0", narration: "" },
     { ledgerId: "", type: "cr", amount: "0", narration: "" },
   ]);
-
   // --- STATE FOR AS INVOICE MODE ---
   const [invoicePartyId, setInvoicePartyId] = useState("");
   const [invoiceSalesPurchaseId, setInvoiceSalesPurchaseId] = useState("");
@@ -365,7 +389,8 @@ export function VoucherForm({
     { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", narration: "" }
   ]);
   const [invoiceTaxLedgerId, setInvoiceTaxLedgerId] = useState("");
-
+  const [gstSupplyType, setGstSupplyType] = useState<"intra" | "inter">("intra");
+  const [defaultGstRate, setDefaultGstRate] = useState<number>(18);
   // Transport details (For challan / invoice)
   const [transportName, setTransportName] = useState("");
   const [lrNumber, setLrNumber] = useState("");
@@ -451,10 +476,17 @@ export function VoucherForm({
 
   // --- AS INVOICE MODE MATHS ---
   const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
-  
-  // Calculate dynamic tax additions (default is 18% if tax ledger is active)
-  const taxPercent = 18;
-  const invoiceTax = invoiceTaxLedgerId ? (invoiceSubtotal * taxPercent) / 100 : 0;
+
+  const invoiceTax = invoiceTaxLedgerId && invoiceTaxLedgerId !== "none"
+    ? invoiceItems.reduce((sum, item) => {
+        if (!item.inventoryItemId) return sum;
+        const itemObj = inventoryOptions.find(o => o.id === item.inventoryItemId);
+        const gstRate = itemObj ? itemObj.gstPercent : defaultGstRate;
+        const itemAmt = parseFloat(item.amount) || 0;
+        return sum + (itemAmt * gstRate) / 100;
+      }, 0)
+    : 0;
+
   const invoiceGrandTotal = invoiceSubtotal + invoiceTax;
 
   const updateVoucherEntryRow = (index: number, field: string, val: any) => {
@@ -583,15 +615,44 @@ export function VoucherForm({
           narration: item.narration || undefined
         });
       });
+      // 3. GST Duties Entries (if applicable)
+      if (invoiceTaxLedgerId && invoiceTaxLedgerId !== "none" && invoiceTax > 0) {
+        if (gstSupplyType === "intra") {
+          const cgstLedger = ledgersOptions.find(l => l.name.toLowerCase().includes("cgst"));
+          const sgstLedger = ledgersOptions.find(l => l.name.toLowerCase().includes("sgst"));
+          const halfTax = invoiceTax / 2;
 
-      // 3. GST Duties Entry (if applicable)
-      if (invoiceTaxLedgerId && invoiceTax > 0) {
-        compiledEntries.push({
-          ledgerId: invoiceTaxLedgerId,
-          type: isSales ? "cr" as const : "dr" as const,
-          amount: invoiceTax,
-          narration: `${taxPercent}% CGST/SGST collected`
-        });
+          if (cgstLedger && sgstLedger) {
+            compiledEntries.push({
+              ledgerId: cgstLedger.id,
+              type: isSales ? ("cr" as const) : ("dr" as const),
+              amount: halfTax,
+              narration: "Local CGST Split Posting"
+            });
+            compiledEntries.push({
+              ledgerId: sgstLedger.id,
+              type: isSales ? ("cr" as const) : ("dr" as const),
+              amount: halfTax,
+              narration: "Local SGST Split Posting"
+            });
+          } else {
+            // Fallback if split ledgers are not found
+            compiledEntries.push({
+              ledgerId: invoiceTaxLedgerId,
+              type: isSales ? ("cr" as const) : ("dr" as const),
+              amount: invoiceTax,
+              narration: "Local CGST/SGST Unified Posting"
+            });
+          }
+        } else {
+          const igstLedger = ledgersOptions.find(l => l.name.toLowerCase().includes("igst"));
+          compiledEntries.push({
+            ledgerId: igstLedger?.id || invoiceTaxLedgerId,
+            type: isSales ? ("cr" as const) : ("dr" as const),
+            amount: invoiceTax,
+            narration: "Inter-State IGST Integrated Posting"
+          });
+        }
       }
     }
 
@@ -724,11 +785,9 @@ export function VoucherForm({
 
           <div>
             <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Date</label>
-            <Input
-              type="date"
+            <DatePicker
               value={voucherDate}
-              onChange={(e) => setVoucherDate(e.target.value)}
-              className="h-9 bg-background/55 border-border/70 rounded-lg text-xs font-semibold"
+              onChange={setVoucherDate}
             />
           </div>
 
@@ -790,24 +849,32 @@ export function VoucherForm({
 
                       <td className="p-2">
                         <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                          type="text"
+                          inputMode="decimal"
                           disabled={item.type !== "dr"}
-                          value={item.amount}
-                          onChange={(e) => updateVoucherEntryRow(index, "amount", e.target.value)}
+                          value={item.type === "dr" ? item.amount : ""}
+                          onFocus={(e) => { if (e.target.value === "0") e.target.select(); }}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9.]/g, "");
+                            updateVoucherEntryRow(index, "amount", v);
+                          }}
+                          placeholder="0.00"
                           className="h-9 text-right font-mono font-bold text-xs bg-background/50 border-border/70 rounded-lg text-emerald-600 disabled:opacity-30 disabled:bg-transparent"
                         />
                       </td>
 
                       <td className="p-2">
                         <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
+                          type="text"
+                          inputMode="decimal"
                           disabled={item.type !== "cr"}
-                          value={item.amount}
-                          onChange={(e) => updateVoucherEntryRow(index, "amount", e.target.value)}
+                          value={item.type === "cr" ? item.amount : ""}
+                          onFocus={(e) => { if (e.target.value === "0") e.target.select(); }}
+                          onChange={(e) => {
+                            const v = e.target.value.replace(/[^0-9.]/g, "");
+                            updateVoucherEntryRow(index, "amount", v);
+                          }}
+                          placeholder="0.00"
                           className="h-9 text-right font-mono font-bold text-xs bg-background/50 border-border/70 rounded-lg text-rose-600 disabled:opacity-30 disabled:bg-transparent"
                         />
                       </td>
@@ -870,8 +937,7 @@ export function VoucherForm({
         {entryMode === "invoice" && (
           <div className="space-y-4">
             
-            {/* PARTY SELECT & INVOICE LEDGERS SECTION */}
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-3 bg-accent/5 p-4 rounded-xl border border-accent/25">
+            {/* PARTY SELECT & INVOICE LEDGERS SECTION */}            <div className="grid gap-4 grid-cols-1 md:grid-cols-5 bg-accent/5 p-4 rounded-xl border border-accent/25">
               <div>
                 <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
                   Party Account Name
@@ -924,9 +990,48 @@ export function VoucherForm({
                       .filter(l => l.group === "duties_taxes")
                       .map(l => (
                         <SelectItem key={l.id} value={l.id} className="text-xs font-semibold">
-                          {l.name} (CGST/SGST 18%)
+                          {l.name}
                         </SelectItem>
                       ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
+                  GST Supply Type
+                </label>
+                <Select
+                  onValueChange={(val: any) => setGstSupplyType(val)}
+                  value={gstSupplyType}
+                >
+                  <SelectTrigger className="w-full h-9 bg-background border-border/80 rounded-lg text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    <SelectItem value="intra" className="text-xs font-semibold">Intra-State (CGST + SGST)</SelectItem>
+                    <SelectItem value="inter" className="text-xs font-semibold">Inter-State (Outside IGST)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
+                  Base GST Rate
+                </label>
+                <Select
+                  onValueChange={(val: any) => setDefaultGstRate(Number(val))}
+                  value={defaultGstRate.toString()}
+                >
+                  <SelectTrigger className="w-full h-9 bg-background border-border/80 rounded-lg text-xs font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl">
+                    {[0, 3, 5, 12, 18, 28].map(rate => (
+                      <SelectItem key={rate} value={rate.toString()} className="text-xs font-semibold">
+                        {GST_RATE_LABELS[rate] ?? `${rate}%`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -938,7 +1043,7 @@ export function VoucherForm({
                 <table className="w-full border-collapse text-left text-xs">
                   <thead>
                     <tr className="border-b border-border/70 bg-muted/40 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                      <th className="px-3 py-2.5">Saree Stock Item (Autocomplete)</th>
+                      <th className="px-3 py-2.5">Stock Item (Autocomplete)</th>
                       <th className="px-3 py-2.5 w-[100px] text-center">Qty</th>
                       <th className="px-3 py-2.5 w-[130px] text-right">Rate (₹)</th>
                       <th className="px-3 py-2.5 w-[140px] text-right">Amount (₹)</th>
@@ -955,38 +1060,42 @@ export function VoucherForm({
                             onChange={(val) => updateInvoiceRow(index, "inventoryItemId", val)}
                             items={inventoryOptions}
                             onSelectCallback={(selected) => handleInvoiceItemSelect(index, selected)}
-                            placeholder="Type saree stock item name..."
+                            placeholder="Type stock item name..."
                           />
                         </td>
 
                         <td className="p-2">
                           <Input
-                            type="number"
-                            min="1"
+                            type="text"
+                            inputMode="numeric"
                             value={item.quantity}
-                            onChange={(e) => updateInvoiceRow(index, "quantity", e.target.value)}
+                            onFocus={(e) => { if (e.target.value === "1" || e.target.value === "0") e.target.select(); }}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^0-9]/g, "");
+                              updateInvoiceRow(index, "quantity", v || "1");
+                            }}
                             className="h-9 text-center font-bold bg-background/55 border-border/70 rounded-lg text-xs"
                           />
                         </td>
 
                         <td className="p-2">
                           <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
+                            type="text"
+                            inputMode="decimal"
                             value={item.rate}
-                            onChange={(e) => updateInvoiceRow(index, "rate", e.target.value)}
+                            onFocus={(e) => { if (e.target.value === "0") e.target.select(); }}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^0-9.]/g, "");
+                              updateInvoiceRow(index, "rate", v);
+                            }}
                             className="h-9 text-right font-mono font-bold bg-background/55 border-border/70 rounded-lg text-xs text-primary"
                           />
                         </td>
 
                         <td className="p-2">
-                          <Input
-                            type="number"
-                            readOnly
-                            value={parseFloat(item.amount).toFixed(2)}
-                            className="h-9 text-right font-mono font-bold bg-muted/30 border-border/50 rounded-lg text-xs text-muted-foreground select-none"
-                          />
+                          <div className="h-9 flex items-center justify-end pr-3 font-mono font-bold text-xs text-muted-foreground bg-muted/30 border border-border/50 rounded-lg select-none">
+                            {(parseFloat(item.amount) || 0).toFixed(2)}
+                          </div>
                         </td>
 
                         <td className="p-2">
@@ -1035,11 +1144,26 @@ export function VoucherForm({
                     <span className="block text-[9px] opacity-70">SUBTOTAL</span>
                     <span className="text-sm font-extrabold text-primary">₹{invoiceSubtotal.toFixed(2)}</span>
                   </div>
-                  {invoiceTaxLedgerId && invoiceTax > 0 && (
-                    <div className="text-right border-l pl-6 border-border/70">
-                      <span className="block text-[9px] opacity-70">18% GST ADDITIONS</span>
-                      <span className="text-sm font-extrabold text-accent">₹{invoiceTax.toFixed(2)}</span>
-                    </div>
+                  {invoiceTaxLedgerId && invoiceTaxLedgerId !== "none" && invoiceTax > 0 && (
+                    <>
+                      {gstSupplyType === "intra" ? (
+                        <>
+                          <div className="text-right border-l pl-6 border-border/70">
+                            <span className="block text-[9px] opacity-70">CGST (CENTRAL)</span>
+                            <span className="text-sm font-extrabold text-accent">₹{(invoiceTax / 2).toFixed(2)}</span>
+                          </div>
+                          <div className="text-right border-l pl-6 border-border/70">
+                            <span className="block text-[9px] opacity-70">SGST (STATE)</span>
+                            <span className="text-sm font-extrabold text-accent">₹{(invoiceTax / 2).toFixed(2)}</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-right border-l pl-6 border-border/70">
+                          <span className="block text-[9px] opacity-70">IGST (INTEGRATED)</span>
+                          <span className="text-sm font-extrabold text-accent">₹{invoiceTax.toFixed(2)}</span>
+                        </div>
+                      )}
+                    </>
                   )}
                   <div className="text-right border-l pl-6 border-border/70">
                     <span className="block text-[9px] opacity-70">GRAND TOTAL</span>
@@ -1078,11 +1202,9 @@ export function VoucherForm({
               </div>
               <div>
                 <label className="text-[9px] uppercase font-bold text-muted-foreground block mb-1">Dispatch Date</label>
-                <Input
-                  type="date"
+                <DatePicker
                   value={dispatchDate}
-                  onChange={(e) => setDispatchDate(e.target.value)}
-                  className="h-9 bg-background rounded-lg border-border/80 text-xs font-semibold"
+                  onChange={setDispatchDate}
                 />
               </div>
               <div>

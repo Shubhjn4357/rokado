@@ -8,9 +8,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 // export const dynamic = "force-dynamic";
-// export const metadata = { title: "GST Report - Shree Saree House ERP" };
+// export const metadata = { title: "GST Report -  ERP" };
 
 export default function GSTPage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
@@ -92,10 +93,16 @@ export default function GSTPage() {
           <Button onClick={() => fetchGSTData()} className="h-10">
             Refresh
           </Button>
+          <ReportExportButtons
+            tableId="gst-table"
+            elementId="gst-report"
+            filename={`gst-liability_${dateFrom}_to_${dateTo}`}
+            className="sm:mt-0"
+          />
         </div>
       </div>
 
-      <Card className="w-full">
+      <Card id="gst-report" className="w-full">
         <CardHeader>
           <CardTitle>GST Liability Summary</CardTitle>
         </CardHeader>
@@ -111,7 +118,7 @@ export default function GSTPage() {
           ) : (
             <>
               <div className="overflow-x-auto">
-                <Table>
+                <Table id="gst-table">
                   <thead>
                     <tr>
                       <th className="text-left px-6 py-3">Particulars</th>

@@ -9,27 +9,39 @@ export function useERPShortcuts() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const active = document.activeElement;
+      const tag = active?.tagName?.toLowerCase() ?? "";
       const isInputFocused =
-        active instanceof HTMLInputElement ||
-        active instanceof HTMLTextAreaElement ||
-        active instanceof HTMLSelectElement ||
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
         (active instanceof HTMLElement && active.isContentEditable);
 
-      // Ctrl+K or Alt+G — Command Palette (Tally Go To)
-      if ((e.ctrlKey && e.key.toLowerCase() === "k") || (e.altKey && e.key.toLowerCase() === "g")) {
+      // ── Global shortcuts (always fire, even in inputs) ──────────────────────
+
+      // Ctrl+K or Alt+G — Command Palette
+      if (
+        (e.ctrlKey && e.key.toLowerCase() === "k") ||
+        (e.altKey && e.key.toLowerCase() === "g")
+      ) {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("erp:command-palette"));
         return;
       }
 
-      // Ctrl+S — Save current form
-      if (e.ctrlKey && e.key === "s") {
+      // Ctrl+S — Save current form (broadcast, individual forms listen)
+      if (e.ctrlKey && e.key.toLowerCase() === "s") {
         e.preventDefault();
         window.dispatchEvent(new CustomEvent("erp:save"));
         return;
       }
 
-      // Only fire F-key shortcuts when not in a text input
+      // Escape — close any open modal/panel (broadcast)
+      if (e.key === "Escape") {
+        window.dispatchEvent(new CustomEvent("erp:escape"));
+        return;
+      }
+
+      // ── Navigation shortcuts (blocked when input is focused) ─────────────────
       if (isInputFocused) return;
 
       switch (e.key) {
@@ -57,12 +69,38 @@ export function useERPShortcuts() {
           e.preventDefault();
           router.push("/vouchers/purchase");
           break;
+        case "F10":
+          e.preventDefault();
+          router.push("/vouchers/challan");
+          break;
+        case "F11":
+          e.preventDefault();
+          router.push("/pos");
+          break;
+        case "F12":
+          e.preventDefault();
+          router.push("/dashboard");
+          break;
       }
 
-      // Alt+C — Create Ledger
-      if (e.altKey && e.key === "c") {
+      // Alt+C — Create Ledger (case-insensitive)
+      if (e.altKey && e.key.toLowerCase() === "c") {
         e.preventDefault();
         router.push("/ledgers/new");
+        return;
+      }
+
+      // Alt+I — Create Inventory Item
+      if (e.altKey && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        router.push("/inventory/new");
+        return;
+      }
+
+      // Alt+A — Add row (broadcast to active form)
+      if (e.altKey && e.key.toLowerCase() === "a") {
+        // Handled by individual forms
+        return;
       }
     };
 

@@ -1,6 +1,6 @@
 "use server";
 
-import { db, companies, companyMembers, users, and, eq } from "@/lib/database";
+import { db, companies, companyMembers, users, ledgers, vouchers, voucherEntries, inventoryItems, stockMovements, ledgerBalances, and, eq, inArray } from "@/lib/database";
 import { getSession, setSession } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
@@ -288,6 +288,128 @@ export async function removeMemberAction(userId: string) {
     return {
       success: false,
       error: error instanceof Error ? error.message : "Failed to remove member",
+    };
+  }
+}
+
+export async function deleteCompanyAction(targetCompanyId: string) {
+  try {
+    const session = await getSession();
+    if (!session) return { success: false, error: "Not authenticated" };
+
+    // 1. Verify that the user is an OWNER of this company
+    const [membership] = await db
+      .select()
+      .from(companyMembers)
+      .where(
+        and(
+          eq(companyMembers.companyId, targetCompanyId),
+          eq(companyMembers.userId, session.id),
+          eq(companyMembers.role, "owner")
+        )
+      )
+      .limit(1);
+
+    if (!membership) {
+      return { success: false, error: "Only the Organization Owner can delete this workspace" };
+    }
+
+    // 2. Perform transactional cascading deletion
+    await db.transaction(async (tx) => {
+      // Find vouchers
+      const companyVouchers = await tx
+        .select({ id: vouchers.id })
+        .from(vouchers)
+        .where(eq(vouchers.companyId, targetCompanyId));
+      const voucherIds = companyVouchers.map(v => v.id);
+
+      // Find items
+      const companyItems = await tx
+        .select({ id: inventoryItems.id })
+        .from(inventoryItems)
+        .where(eq(inventoryItems.companyId, targetCompanyId));
+      const itemIds = companyItems.map(i => i.id);
+
+      // Delete voucher entries
+      if (voucherIds.length > 0) {
+        await tx.delete(voucherEntries).where(inArray(voucherEntries.voucherId, voucherIds));
+      }
+
+      // Delete stock movements
+      if (itemIds.length > 0) {
+        await tx.delete(stockMovements).where(inArray(stockMovements.itemId, itemIds));
+      }
+      if (voucherIds.length > 0) {
+        await tx.delete(stockMovements).where(inArray(stockMovements.voucherId, voucherIds));
+      }
+
+      // Delete vouchers
+      await tx.delete(vouchers).where(eq(vouchers.companyId, targetCompanyId));
+
+      // Delete inventory items
+      await tx.delete(inventoryItems).where(eq(inventoryItems.companyId, targetCompanyId));
+
+      // Find ledgers
+      const companyLedgers = await tx
+        .select({ id: ledgers.id })
+        .from(ledgers)
+        .where(eq(ledgers.companyId, targetCompanyId));
+      const ledgerIds = companyLedgers.map(l => l.id);
+
+      // Delete ledger balances
+      if (ledgerIds.length > 0) {
+        await tx.delete(ledgerBalances).where(inArray(ledgerBalances.ledgerId, ledgerIds));
+      }
+
+      // Delete ledgers
+      await tx.delete(ledgers).where(eq(ledgers.companyId, targetCompanyId));
+
+      // Delete company members
+      await tx.delete(companyMembers).where(eq(companyMembers.companyId, targetCompanyId));
+
+      // Delete company record
+      await tx.delete(companies).where(eq(companies.id, targetCompanyId));
+
+      // 3. Re-route user's session active company if they deleted their active one
+      if (session.companyId === targetCompanyId) {
+        // Find another company they belong to
+        const [anotherMembership] = await tx
+          .select()
+          .from(companyMembers)
+          .where(eq(companyMembers.userId, session.id))
+          .limit(1);
+
+        const nextCompanyId = anotherMembership?.companyId ?? null;
+        const nextRole = (anotherMembership?.role as any) ?? "accountant";
+
+        await tx
+          .update(users)
+          .set({
+            companyId: nextCompanyId,
+            role: nextCompanyId ? nextRole : "accountant",
+            updatedAt: Date.now(),
+          })
+          .where(eq(users.id, session.id));
+
+        // Update session cookie
+        await setSession({
+          id: session.id,
+          username: session.username,
+          name: session.name,
+          role: nextCompanyId ? nextRole : "accountant",
+          companyId: nextCompanyId,
+        });
+      }
+    });
+
+    revalidatePath("/");
+    revalidatePath("/settings");
+    return { success: true };
+  } catch (error) {
+    console.error("Failed to delete company:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to delete company",
     };
   }
 }

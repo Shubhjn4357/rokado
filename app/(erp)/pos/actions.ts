@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
 import { and, eq, sql } from "@/lib/database";
 import type { VoucherType } from "@/lib/types";
+import { getSession } from "@/lib/auth";
 
 export interface PosSaveInput {
   customerLedgerId: string; // sundry_debtors ledger id, or null for walk-in
@@ -26,6 +27,12 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
     if (!input.items || input.items.length === 0) {
       return { success: false, error: "Cart is empty" };
     }
+
+    const session = await getSession();
+    if (!session || !session.companyId) {
+      return { success: false, error: "Not authenticated or no active organization" };
+    }
+    const companyId = session.companyId;
 
     // Calculate amount due
     let subTotal = 0;
@@ -54,7 +61,7 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
       .from(ledgers)
       .where(and(
         eq(ledgers.group as any, "sales"),
-        eq(ledgers.companyId as any, "company_1")
+        eq(ledgers.companyId as any, companyId)
       ))
       .limit(1);
 
@@ -71,7 +78,7 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
         // Create a new ledger for walk-in customer
         const [ledger] = await tx.insert(ledgers).values({
           id: randomUUID(),
-          companyId: "company_1",
+          companyId: companyId,
           name: input.walkInCustomerName,
           group: "sundry_debtors",
           openingBalance: 0,
@@ -90,7 +97,7 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
 
       await tx.insert(vouchers).values({
         id: voucherId,
-        companyId: "company_1",
+        companyId: companyId,
         type: "sales",
         number: `POS-${Date.now()}`,
         date: Date.now(),
@@ -128,7 +135,7 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
           .set({ stockQuantity: sql`${inventoryItems.stockQuantity} - ${line.quantity}` })
           .where(and(
             eq(inventoryItems.id as any, line.inventoryItemId),
-            eq(inventoryItems.companyId as any, "company_1")
+            eq(inventoryItems.companyId as any, companyId)
           ));
 
         // Stock movement
@@ -169,6 +176,10 @@ export interface LedgerDetails {
 
 export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails | null> {
   try {
+    const session = await getSession();
+    if (!session || !session.companyId) return null;
+    const companyId = session.companyId;
+
     // Get the ledger basic info
     const ledger = await db
       .select({
@@ -181,7 +192,7 @@ export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails 
       .from(ledgers)
       .where(and(
         eq(ledgers.id as any, ledgerId),
-        eq(ledgers.companyId as any, "company_1")
+        eq(ledgers.companyId as any, companyId)
       ))
       .limit(1);
 
@@ -200,7 +211,7 @@ export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails 
       .where(
         and(
           eq(voucherEntries.ledgerId as any, ledgerId),
-          eq(vouchers.companyId as any, "company_1")
+          eq(vouchers.companyId as any, companyId)
         )
       );
 
@@ -230,6 +241,10 @@ export async function getLedgerDetails(ledgerId: string): Promise<LedgerDetails 
 
 export async function getDebtorsOptions(): Promise<Array<{ id: string; name: string; openingBalance: number }>> {
   try {
+    const session = await getSession();
+    if (!session || !session.companyId) return [];
+    const companyId = session.companyId;
+
     return await db
       .select({ id: ledgers.id, name: ledgers.name, openingBalance: ledgers.openingBalance })
       .from(ledgers)
@@ -237,7 +252,7 @@ export async function getDebtorsOptions(): Promise<Array<{ id: string; name: str
         and(
           eq(ledgers.group as any, "sundry_debtors"),
           eq(ledgers.isActive as any, true),
-          eq(ledgers.companyId as any, "company_1")
+          eq(ledgers.companyId as any, companyId)
         )
       )
       .orderBy(ledgers.name);

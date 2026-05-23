@@ -25,6 +25,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
 export default function AuditPage() {
   const [dateFrom, setDateFrom] = useState<string | null>(null);
@@ -172,7 +173,7 @@ export default function AuditPage() {
         </div>
       </div>
 
-      <Card>
+      <Card id="audit-report">
         <CardContent>
           {loading ? (
             <div className="flex items-center justify-center py-8">
@@ -183,7 +184,7 @@ export default function AuditPage() {
               No audit entries found for the selected criteria.
             </div>
           ) : (
-            <Table className="w-full">
+            <Table id="audit-table" className="w-full">
               <thead>
                 <tr>
                   <th className="text-left px-6 py-3">Timestamp</th>
@@ -221,16 +222,12 @@ export default function AuditPage() {
             </Table>
           )}
         </CardContent>
-        <CardFooter className="flex justify-between border-t border-border/50 p-4">
-          <Button
-            variant="outline"
-            onClick={() => {
-              // In a real app, this would export to CSV/Excel
-              alert("Audit log export functionality would be implemented here");
-            }}
-          >
-            Export Audit Log
-          </Button>
+        <CardFooter className="flex justify-between items-center border-t border-border/50 p-4">
+          <ReportExportButtons
+            tableId="audit-table"
+            elementId="audit-report"
+            filename={`audit-trail_${dateFrom}_to_${dateTo}`}
+          />
           <div className="text-sm text-muted-foreground">
             Showing {auditEntries.length} entries
           </div>

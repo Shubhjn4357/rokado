@@ -4,7 +4,7 @@ import { VouchersClient } from "@/components/vouchers/vouchers-client";
 import { TableSkeleton } from "@/components/ui/skeletons";
 
 export const dynamic = "force-dynamic";
-export const metadata = { title: "Vouchers - Shree Saree House ERP" };
+export const metadata = { title: "Vouchers -  ERP" };
 
 async function getVouchersData() {
   const [allVouchers, allLedgers] = await Promise.all([

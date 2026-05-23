@@ -60,7 +60,7 @@ export function TopBar() {
               <Building2 className="w-3.5 h-3.5 text-accent shrink-0 group-hover:scale-105 transition-transform" />
               <div className="flex flex-col items-start leading-none">
                 <span className="font-black text-foreground text-xs tracking-tight truncate max-w-[120px]">
-                  {companiesList.find(c => c.id === user?.companyId)?.name || "Shree Saree House"}
+                  {companiesList.find(c => c.id === user?.companyId)?.name || "  House"}
                 </span>
                 <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 uppercase tracking-wider">
                   {companiesList.find(c => c.id === user?.companyId)?.role || role || "Owner"}

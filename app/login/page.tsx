@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Building2, Lock, User, Eye, EyeOff, KeyRound, Loader2 } from "lucide-react";
 import { loginAction } from "./actions";
+import { AppConst } from "@/constant/app.constant";
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -50,10 +51,10 @@ export default function LoginPage() {
             <Building2 className="w-8 h-8 text-accent animate-pulse" />
           </div>
           <h1 className="text-3xl font-black mt-4 text-foreground tracking-tight select-none">
-            Shree Saree House
+            {AppConst.name}
           </h1>
           <p className="text-xs text-foreground/60 font-semibold select-none">
-            Financial Core & Ledger Management
+            {AppConst.tagline}
           </p>
         </div>
 

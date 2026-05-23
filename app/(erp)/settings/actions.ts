@@ -66,35 +66,36 @@ export async function getSettings() {
 
     return {
       companyInfo: {
-        name: company?.name ?? "My Organization",
-        gstin: company?.gstin ?? "",
-        pan: company?.pan ?? "",
-        address: company?.address ?? "",
-        city: company?.city ?? "",
-        state: company?.state ?? "",
-        pincode: company?.pincode ?? "",
-        phone: company?.phone ?? "",
-        email: company?.email ?? "",
-        website: jsonSettings.companyInfo?.website ?? "",
+        name: company?.name || "",
+        gstin: company?.gstin || "",
+        pan: company?.pan || "",
+        address: company?.address || "",
+        city: company?.city || "",
+        state: company?.state || "",
+        pincode: company?.pincode || "",
+        phone: company?.phone || "",
+        email: company?.email || "",
+        website: jsonSettings.companyInfo?.website || "",
       },
       financialSettings: {
-        fiscalYearStart: jsonSettings.financialSettings?.fiscalYearStart ?? "04-01",
-        currencySymbol: jsonSettings.financialSettings?.currencySymbol ?? "₹",
-        currencyCode: jsonSettings.financialSettings?.currencyCode ?? "INR",
-        numberFormat: jsonSettings.financialSettings?.numberFormat ?? "Indian",
+        fiscalYearStart: jsonSettings.financialSettings?.fiscalYearStart || "04-01",
+        currencySymbol: jsonSettings.financialSettings?.currencySymbol || "₹",
+        currencyCode: jsonSettings.financialSettings?.currencyCode || "INR",
+        numberFormat: jsonSettings.financialSettings?.numberFormat || "Indian",
+        defaultTemplate: jsonSettings.financialSettings?.defaultTemplate || "minimalist",
       },
       taxSettings: {
-        gstApplicable: jsonSettings.taxSettings?.gstApplicable ?? true,
+        gstApplicable: jsonSettings.taxSettings?.gstApplicable !== false,
         defaultGstRate: jsonSettings.taxSettings?.defaultGstRate ?? 18,
-        TDSApplicable: jsonSettings.taxSettings?.TDSApplicable ?? false,
+        TDSApplicable: jsonSettings.taxSettings?.TDSApplicable === true,
         defaultTDSRate: jsonSettings.taxSettings?.defaultTDSRate ?? 10,
       },
       notificationSettings: {
-        emailNotifications: jsonSettings.notificationSettings?.emailNotifications ?? true,
-        smsNotifications: jsonSettings.notificationSettings?.smsNotifications ?? false,
-        lowStockAlerts: jsonSettings.notificationSettings?.lowStockAlerts ?? true,
-        paymentReminders: jsonSettings.notificationSettings?.paymentReminders ?? true,
-        backupReminders: jsonSettings.notificationSettings?.backupReminders ?? true,
+        emailNotifications: jsonSettings.notificationSettings?.emailNotifications !== false,
+        smsNotifications: jsonSettings.notificationSettings?.smsNotifications === true,
+        lowStockAlerts: jsonSettings.notificationSettings?.lowStockAlerts !== false,
+        paymentReminders: jsonSettings.notificationSettings?.paymentReminders !== false,
+        backupReminders: jsonSettings.notificationSettings?.backupReminders !== false,
       },
     };
   } catch (err) {
@@ -159,6 +160,7 @@ export async function saveFinancialSettings(data: {
   currencySymbol: string;
   currencyCode: string;
   numberFormat: string;
+  defaultTemplate: string;
 }) {
   try {
     const session = await getSession();

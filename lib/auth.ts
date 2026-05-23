@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { cookies } from "next/headers";
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "super-secure-local-session-secret-for-shree-saree-house-erp-app";
+const SESSION_SECRET = process.env.SESSION_SECRET || "super-secure-local-session-secret-for---house-erp-app";
 const COOKIE_NAME = "erp_session";
 
 export interface SessionUser {

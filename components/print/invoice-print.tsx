@@ -2,6 +2,7 @@
 
 import { formatCurrency, formatDate } from "@/lib/types";
 import { useEffect, useState } from "react";
+import { QRCodeRenderer } from "@/components/print/qr-code-renderer";
 
 interface InvoicePrintProps {
   invoiceNumber: string;
@@ -51,11 +52,25 @@ export function InvoicePrint({
   companyGstin,
   companyPan,
 }: InvoicePrintProps) {
+  const [settings, setSettings] = useState<{ showQrCode?: boolean; upiId?: string }>({});
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("erp:print-settings");
+      if (raw) {
+        setSettings(JSON.parse(raw));
+      }
+    } catch (err) {
+      console.error("Failed to load print settings:", err);
+    }
+  }, []);
+
   // Trigger print when component mounts
   useEffect(() => {
-    window.print();
-    // After print, we could close the window if it's a popup
-    // But for now, we just print and leave it open.
+    const timer = setTimeout(() => {
+      window.print();
+    }, 800); // Allow QR code to fully generate before triggering print window
+    return () => clearTimeout(timer);
   }, []);
 
   const gstRate = cgstAmount + sgstAmount + igstAmount;
@@ -64,7 +79,7 @@ export function InvoicePrint({
   const igstRate = igstAmount;
 
   return (
-    <div className="p-4 max-w-[200mm] mx-auto" style={{ fontSize: "12px" }}>
+    <div className="p-4 max-w-[200mm] mx-auto text-black bg-white" style={{ fontSize: "12px" }}>
       <div className="mb-4 text-center">
         <h1 className="text-xl font-bold">{companyName}</h1>
         <p className="text-xs">{companyAddress}</p>
@@ -82,9 +97,9 @@ export function InvoicePrint({
         </div>
       </div>
 
-      <div className="mb-4">
-        <span className="font-medium mb-2 block">Bill To:</span>
-        <p className="text-xs mb-1">{customerName}</p>
+      <div className="mb-4 mt-2">
+        <span className="font-medium mb-1 block">Bill To:</span>
+        <p className="text-xs mb-1 font-bold">{customerName}</p>
         {customerPhone && <p className="text-xs mb-1">Phone: {customerPhone}</p>}
         {customerGstin && <p className="text-xs">GSTIN: {customerGstin}</p>}
       </div>
@@ -118,29 +133,31 @@ export function InvoicePrint({
               <td colSpan={5} className="text-right py-1 font-medium">Subtotal:</td>
               <td className="py-1 text-right">{formatCurrency(subtotal)}</td>
             </tr>
-            <tr>
-              <td colSpan={5} className="text-right py-1 font-medium">Discount:</td>
-              <td className="py-1 text-right">{formatCurrency(discountAmount)}</td>
-            </tr>
+            {discountAmount > 0 && (
+              <tr>
+                <td colSpan={5} className="text-right py-1 font-medium">Discount:</td>
+                <td className="py-1 text-right">{formatCurrency(discountAmount)}</td>
+              </tr>
+            )}
             <tr>
               <td colSpan={5} className="text-right py-1 font-medium">Taxable Value:</td>
               <td className="py-1 text-right">{formatCurrency(taxableValue)}</td>
             </tr>
             {cgstAmount > 0 && (
               <tr>
-                <td colSpan={5} className="text-right py-1 font-medium">CGST @{formatCurrency((cgstAmount / taxableValue) * 100)}%:</td>
+                <td colSpan={5} className="text-right py-1 font-medium">CGST:</td>
                 <td className="py-1 text-right">{formatCurrency(cgstAmount)}</td>
               </tr>
             )}
             {sgstAmount > 0 && (
               <tr>
-                <td colSpan={5} className="text-right py-1 font-medium">SGST @{formatCurrency((sgstAmount / taxableValue) * 100)}%:</td>
+                <td colSpan={5} className="text-right py-1 font-medium">SGST:</td>
                 <td className="py-1 text-right">{formatCurrency(sgstAmount)}</td>
               </tr>
             )}
             {igstAmount > 0 && (
               <tr>
-                <td colSpan={5} className="text-right py-1 font-medium">IGST @{formatCurrency((igstAmount / taxableValue) * 100)}%:</td>
+                <td colSpan={5} className="text-right py-1 font-medium">IGST:</td>
                 <td className="py-1 text-right">{formatCurrency(igstAmount)}</td>
               </tr>
             )}
@@ -148,18 +165,39 @@ export function InvoicePrint({
               <td colSpan={5} className="text-right py-1">Total Amount:</td>
               <td className="py-1 text-right">{formatCurrency(totalAmount)}</td>
             </tr>
-            <tr>
-              <td colSpan={6} className="py-2 text-left">
-                Amount in Words: {amountInWords}
-              </td>
-            </tr>
+            {amountInWords && (
+              <tr>
+                <td colSpan={6} className="py-2 text-left text-[10px] text-gray-500 italic">
+                  Amount in Words: {amountInWords}
+                </td>
+              </tr>
+            )}
           </tfoot>
         </table>
       </div>
 
-      <div className="mt-4 text-center text-xs">
-        <p>Thank you for your business!</p>
-        <p>Authorized Signatory</p>
+      <div className="mt-6 flex justify-between items-start gap-4 border-t border-dashed pt-4">
+        <div>
+          {settings.showQrCode && settings.upiId && (
+            <div className="flex items-center gap-2.5 bg-gray-50 p-2 rounded-lg border border-gray-200">
+              <QRCodeRenderer
+                text={`upi://pay?pa=${settings.upiId}&pn=${encodeURIComponent(companyName)}&am=${totalAmount}&cu=INR`}
+                size={60}
+              />
+              <div>
+                <div className="font-bold text-gray-700 text-[8px] uppercase tracking-wider">Instant UPI Payment</div>
+                <div className="text-[7px] text-gray-500 mt-0.5 font-mono">{settings.upiId}</div>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="text-right">
+          <p className="font-semibold text-xs">Thank you for your business!</p>
+          <div className="text-center w-36 border-t border-gray-300 mt-8 pt-1.5 font-bold ml-auto">
+            <div className="text-[8px] uppercase tracking-wider text-gray-400">Authorized Signatory</div>
+            <div className="text-gray-800 text-[9px] mt-0.5">{companyName}</div>
+          </div>
+        </div>
       </div>
     </div>
   );

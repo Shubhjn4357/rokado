@@ -102,7 +102,7 @@ export default function RegisterPage() {
             <Building2 className="w-8 h-8 text-accent animate-pulse" />
           </div>
           <h1 className="text-3xl font-black mt-4 text-foreground tracking-tight select-none">
-            Shree Saree House
+            House
           </h1>
           <p className="text-xs text-foreground/60 font-semibold select-none">
             Financial Core & Ledger Management

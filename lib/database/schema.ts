@@ -17,7 +17,7 @@ export const companies = sqliteTable("companies", {
     const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
     return new Date(year, 3, 1).getTime(); // April 1
   }),
-  businessType: text("business_type").notNull().default("wholesale_saree"),
+  businessType: text("business_type").notNull().default("wholesale_"),
   createdAt: integer("created_at").notNull().$defaultFn(() => Date.now()),
   updatedAt: integer("updated_at").notNull().$defaultFn(() => Date.now()),
 });

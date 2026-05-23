@@ -29,7 +29,7 @@ export type LedgerGroup =
 export type VoucherStatus = "draft" | "posted" | "cancelled";
 
 export type BusinessType =
-  | "wholesale_saree"
+  | "wholesale_"
   | "textile_retail"
   | "garment_store"
   | "distributor"
@@ -63,20 +63,20 @@ export const VOUCHER_TYPE_LABELS: Record<VoucherType, string> = {
 };
 
 export const INVENTORY_CATEGORIES = [
-  "Silk Sarees",
-  "Cotton Sarees",
-  "Wedding Collection",
-  "Designer Sarees",
-  "Daily Wear",
-  "Premium Collection",
-  "Festival Collection",
-  "Lehenga Choli",
-  "Blouse Pieces",
-  "Dress Materials",
+  "Office Furniture",
+  "Electronics & Tech",
+  "Computer Accessories",
+  "Storage Devices",
+  "Smart Home",
+  "Office Security",
+  "Office Supplies",
+  "Apparel & Clothing",
+  "General Stock Items",
+  "Custom...",
 ] as const;
 
-export type InventoryItemCategory = (typeof INVENTORY_CATEGORIES)[number];
-export type InventoryCategory = InventoryItemCategory;
+export type InventoryItemCategory = string;
+export type InventoryCategory = string;
 
 export interface InventoryItem {
   id: string;

@@ -226,7 +226,7 @@ export function TVClient({ data }: TVClientProps) {
               {data.criticalStock.length} Items
             </div>
             <div className="text-xs font-bold mt-1 text-muted-foreground">
-              Saree collections below minimum threshold
+              collections below minimum threshold
             </div>
           </div>
         </div>
@@ -235,11 +235,11 @@ export function TVClient({ data }: TVClientProps) {
       {/* MAIN TWO PANEL CONTENT FEED */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 relative z-10">
         
-        {/* LEFT COLUMN: Saree Category Sales charts (5 cols wide on lg) */}
+        {/* LEFT COLUMN:  Category Sales charts (5 cols wide on lg) */}
         <div className="lg:col-span-5 surface-card rounded-[var(--radius-xl)] p-5 flex flex-col border-none overflow-hidden">
           <div className="flex items-center gap-2 mb-5">
             <ShoppingBag className="w-4 h-4 text-accent" />
-            <h2 className="text-xs font-black uppercase tracking-wider text-foreground/80">Saree Category Sales Performance</h2>
+            <h2 className="text-xs font-black uppercase tracking-wider text-foreground/80"> Category Sales Performance</h2>
           </div>
 
           <div className="flex-1 flex flex-col justify-center space-y-5.5">
@@ -349,14 +349,14 @@ export function TVClient({ data }: TVClientProps) {
           <div className="rounded-[var(--radius-xl)] border-none surface-card p-5 flex flex-col overflow-hidden min-h-[160px]">
             <div className="flex items-center gap-2 mb-3.5">
               <AlertTriangle className="w-4 h-4 text-destructive" />
-              <h2 className="text-xs font-black uppercase tracking-wider text-foreground/80">Saree Inventory Alerts (Low Stock)</h2>
+              <h2 className="text-xs font-black uppercase tracking-wider text-foreground/80"> Inventory Alerts (Low Stock)</h2>
             </div>
 
             <div className="flex-grow overflow-y-auto max-h-[140px] pr-1 space-y-2 custom-scrollbar">
               {data.criticalStock.length === 0 ? (
                 <div className="text-center py-6 text-credit text-xs font-bold flex items-center justify-center gap-2">
                   <CheckCircle className="w-4 h-4 text-credit" />
-                  All saree collections are perfectly balanced above minimum threshold.
+                  All  collections are perfectly balanced above minimum threshold.
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -407,7 +407,7 @@ export function TVClient({ data }: TVClientProps) {
             ) : (
               <span className="flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-credit inline-block" />
-                SHREE SAREE HOUSE ERP OPERATING NORMALLY. ALL AUDITED DOUBLE-ENTRY VOUCHERS PERFECTLY SYNCED WITH CLOUD DATABASES.
+                  ERP OPERATING NORMALLY. ALL AUDITED DOUBLE-ENTRY VOUCHERS PERFECTLY SYNCED WITH CLOUD DATABASES.
               </span>
             )}
             <span className="flex items-center gap-2">
