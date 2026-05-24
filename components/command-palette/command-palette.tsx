@@ -15,8 +15,10 @@ import {
   BarChart3,
   Settings,
   Plus,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ERP_ACTION_SHORTCUTS, ERP_NAVIGATION_SHORTCUTS } from "@/lib/erp-shortcuts";
 
 type CommandItem = {
   id: string;
@@ -28,6 +30,20 @@ type CommandItem = {
   keywords?: string[];
 };
 
+const SHORTCUT_ICONS: Record<string, React.ElementType> = {
+  F4: ArrowLeftRight,
+  F5: ArrowLeftRight,
+  F6: CreditCard,
+  F7: FileText,
+  F8: Receipt,
+  F9: ShoppingCart,
+  F10: FileText,
+  F11: Calculator,
+  F12: LayoutDashboard,
+  "Alt+C": Plus,
+  "Alt+I": Package,
+};
+
 function useCommandItems(router: ReturnType<typeof useRouter>): CommandItem[] {
   return [
     // Navigation
@@ -37,14 +53,25 @@ function useCommandItems(router: ReturnType<typeof useRouter>): CommandItem[] {
     { id: "inventory", label: "Inventory", icon: Package, action: () => router.push("/inventory"), keywords: ["stock", "items", ""] },
     { id: "pos", label: "POS Billing", icon: Calculator, action: () => router.push("/pos"), keywords: ["billing", "sell", "invoice"] },
     { id: "settings", label: "Settings", icon: Settings, action: () => router.push("/settings"), keywords: ["config", "preferences"] },
-    // Quick create
-    { id: "new-sales", label: "New Sales Voucher", description: "F8", icon: Receipt, shortcut: "F8", action: () => router.push("/vouchers/sales"), keywords: ["sell", "invoice", "sales"] },
-    { id: "new-purchase", label: "New Purchase Voucher", description: "F9", icon: ShoppingCart, shortcut: "F9", action: () => router.push("/vouchers/purchase"), keywords: ["buy", "purchase"] },
-    { id: "new-receipt", label: "New Receipt Voucher", description: "F6", icon: CreditCard, shortcut: "F6", action: () => router.push("/vouchers/receipt"), keywords: ["receive", "payment in"] },
-    { id: "new-payment", label: "New Payment Voucher", description: "F5", icon: ArrowLeftRight, shortcut: "F5", action: () => router.push("/vouchers/payment"), keywords: ["pay", "payment out"] },
-    { id: "new-journal", label: "New Journal Entry", description: "F7", icon: FileText, shortcut: "F7", action: () => router.push("/vouchers/journal"), keywords: ["journal", "adjustment"] },
-    { id: "new-contra", label: "New Contra Voucher", description: "F4", icon: ArrowLeftRight, shortcut: "F4", action: () => router.push("/vouchers/contra"), keywords: ["contra", "cash transfer"] },
-    { id: "new-ledger", label: "Create New Ledger", description: "Alt+C", icon: Plus, shortcut: "Alt+C", action: () => router.push("/ledgers/new"), keywords: ["ledger", "account", "party"] },
+    // Shortcuts
+    ...ERP_NAVIGATION_SHORTCUTS.map((shortcut) => ({
+      id: `shortcut-${shortcut.key}`,
+      label: shortcut.label,
+      description: shortcut.description,
+      icon: SHORTCUT_ICONS[shortcut.key] ?? FileText,
+      shortcut: shortcut.key,
+      action: () => router.push(shortcut.route!),
+      keywords: [shortcut.label.toLowerCase(), shortcut.description.toLowerCase()],
+    })),
+    ...ERP_ACTION_SHORTCUTS.filter((shortcut) => shortcut.route).map((shortcut) => ({
+      id: `shortcut-${shortcut.key}`,
+      label: shortcut.label,
+      description: shortcut.description,
+      icon: SHORTCUT_ICONS[shortcut.key] ?? Plus,
+      shortcut: shortcut.key,
+      action: () => router.push(shortcut.route!),
+      keywords: [shortcut.label.toLowerCase(), shortcut.description.toLowerCase()],
+    })),
     // Reports
     { id: "trial-balance", label: "Trial Balance", icon: BarChart3, action: () => router.push("/reports/trial-balance"), keywords: ["report", "balance"] },
     { id: "outstanding", label: "Outstanding Report", icon: BarChart3, action: () => router.push("/reports/outstanding"), keywords: ["due", "debtors", "creditors"] },
@@ -122,18 +149,16 @@ export function CommandPalette() {
       onClick={() => setOpen(false)}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-foreground/45 backdrop-blur-sm" />
 
       {/* Palette */}
       <div
-        className="relative w-full max-w-xl mx-4 rounded-2xl border border-border/60 bg-card/95 backdrop-blur-xl shadow-2xl overflow-hidden"
+        className="surface-elevated relative w-full max-w-xl mx-4 rounded-[var(--radius-card)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}
         <div className="flex items-center gap-3 px-4 border-b border-border/60">
-          <svg className="w-4 h-4 text-muted-foreground shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
+          <Search className="w-4 h-4 text-muted-foreground shrink-0" />
           <input
             ref={inputRef}
             value={query}
@@ -158,13 +183,13 @@ export function CommandPalette() {
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors",
                   idx === selectedIndex
-                    ? "bg-primary/10 text-primary"
+                    ? "bg-accent/10 text-accent"
                     : "hover:bg-muted/50 text-foreground"
                 )}
               >
                 <div className={cn(
                   "w-7 h-7 rounded-lg flex items-center justify-center shrink-0",
-                  idx === selectedIndex ? "bg-primary/20" : "bg-muted/60"
+                  idx === selectedIndex ? "bg-accent/15" : "bg-muted/60"
                 )}>
                   <item.icon className="w-3.5 h-3.5" />
                 </div>
@@ -185,9 +210,9 @@ export function CommandPalette() {
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-2 border-t border-border/60 bg-muted/20 flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span>↑↓ navigate</span>
-          <span>↵ select</span>
+        <div className="px-4 py-2 border-t border-border/60 bg-muted/25 flex items-center gap-3 text-[11px] text-muted-foreground">
+          <span>Up/Down navigate</span>
+          <span>Enter select</span>
           <span>esc close</span>
           <span className="ml-auto">Ctrl+K to reopen</span>
         </div>

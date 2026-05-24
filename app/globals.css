@@ -1,337 +1,293 @@
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────────────────────
-   TAILWIND v4 THEME EXTENSION
-   Maps CSS custom properties → Tailwind color/radius utilities
-───────────────────────────────────────────────────────── */
 @theme {
-  /* Radii */
-  --radius-sm:   10px;
-  --radius-md:   14px;
-  --radius-lg:   18px;
-  --radius-xl:   22px;
-  --radius-2xl:  26px;
-  --radius-card: 24px;
+  --font-sans: var(--font-geist-sans), Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), "SFMono-Regular", Consolas, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-2xl: 12px;
+  --radius-3xl: 14px;
+  --radius-card: 8px;
   --radius-pill: 9999px;
 
-  /* Semantic color bridge (Tailwind uses these via bg-*, text-*, etc.) */
-  --color-background:         var(--background);
-  --color-foreground:         var(--foreground);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
 
-  --color-surface:            var(--surface);
+  --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
-  --color-surface-elevated:   var(--surface-elevated);
+  --color-surface-elevated: var(--surface-elevated);
 
-  --color-card:               var(--card);
-  --color-card-foreground:    var(--card-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
 
-  --color-popover:            var(--popover);
+  --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
 
-  --color-primary:            var(--primary);
+  --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
 
-  --color-secondary:          var(--secondary);
+  --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
 
-  --color-muted:              var(--muted);
-  --color-muted-foreground:   var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
 
-  --color-accent:             var(--accent);
-  --color-accent-foreground:  var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
 
-  --color-destructive:        var(--destructive);
+  --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
 
-  --color-border:             var(--border);
-  --color-input:              var(--input);
-  --color-ring:               var(--ring);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
-  /* Vivid accent panels (Yellow / Orange / Black) */
-  --color-panel-yellow:          var(--panel-yellow);
-  --color-panel-yellow-fg:       var(--panel-yellow-fg);
-  --color-panel-orange:          var(--panel-orange);
-  --color-panel-orange-fg:       var(--panel-orange-fg);
-  --color-panel-black:           var(--panel-black);
-  --color-panel-black-fg:        var(--panel-black-fg);
+  --color-panel-yellow: var(--panel-yellow);
+  --color-panel-yellow-fg: var(--panel-yellow-fg);
+  --color-panel-orange: var(--panel-orange);
+  --color-panel-orange-fg: var(--panel-orange-fg);
+  --color-panel-black: var(--panel-black);
+  --color-panel-black-fg: var(--panel-black-fg);
 
-  /* Semantic debit / credit colours (accounting) */
-  --color-debit:                 var(--debit);
-  --color-debit-foreground:      var(--debit-foreground);
-  --color-credit:                var(--credit);
-  --color-credit-foreground:     var(--credit-foreground);
+  --color-debit: var(--debit);
+  --color-debit-foreground: var(--debit-foreground);
+  --color-credit: var(--credit);
+  --color-credit-foreground: var(--credit-foreground);
 }
 
-
-/* ─────────────────────────────────────────────────────────
-   DESIGN TOKENS  — LIGHT MODE
-───────────────────────────────────────────────────────── */
 @layer base {
   :root {
-    /* Body — transparent so the gradient on <html> shows through */
-    --background:            transparent;
-    --foreground:            hsl(220 15% 14%);
+    --background: hsl(214 24% 97%);
+    --foreground: hsl(222 24% 12%);
 
-    /* Card / Surface layers */
-    --surface:               hsl(0 0% 100% / 0.80);
-    --surface-foreground:    hsl(220 15% 14%);
-    --surface-elevated:      hsl(0 0% 100% / 0.96);
+    --surface: hsl(0 0% 100%);
+    --surface-foreground: hsl(222 24% 12%);
+    --surface-elevated: hsl(0 0% 100%);
 
-    --card:                  hsl(0 0% 100% / 0.80);
-    --card-foreground:       hsl(220 15% 14%);
+    --card: hsl(0 0% 100%);
+    --card-foreground: hsl(222 24% 12%);
 
-    --popover:               hsl(0 0% 100% / 0.97);
-    --popover-foreground:    hsl(220 15% 14%);
+    --popover: hsl(0 0% 100%);
+    --popover-foreground: hsl(222 24% 12%);
 
-    /* Interactive */
-    --primary:               hsl(220 15% 10%);
-    --primary-foreground:    hsl(0 0% 100%);
+    --primary: hsl(222 24% 11%);
+    --primary-foreground: hsl(0 0% 100%);
 
-    --secondary:             hsl(220 12% 95%);
-    --secondary-foreground:  hsl(220 15% 20%);
+    --secondary: hsl(214 18% 92%);
+    --secondary-foreground: hsl(222 20% 18%);
 
-    --muted:                 hsl(220 10% 94%);
-    --muted-foreground:      hsl(220 10% 50%);
+    --muted: hsl(214 20% 94%);
+    --muted-foreground: hsl(220 10% 42%);
 
-    /* Accent — Royal Indigo */
-    --accent:                hsl(241 78% 65%);
-    --accent-foreground:     hsl(0 0% 100%);
+    --accent: hsl(248 68% 56%);
+    --accent-foreground: hsl(0 0% 100%);
 
-    /* Danger */
-    --destructive:           hsl(4 88% 56%);
+    --destructive: hsl(4 74% 52%);
     --destructive-foreground: hsl(0 0% 100%);
 
-    /* Structural */
-    --border:                hsl(220 14% 90%);
-    --input:                 hsl(220 14% 92%);
-    --ring:                  hsl(241 78% 65%);
+    --border: hsl(216 16% 86%);
+    --input: hsl(216 16% 88%);
+    --ring: hsl(248 68% 56%);
 
-    /* Base radius (shadcn primitives pick this up) */
-    --radius:                18px;
+    --radius: 8px;
 
-    /* ── Vivid Accent Panels ── */
-    --panel-yellow:          hsl(65 94% 59%);   /* #EBF53B neon yellow   */
-    --panel-yellow-fg:       hsl(220 15% 8%);   /* near-black on yellow  */
-    --panel-orange:          hsl(24 100% 61%);  /* #FF8C37 sun orange    */
-    --panel-orange-fg:       hsl(220 15% 8%);   /* near-black on orange  */
-    --panel-black:           hsl(0 0% 6%);      /* #0F0F0F jet black     */
-    --panel-black-fg:        hsl(0 0% 97%);     /* near-white on black   */
+    --panel-yellow: hsl(58 88% 62%);
+    --panel-yellow-fg: hsl(222 24% 10%);
+    --panel-orange: hsl(25 92% 60%);
+    --panel-orange-fg: hsl(222 24% 10%);
+    --panel-black: hsl(222 22% 9%);
+    --panel-black-fg: hsl(0 0% 98%);
 
-    /* ── Accounting semantics ── */
-    --debit:                 hsl(353 72% 52%);  /* warm rose for debits  */
-    --debit-foreground:      hsl(0 0% 100%);
-    --credit:                hsl(152 55% 42%);  /* emerald for credits   */
-    --credit-foreground:     hsl(0 0% 100%);
+    --debit: hsl(351 68% 49%);
+    --debit-foreground: hsl(0 0% 100%);
+    --credit: hsl(155 56% 36%);
+    --credit-foreground: hsl(0 0% 100%);
 
-    /* ── Shadows (used via custom CSS, not Tailwind) ── */
-    --shadow-card:     0 2px 12px -2px hsl(220 30% 60% / 0.10),
-                       0 1px 3px hsl(220 30% 60% / 0.06);
-    --shadow-elevated: 0 8px 32px -6px hsl(220 30% 50% / 0.14),
-                       0 2px 8px hsl(220 30% 60% / 0.08);
-    --shadow-glow-accent: 0 0 20px -4px hsl(241 78% 65% / 0.25);
+    --shadow-card: 0 1px 2px hsl(220 20% 24% / 0.06),
+      0 8px 22px -18px hsl(220 24% 14% / 0.24);
+    --shadow-elevated: 0 16px 36px -24px hsl(220 24% 10% / 0.32),
+      0 4px 12px -8px hsl(220 24% 10% / 0.24);
+    --shadow-glow-accent: 0 0 0 3px hsl(248 68% 56% / 0.12);
   }
 
-
-/* ─────────────────────────────────────────────────────────
-   DESIGN TOKENS  — DARK MODE
-───────────────────────────────────────────────────────── */
   .dark {
-    --background:            transparent;
-    --foreground:            hsl(220 15% 92%);
+    --background: hsl(240 9% 9%);
+    --foreground: hsl(220 18% 92%);
 
-    --surface:               hsl(220 20% 10% / 0.80);
-    --surface-foreground:    hsl(220 15% 92%);
-    --surface-elevated:      hsl(220 20% 12% / 0.96);
+    --surface: hsl(240 8% 12%);
+    --surface-foreground: hsl(220 18% 92%);
+    --surface-elevated: hsl(240 8% 14%);
 
-    --card:                  hsl(220 20% 10% / 0.80);
-    --card-foreground:       hsl(220 15% 92%);
+    --card: hsl(240 8% 12%);
+    --card-foreground: hsl(220 18% 92%);
 
-    --popover:               hsl(220 20% 9% / 0.97);
-    --popover-foreground:    hsl(220 15% 92%);
+    --popover: hsl(240 8% 13%);
+    --popover-foreground: hsl(220 18% 92%);
 
-    --primary:               hsl(220 15% 92%);
-    --primary-foreground:    hsl(220 15% 8%);
+    --primary: hsl(0 0% 96%);
+    --primary-foreground: hsl(240 10% 8%);
 
-    --secondary:             hsl(220 15% 16%);
-    --secondary-foreground:  hsl(220 15% 85%);
+    --secondary: hsl(240 7% 18%);
+    --secondary-foreground: hsl(220 16% 88%);
 
-    --muted:                 hsl(220 15% 14%);
-    --muted-foreground:      hsl(220 10% 55%);
+    --muted: hsl(240 7% 17%);
+    --muted-foreground: hsl(220 8% 64%);
 
-    --accent:                hsl(241 78% 68%);
-    --accent-foreground:     hsl(0 0% 100%);
+    --accent: hsl(248 72% 66%);
+    --accent-foreground: hsl(0 0% 100%);
 
-    --destructive:           hsl(4 80% 55%);
+    --destructive: hsl(4 74% 60%);
     --destructive-foreground: hsl(0 0% 100%);
 
-    --border:                hsl(220 15% 22%);
-    --input:                 hsl(220 15% 18%);
-    --ring:                  hsl(241 78% 68%);
+    --border: hsl(240 7% 24%);
+    --input: hsl(240 7% 22%);
+    --ring: hsl(248 72% 66%);
 
-    --radius:                18px;
+    --panel-yellow: hsl(58 82% 58%);
+    --panel-yellow-fg: hsl(240 10% 8%);
+    --panel-orange: hsl(25 88% 57%);
+    --panel-orange-fg: hsl(240 10% 8%);
+    --panel-black: hsl(0 0% 4%);
+    --panel-black-fg: hsl(0 0% 98%);
 
-    /* Vivid panels stay vivid in dark mode — slightly adjusted */
-    --panel-yellow:          hsl(63 90% 55%);
-    --panel-yellow-fg:       hsl(220 15% 8%);
-    --panel-orange:          hsl(22 98% 56%);
-    --panel-orange-fg:       hsl(220 15% 8%);
-    --panel-black:           hsl(0 0% 4%);
-    --panel-black-fg:        hsl(0 0% 97%);
+    --debit: hsl(351 72% 62%);
+    --debit-foreground: hsl(0 0% 100%);
+    --credit: hsl(155 54% 50%);
+    --credit-foreground: hsl(0 0% 100%);
 
-    --debit:                 hsl(353 72% 62%);
-    --debit-foreground:      hsl(0 0% 100%);
-    --credit:                hsl(152 55% 52%);
-    --credit-foreground:     hsl(0 0% 100%);
-
-    --shadow-card:     0 2px 16px -2px hsl(220 30% 4% / 0.40),
-                       0 1px 4px hsl(220 30% 4% / 0.25);
-    --shadow-elevated: 0 8px 40px -8px hsl(220 30% 4% / 0.55),
-                       0 2px 10px hsl(220 30% 4% / 0.30);
-    --shadow-glow-accent: 0 0 20px -4px hsl(241 78% 68% / 0.30);
+    --shadow-card: 0 1px 2px hsl(0 0% 0% / 0.26),
+      0 10px 24px -18px hsl(0 0% 0% / 0.56);
+    --shadow-elevated: 0 18px 42px -24px hsl(0 0% 0% / 0.72),
+      0 6px 16px -10px hsl(0 0% 0% / 0.5);
+    --shadow-glow-accent: 0 0 0 3px hsl(248 72% 66% / 0.16);
   }
-}
 
-
-/* ─────────────────────────────────────────────────────────
-   GLOBAL BASE RESETS
-───────────────────────────────────────────────────────── */
-@layer base {
   * {
     @apply border-border;
-    border-color: color-mix(in srgb, var(--border) 16%, transparent);
-    /* Hide scrollbars everywhere */
-    &::-webkit-scrollbar { display: none; }
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+    border-color: color-mix(in srgb, var(--border) 72%, transparent);
   }
 
   html {
-    /* Warm sand light gradient — pure CSS variable expressions would require
-       registered custom properties, so we use CSS calc-friendly hsl() directly
-       from the tokens defined above via a body class swap if needed.
-       The gradient is defined once here and toggled via .dark on <html>. */
-    background-image: linear-gradient(
-      145deg,
-      hsl(48 30% 92%) 0%,
-      hsl(34 38% 91%) 50%,
-      hsl(44 24% 90%) 100%
-    );
-    background-attachment: fixed;
     min-height: 100%;
-  }
-
-  html.dark {
-    background-image: linear-gradient(
-      145deg,
-      hsl(222 42% 7%)  0%,
-      hsl(226 45% 10%) 50%,
-      hsl(222 42% 7%)  100%
-    );
+    background: var(--background);
   }
 
   body {
-    @apply text-foreground antialiased font-sans text-xs;
-    @apply selection:bg-accent/20 selection:text-foreground;
+    @apply text-foreground antialiased font-sans;
+    min-height: 100%;
+    background:
+      linear-gradient(180deg, color-mix(in srgb, var(--background) 94%, white 6%), var(--background) 34rem),
+      var(--background);
+    color: var(--foreground);
+    font-size: 13px;
+    line-height: 1.45;
+    font-feature-settings: "cv02", "cv03", "cv04", "tnum";
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--foreground);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
     background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--muted-foreground) 22%, transparent);
+    border: 3px solid transparent;
+    border-radius: var(--radius-pill);
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: color-mix(in srgb, var(--muted-foreground) 34%, transparent);
+    border: 3px solid transparent;
+    background-clip: padding-box;
   }
 }
 
-
-/* ─────────────────────────────────────────────────────────
-   SURFACE UTILITY CLASSES
-   Use these instead of hardcoded glass/slate/white classes
-───────────────────────────────────────────────────────── */
-
-/* Standard card surface — the main building block */
 .surface-card {
   background: var(--surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid color-mix(in srgb, var(--border) 35%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
   box-shadow: var(--shadow-card);
 }
 
-/* Elevated surface — popovers, dropdowns, modals */
 .surface-elevated {
   background: var(--surface-elevated);
-  backdrop-filter: blur(32px);
-  -webkit-backdrop-filter: blur(32px);
-  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   box-shadow: var(--shadow-elevated);
 }
 
-/* Inset / muted panel — info boxes, step panels */
 .surface-inset {
-  background: var(--muted);
-  border: 1px solid color-mix(in srgb, var(--border) 30%, transparent);
+  background: color-mix(in srgb, var(--muted) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
 }
 
-/* Table row hover utility */
 .table-row-hover {
-  transition: background 0.15s ease;
+  transition: background 140ms ease, color 140ms ease;
 }
+
 .table-row-hover:hover {
-  background: color-mix(in srgb, var(--muted) 60%, transparent);
+  background: color-mix(in srgb, var(--muted) 72%, transparent);
 }
 
-
-/* ─────────────────────────────────────────────────────────
-   ACCENT PANEL UTILITIES  (Yellow / Orange / Black)
-   These render the hero stat cards visible in Image 1
-───────────────────────────────────────────────────────── */
 .panel-yellow {
   background: var(--panel-yellow);
   color: var(--panel-yellow-fg);
+  border: 1px solid color-mix(in srgb, var(--panel-yellow-fg) 14%, transparent);
 }
+
 .panel-orange {
   background: var(--panel-orange);
   color: var(--panel-orange-fg);
+  border: 1px solid color-mix(in srgb, var(--panel-orange-fg) 14%, transparent);
 }
+
 .panel-black {
   background: var(--panel-black);
   color: var(--panel-black-fg);
+  border: 1px solid color-mix(in srgb, var(--panel-black-fg) 10%, transparent);
 }
 
-
-/* ─────────────────────────────────────────────────────────
-   LEGACY ALIASES  (keep old class names working during migration)
-───────────────────────────────────────────────────────── */
-.glass-card-premium {
-  background: var(--surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-card);
-}
-
+.glass-card-premium,
 .glass-container {
   background: var(--surface);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid var(--border);
+  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
   box-shadow: var(--shadow-card);
 }
 
 .glass-table-row {
-  transition: background 0.15s ease;
-}
-.glass-table-row:hover {
-  background: color-mix(in srgb, var(--muted) 80%, transparent);
+  transition: background 140ms ease;
 }
 
-/* ─────────────────────────────────────────────────────────
-   SKELETON LOADING — shimmer animation
-───────────────────────────────────────────────────────── */
+.glass-table-row:hover {
+  background: color-mix(in srgb, var(--muted) 72%, transparent);
+}
+
 @keyframes shimmer {
-  0%   { background-position: -400px 0; }
-  100% { background-position: 400px 0; }
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
 }
 
 .skeleton {
   background: linear-gradient(
     90deg,
     var(--muted) 25%,
-    color-mix(in srgb, var(--muted) 60%, var(--background)) 50%,
+    color-mix(in srgb, var(--muted) 56%, var(--surface)) 50%,
     var(--muted) 75%
   );
   background-size: 800px 100%;
@@ -339,13 +295,10 @@
   border-radius: var(--radius-sm);
 }
 
-/* ─────────────────────────────────────────────────────────
-   PAGE TRANSITIONS
-───────────────────────────────────────────────────────── */
 @keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(4px);
   }
   to {
     opacity: 1;
@@ -354,12 +307,9 @@
 }
 
 .page-enter {
-  animation: page-enter 220ms ease-out both;
+  animation: page-enter 180ms ease-out both;
 }
 
-/* ─────────────────────────────────────────────────────────
-   DATE / TIME INPUT  — consistent cross-browser styling
-───────────────────────────────────────────────────────── */
 input[type="date"],
 input[type="time"],
 input[type="datetime-local"] {
@@ -381,8 +331,7 @@ input[type="datetime-local"] {
 input[type="date"]::-webkit-calendar-picker-indicator,
 input[type="time"]::-webkit-calendar-picker-indicator,
 input[type="datetime-local"]::-webkit-calendar-picker-indicator {
-  opacity: 0.4;
-  filter: invert(0);
+  opacity: 0.5;
   cursor: pointer;
   padding: 0;
   width: 14px;
@@ -393,27 +342,20 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
 .dark input[type="time"]::-webkit-calendar-picker-indicator,
 .dark input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: invert(1);
-  opacity: 0.4;
 }
 
-/* ─────────────────────────────────────────────────────────
-   NUMBER INPUT  — remove browser default spin buttons to
-   prevent clearing issues and standardise appearance
-───────────────────────────────────────────────────────── */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
+
 input[type="number"] {
-  -moz-appearance: textfield;
   appearance: textfield;
+  -moz-appearance: textfield;
 }
 
-/* ─────────────────────────────────────────────────────────
-   FOCUS RING  — Consistent, subtle accent focus
-───────────────────────────────────────────────────────── */
 :focus-visible {
-  outline: 2px solid hsl(var(--ring) / 0.4);
-  outline-offset: 1px;
+  outline: 2px solid color-mix(in srgb, var(--ring) 52%, transparent);
+  outline-offset: 2px;
 }

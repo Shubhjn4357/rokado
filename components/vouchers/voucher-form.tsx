@@ -452,20 +452,17 @@ export function VoucherForm({
     }
   }, [voucherType, entryMode]);
 
-  // Alt+A keyboard listener to dynamically append items or ledger rows
+  // Alt+A is normalized by the global shortcut provider and broadcast here.
   useEffect(() => {
-    const handleShortcuts = (e: KeyboardEvent) => {
-      if (e.altKey && e.key.toLowerCase() === "a") {
-        e.preventDefault();
-        if (entryMode === "voucher") {
-          setEntries(prev => [...prev, { ledgerId: "", type: "cr", amount: "0", narration: "" }]);
-        } else {
-          setInvoiceItems(prev => [...prev, { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", narration: "" }]);
-        }
+    const handleAddRow = () => {
+      if (entryMode === "voucher") {
+        setEntries(prev => [...prev, { ledgerId: "", type: "cr", amount: "0", narration: "" }]);
+      } else {
+        setInvoiceItems(prev => [...prev, { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", narration: "" }]);
       }
     };
-    window.addEventListener("keydown", handleShortcuts);
-    return () => window.removeEventListener("keydown", handleShortcuts);
+    window.addEventListener("erp:add-row", handleAddRow);
+    return () => window.removeEventListener("erp:add-row", handleAddRow);
   }, [entryMode]);
 
   // --- AS VOUCHER MODE MATHS ---

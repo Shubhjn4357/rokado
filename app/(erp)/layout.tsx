@@ -21,11 +21,11 @@ export default async function ERPLayout({ children }: { children: React.ReactNod
 
   return (
     <AuthProvider initialUser={session}>
-      <div className="flex h-screen overflow-hidden bg-background">
+      <div className="flex h-screen overflow-hidden bg-background text-foreground">
         <Sidebar />
         <div className="flex-1 flex flex-col overflow-hidden transition-all duration-300 max-lg:pl-0">
           <TopBar />
-          <main className="flex-1 overflow-y-auto pt-2 pb-4 pr-4 pl-2 min-h-0">
+          <main className="flex-1 overflow-y-auto min-h-0 px-3 pb-4 pt-2">
             <PageTransitionProvider>
               {children}
             </PageTransitionProvider>

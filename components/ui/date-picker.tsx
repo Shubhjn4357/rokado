@@ -97,7 +97,7 @@ export function DatePicker({
       </PopoverTrigger>
 
       <PopoverContent
-        className="p-0 w-72 rounded-2xl border border-border bg-popover shadow-2xl backdrop-blur-2xl z-50 overflow-hidden"
+        className="surface-elevated p-0 w-72 rounded-[var(--radius-card)] z-50 overflow-hidden"
         align="start"
         onOpenAutoFocus={(e) => e.preventDefault()}
       >

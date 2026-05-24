@@ -14,8 +14,8 @@ const geistMono = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Tally.ERP 9 Modern Clone",
-  description: "Enterprise Agentic Architecture",
+  title: "Rokado ERP",
+  description: "Accounting, inventory, billing, and reports workspace",
 };
 
 export default function RootLayout({

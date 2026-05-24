@@ -24,96 +24,14 @@ import {
 import { Printer, X, LayoutTemplate, Palette, Type, Settings, Eye, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { QRCodeRenderer } from "@/components/print/qr-code-renderer";
-
-// List of available fonts
-const INVOICE_FONTS = [
-  { id: "font-sans", name: "Modern Sans (Inter)", class: "font-sans" },
-  { id: "font-serif", name: "Elegant Serif (Playfair)", class: "font-serif" },
-  { id: "font-mono", name: "Typewriter / Mono (Courier)", class: "font-mono" },
-];
-
-// List of pre-made templates
-export type TemplateId =
-  | "minimalist"
-  | "emerald"
-  | "thermal"
-  | "corporate"
-  | "neon"
-  | "retro"
-  | "crimson"
-  | "artisan"
-  | "indigo"
-  | "grocer";
-
-interface TemplateConfig {
-  id: TemplateId;
-  name: string;
-  description: string;
-  themeClass: string;
-}
-
-const TEMPLATES: TemplateConfig[] = [
-  {
-    id: "minimalist",
-    name: "1. Minimalist Stark",
-    description: "Ultra clean, spacious, sans-serif design.",
-    themeClass: "border-black bg-white text-black",
-  },
-  {
-    id: "emerald",
-    name: "2. Emerald Classic",
-    description: "Classic green borders and headers for traditional elegance.",
-    themeClass: "border-emerald-600/40 text-emerald-950",
-  },
-  {
-    id: "thermal",
-    name: "3. Thermal POS Receipt",
-    description: "Compact 80mm centered receipt style layout.",
-    themeClass: "w-[80mm] border-dashed border-gray-400 text-black",
-  },
-  {
-    id: "corporate",
-    name: "4. Corporate Prestige",
-    description: "Strong navy header banner, bold visual separation.",
-    themeClass: "border-slate-800 text-slate-900",
-  },
-  {
-    id: "neon",
-    name: "5. Neon Cyber Tech",
-    description: "Cyberpunk high-contrast grid layouts.",
-    themeClass: "border-cyan-500 text-cyan-950",
-  },
-  {
-    id: "retro",
-    name: "6. Retro Carbon Copy",
-    description: "Typewriter styling with dotted dividers.",
-    themeClass: "border-gray-500 text-gray-800",
-  },
-  {
-    id: "crimson",
-    name: "7. Crimson Modern",
-    description: "Sleek crimson accent bands with geometric layouts.",
-    themeClass: "border-rose-600 text-rose-950",
-  },
-  {
-    id: "artisan",
-    name: "8. Warm Artisan",
-    description: "Elegant sepia styling, italic details.",
-    themeClass: "border-amber-600/40 text-amber-900",
-  },
-  {
-    id: "indigo",
-    name: "9. Sleek Indigo Card",
-    description: "Modern cards layout using rich indigo headers.",
-    themeClass: "border-indigo-600 text-indigo-950",
-  },
-  {
-    id: "grocer",
-    name: "10. Compact Grocer",
-    description: "Densely packed grid for wholesale invoices.",
-    themeClass: "border-gray-800 text-black",
-  },
-];
+import {
+  INVOICE_FONTS,
+  INVOICE_TEMPLATES as TEMPLATES,
+  getInvoiceTemplate,
+  loadPrintSettings,
+  type InvoiceFontId,
+  type TemplateId,
+} from "@/lib/print-settings";
 
 export interface InvoicePrintData {
   invoiceNumber: string;
@@ -158,57 +76,45 @@ export function InvoiceCustomTemplates({
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("minimalist");
   const [upiId, setUpiId] = useState("");
   const [showQrCode, setShowQrCode] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("erp:print-settings");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (parsed.upiId) setUpiId(parsed.upiId);
-        if (parsed.showQrCode) setShowQrCode(parsed.showQrCode);
-      }
-    } catch (err) {
-      console.error("Failed to load print settings:", err);
-    }
-  }, [open]);
-  const [selectedFont, setSelectedFont] = useState<string>("font-sans");
+  const [selectedFont, setSelectedFont] = useState<InvoiceFontId>("font-sans");
   const [companyTitle, setCompanyTitle] = useState(data.companyName);
   const [companyAddr, setCompanyAddr] = useState(data.companyAddress);
   const [companyContact, setCompanyContact] = useState("Phone: +91 98765 43210");
+  const [invoiceTitle, setInvoiceTitle] = useState("Tax Invoice");
   const [invoiceFooter, setInvoiceFooter] = useState("Thank you for shopping with us! Goods once sold cannot be returned.");
 
   // Toggle states
   const [showDiscount, setShowDiscount] = useState(true);
   const [showTax, setShowTax] = useState(true);
   const [showSignature, setShowSignature] = useState(true);
+  const [showAmountInWords, setShowAmountInWords] = useState(true);
+  const [bankDetails, setBankDetails] = useState("");
   const [customAccent, setCustomAccent] = useState("#000000");
 
-  // Sync state if template changes some defaults
   useEffect(() => {
-    if (selectedTemplate === "emerald") {
-      setCustomAccent("#059669"); // emerald-600
-    } else if (selectedTemplate === "corporate") {
-      setCustomAccent("#1e3a8a"); // navy-900
-    } else if (selectedTemplate === "neon") {
-      setCustomAccent("#06b6d4"); // cyan-500
-    } else if (selectedTemplate === "crimson") {
-      setCustomAccent("#e11d48"); // rose-600
-    } else if (selectedTemplate === "artisan") {
-      setCustomAccent("#b45309"); // amber-700
-    } else if (selectedTemplate === "indigo") {
-      setCustomAccent("#4f46e5"); // indigo-600
-    } else {
-      setCustomAccent("#000000");
-    }
+    const settings = loadPrintSettings();
+    setSelectedTemplate(settings.template);
+    setSelectedFont(settings.fontFamily);
+    setCustomAccent(settings.accentColor);
+    setShowDiscount(settings.showDiscount);
+    setShowTax(settings.showGstBreakdown);
+    setShowSignature(settings.showSignatureLine);
+    setShowAmountInWords(settings.showAmountInWords);
+    setBankDetails(settings.bankDetailsText);
+    setInvoiceTitle(settings.invoiceTitle);
+    setInvoiceFooter(settings.footerText);
+    setUpiId(settings.upiId);
+    setShowQrCode(settings.showQrCode);
+    setCompanyTitle(data.companyName);
+    setCompanyAddr(data.companyAddress);
+  }, [open, data.companyAddress, data.companyName]);
 
-    if (selectedTemplate === "retro") {
-      setSelectedFont("font-mono");
-    } else if (selectedTemplate === "artisan") {
-      setSelectedFont("font-serif");
-    } else {
-      setSelectedFont("font-sans");
-    }
-  }, [selectedTemplate]);
+  const applyTemplate = (templateId: TemplateId) => {
+    const template = getInvoiceTemplate(templateId);
+    setSelectedTemplate(templateId);
+    setCustomAccent(template.accentColor);
+    setSelectedFont(template.defaultFont);
+  };
 
   const handlePrint = () => {
     const printContent = document.getElementById("invoice-printable-area");
@@ -293,7 +199,7 @@ export function InvoiceCustomTemplates({
                 <LayoutTemplate className="w-3.5 h-3.5" /> 1. Select Template Layout
               </Label>
               <div className="space-y-1">
-                <Select value={selectedTemplate} onValueChange={(val) => setSelectedTemplate(val as TemplateId)}>
+                <Select value={selectedTemplate} onValueChange={(val) => applyTemplate(val as TemplateId)}>
                   <SelectTrigger className="h-9 rounded-xl text-xs bg-background">
                     <SelectValue />
                   </SelectTrigger>
@@ -336,7 +242,7 @@ export function InvoiceCustomTemplates({
               <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
                 <Type className="w-3.5 h-3.5" /> 3. Font Family
               </Label>
-              <Select value={selectedFont} onValueChange={setSelectedFont}>
+              <Select value={selectedFont} onValueChange={(value) => setSelectedFont(value as InvoiceFontId)}>
                 <SelectTrigger className="h-9 rounded-xl text-xs bg-background">
                   <SelectValue />
                 </SelectTrigger>
@@ -357,6 +263,10 @@ export function InvoiceCustomTemplates({
               </Label>
 
               <div className="space-y-2">
+                <div className="space-y-1">
+                  <Label className="text-[9px] text-muted-foreground">Invoice Title</Label>
+                  <Input value={invoiceTitle} onChange={(e) => setInvoiceTitle(e.target.value)} className="h-8 rounded-lg text-xs bg-background" />
+                </div>
                 <div className="space-y-1">
                   <Label className="text-[9px] text-muted-foreground">Shop / Business Title</Label>
                   <Input value={companyTitle} onChange={(e) => setCompanyTitle(e.target.value)} className="h-8 rounded-lg text-xs bg-background" />
@@ -393,6 +303,10 @@ export function InvoiceCustomTemplates({
                 <div className="flex items-center justify-between">
                   <Label htmlFor="show-sig" className="text-xs text-foreground/80 font-medium">Show Signature box</Label>
                   <Switch id="show-sig" checked={showSignature} onCheckedChange={setShowSignature} />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="show-words" className="text-xs text-foreground/80 font-medium">Show Amount in Words</Label>
+                  <Switch id="show-words" checked={showAmountInWords} onCheckedChange={setShowAmountInWords} />
                 </div>
               </div>
             </div>
@@ -436,7 +350,7 @@ export function InvoiceCustomTemplates({
                         <p className="text-[10px] font-mono opacity-80 mt-0.5">{companyContact}</p>
                       </div>
                       <div className="text-right">
-                        <div className="text-xs font-black uppercase tracking-widest">Retail Invoice</div>
+                        <div className="text-xs font-black uppercase tracking-widest">{invoiceTitle}</div>
                         <div className="font-mono text-[10px] mt-1 font-bold">GSTIN: {data.companyGstin || "—"}</div>
                         <div className="font-mono text-[10px] font-bold">PAN: {data.companyPan || "—"}</div>
                       </div>
@@ -458,7 +372,7 @@ export function InvoiceCustomTemplates({
                         <p className="text-[10px] font-mono text-gray-500 mt-1">{companyContact}</p>
                       </div>
                       <div className="text-right space-y-1 select-none">
-                        <h2 className="text-xs font-black uppercase tracking-wider text-gray-400">TAX INVOICE</h2>
+                        <h2 className="text-xs font-black uppercase tracking-wider text-gray-400">{invoiceTitle}</h2>
                         <div className="font-mono text-[10px] font-bold">No: {data.invoiceNumber}</div>
                         <div className="font-mono text-[10px] font-bold">Date: {formatDate(data.date)}</div>
                       </div>
@@ -471,6 +385,7 @@ export function InvoiceCustomTemplates({
                     <h1 className="text-sm font-extrabold uppercase tracking-widest">{companyTitle}</h1>
                     <p className="text-[9px] max-w-xs mx-auto leading-tight">{companyAddr}</p>
                     <p className="text-[9px] font-mono">{companyContact}</p>
+                    <div className="text-[9px] font-black uppercase tracking-wider">{invoiceTitle}</div>
                     <div className="text-[9px] font-bold border-t border-dashed pt-1.5 border-gray-400 flex justify-between font-mono">
                       <span>Receipt: {data.invoiceNumber}</span>
                       <span>{formatDate(data.date)}</span>
@@ -606,7 +521,7 @@ export function InvoiceCustomTemplates({
                 </div>
 
                 {/* Amount in words for larger invoices */}
-                {selectedTemplate !== "thermal" && data.amountInWords && (
+                {selectedTemplate !== "thermal" && showAmountInWords && data.amountInWords && (
                   <div className="text-[9px] font-bold text-gray-400 border-t border-gray-100/50 pt-2 flex flex-col gap-0.5">
                     <span>AMOUNT IN WORDS</span>
                     <span className="text-gray-600 capitalize text-[10px]">{data.amountInWords} Only</span>
@@ -621,6 +536,11 @@ export function InvoiceCustomTemplates({
                 {selectedTemplate !== "thermal" && (
                   <div className="flex justify-between items-end text-[10px] pt-8">
                     <div className="text-gray-400 italic space-y-1">
+                      {bankDetails && (
+                        <div className="text-[8px] text-gray-500 font-mono whitespace-pre-line not-italic mb-2">
+                          {bankDetails}
+                        </div>
+                      )}
                       {showQrCode && upiId && (
                         <div className="flex items-center gap-3 bg-gray-50/50 p-2 rounded-lg border border-gray-200/50 select-none mb-2">
                           <QRCodeRenderer

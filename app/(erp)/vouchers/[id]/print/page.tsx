@@ -1,9 +1,8 @@
 "use client";
 
-import { db, vouchers, voucherEntries, ledgers, eq } from "@/lib/database";
+import { db, vouchers, ledgers, companies, eq } from "@/lib/database";
 import { notFound } from "next/navigation";
 import { InvoicePrint } from "@/components/print/invoice-print";
-import { formatCurrency, formatDate } from "@/lib/types";
 import { useEffect, useState, use } from "react";
 
 // export const dynamic = "force-dynamic";
@@ -35,6 +34,7 @@ export default function VoucherPrintPage({ params }: { params: Promise<{ id: str
             gstTotal: vouchers.gstTotal,
             grandTotal: vouchers.grandTotal,
             partyLedgerId: vouchers.partyLedgerId,
+            companyId: vouchers.companyId,
           })
           .from(vouchers)
           .where(eq(vouchers.id as any, id))
@@ -58,31 +58,26 @@ export default function VoucherPrintPage({ params }: { params: Promise<{ id: str
               .limit(1)
           : [];
 
-        const entries = await db
-          .select({
-            id: voucherEntries.id,
-            amount: voucherEntries.amount,
-            narration: voucherEntries.narration,
-            ledgerId: voucherEntries.ledgerId,
-          })
-          .from(voucherEntries)
-          .where(eq(voucherEntries.voucherId, id));
-
-        // Get ledger names for entries
-        const ledgerNames = await db
-          .select({ id: ledgers.id, name: ledgers.name })
-          .from(ledgers);
-
-        const ledgerMap: Record<string, string> = {};
-        ledgerNames.forEach((l) => {
-          ledgerMap[l.id] = l.name;
-        });
+        const company = voucher[0].companyId
+          ? await db
+              .select({
+                name: companies.name,
+                address: companies.address,
+                city: companies.city,
+                state: companies.state,
+                pincode: companies.pincode,
+                gstin: companies.gstin,
+                pan: companies.pan,
+              })
+              .from(companies)
+              .where(eq(companies.id, voucher[0].companyId))
+              .limit(1)
+          : [];
 
         setData({
           voucher: voucher[0],
           party: partyLedger[0],
-          entries,
-          ledgerMap,
+          company: company[0],
         });
       } catch (err) {
         console.error("Failed to fetch voucher for print:", err);
@@ -98,7 +93,7 @@ export default function VoucherPrintPage({ params }: { params: Promise<{ id: str
   if (data?.error === "NotFound") return notFound();
   if (!data) return <div>No data</div>;
 
-  const { voucher, party, entries, ledgerMap } = data;
+  const { voucher, party, company } = data;
 
   // Compute amounts (simplified)
   const subtotal = voucher.totalAmount; // Assuming totalAmount is before tax
@@ -125,9 +120,9 @@ export default function VoucherPrintPage({ params }: { params: Promise<{ id: str
       <InvoicePrint
         invoiceNumber={voucher.number}
         date={voucher.date}
-        customerName={party.name}
-        customerPhone={party.phone}
-        customerGstin={party.gstNumber}
+        customerName={party?.name ?? "Walk-in Customer"}
+        customerPhone={party?.phone}
+        customerGstin={party?.gstNumber}
         items={items}
         subtotal={subtotal}
         discountAmount={0}
@@ -137,10 +132,10 @@ export default function VoucherPrintPage({ params }: { params: Promise<{ id: str
         igstAmount={0}
         totalAmount={totalAmount}
         amountInWords={amountInWords}
-        companyName="  House"
-        companyAddress="145,  Market, Chandni Chowk, Delhi 110006"
-        companyGstin="27AAACS1429B1ZB"
-        companyPan="AAACS1429B"
+        companyName={company?.name ?? "Company"}
+        companyAddress={[company?.address, company?.city, company?.state, company?.pincode].filter(Boolean).join(", ")}
+        companyGstin={company?.gstin ?? ""}
+        companyPan={company?.pan ?? ""}
       />
     </div>
   );

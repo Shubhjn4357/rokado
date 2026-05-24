@@ -2,105 +2,82 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import {
+  ERP_ACTION_SHORTCUTS,
+  ERP_NAVIGATION_SHORTCUTS,
+  eventToShortcutKey,
+  isEditableShortcutTarget,
+} from "@/lib/erp-shortcuts";
+
+function submitActiveForm() {
+  const active = document.activeElement;
+  const focusedForm = active instanceof HTMLElement ? active.closest("form") : null;
+
+  if (focusedForm) {
+    focusedForm.requestSubmit();
+    return true;
+  }
+
+  const visibleForms = Array.from(document.querySelectorAll("form")).filter((form) => {
+    const rect = form.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  });
+
+  if (visibleForms.length === 1) {
+    visibleForms[0].requestSubmit();
+    return true;
+  }
+
+  return false;
+}
 
 export function useERPShortcuts() {
   const router = useRouter();
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const active = document.activeElement;
-      const tag = active?.tagName?.toLowerCase() ?? "";
-      const isInputFocused =
-        tag === "input" ||
-        tag === "textarea" ||
-        tag === "select" ||
-        (active instanceof HTMLElement && active.isContentEditable);
+    const handler = (event: KeyboardEvent) => {
+      const shortcutKey = eventToShortcutKey(event);
 
-      // ── Global shortcuts (always fire, even in inputs) ──────────────────────
-
-      // Ctrl+K or Alt+G — Command Palette
-      if (
-        (e.ctrlKey && e.key.toLowerCase() === "k") ||
-        (e.altKey && e.key.toLowerCase() === "g")
-      ) {
-        e.preventDefault();
+      if (shortcutKey === "Ctrl+K" || shortcutKey === "Alt+G") {
+        event.preventDefault();
         window.dispatchEvent(new CustomEvent("erp:command-palette"));
         return;
       }
 
-      // Ctrl+S — Save current form (broadcast, individual forms listen)
-      if (e.ctrlKey && e.key.toLowerCase() === "s") {
-        e.preventDefault();
+      if (shortcutKey === "Ctrl+S") {
+        event.preventDefault();
         window.dispatchEvent(new CustomEvent("erp:save"));
+        submitActiveForm();
         return;
       }
 
-      // Escape — close any open modal/panel (broadcast)
-      if (e.key === "Escape") {
+      if (shortcutKey === "Alt+A") {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent("erp:add-row"));
+        return;
+      }
+
+      if (event.key === "Escape") {
         window.dispatchEvent(new CustomEvent("erp:escape"));
         return;
       }
 
-      // ── Navigation shortcuts (blocked when input is focused) ─────────────────
-      if (isInputFocused) return;
+      if (isEditableShortcutTarget(document.activeElement)) return;
 
-      switch (e.key) {
-        case "F4":
-          e.preventDefault();
-          router.push("/vouchers/contra");
-          break;
-        case "F5":
-          e.preventDefault();
-          router.push("/vouchers/payment");
-          break;
-        case "F6":
-          e.preventDefault();
-          router.push("/vouchers/receipt");
-          break;
-        case "F7":
-          e.preventDefault();
-          router.push("/vouchers/journal");
-          break;
-        case "F8":
-          e.preventDefault();
-          router.push("/vouchers/sales");
-          break;
-        case "F9":
-          e.preventDefault();
-          router.push("/vouchers/purchase");
-          break;
-        case "F10":
-          e.preventDefault();
-          router.push("/vouchers/challan");
-          break;
-        case "F11":
-          e.preventDefault();
-          router.push("/pos");
-          break;
-        case "F12":
-          e.preventDefault();
-          router.push("/dashboard");
-          break;
-      }
-
-      // Alt+C — Create Ledger (case-insensitive)
-      if (e.altKey && e.key.toLowerCase() === "c") {
-        e.preventDefault();
-        router.push("/ledgers/new");
+      const navShortcut = ERP_NAVIGATION_SHORTCUTS.find((shortcut) => shortcut.key === shortcutKey);
+      if (navShortcut?.route) {
+        event.preventDefault();
+        router.push(navShortcut.route);
         return;
       }
 
-      // Alt+I — Create Inventory Item
-      if (e.altKey && e.key.toLowerCase() === "i") {
-        e.preventDefault();
-        router.push("/inventory/new");
-        return;
-      }
-
-      // Alt+A — Add row (broadcast to active form)
-      if (e.altKey && e.key.toLowerCase() === "a") {
-        // Handled by individual forms
-        return;
+      const actionShortcut = ERP_ACTION_SHORTCUTS.find((shortcut) => shortcut.key === shortcutKey);
+      if (actionShortcut?.route) {
+        event.preventDefault();
+        router.push(actionShortcut.route);
+      } else if (actionShortcut?.eventName) {
+        event.preventDefault();
+        window.dispatchEvent(new CustomEvent(actionShortcut.eventName));
       }
     };
 

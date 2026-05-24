@@ -177,17 +177,17 @@ function NavItemComponent({
         <button
           onClick={handleClick}
           className={cn(
-            "flex items-center w-full px-3 py-2 text-xs transition-all duration-200 rounded-xl font-bold select-none cursor-pointer",
+            "flex items-center w-full px-2.5 py-2 text-xs transition-all duration-150 rounded-[var(--radius-sm)] font-semibold select-none cursor-pointer",
             open && !isCollapsed
-              ? "bg-white/80 dark:bg-white/10 text-foreground shadow-[0_4px_12px_rgba(0,0,0,0.02)] border border-white/20"
-              : "text-foreground/75 hover:bg-white/25 dark:hover:bg-white/5 hover:text-foreground",
+              ? "bg-muted text-foreground border border-border shadow-[var(--shadow-card)]"
+              : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
             // If collapsed, center the icon and hide paddings/gaps
             isCollapsed ? "justify-center px-0 gap-0" : "gap-2.5",
             !isOpen && "max-lg:justify-center max-lg:px-0 max-lg:gap-0"
           )}
           title={isCollapsed ? item.title : undefined}
         >
-          <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", (open && !isCollapsed) ? "text-accent" : "text-foreground/50")} />
+          <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", (open && !isCollapsed) ? "text-accent" : "text-muted-foreground")} />
           <span className={cn(
             "flex-1 text-left transition-all duration-200",
             isCollapsed ? "hidden" : "block",
@@ -207,7 +207,7 @@ function NavItemComponent({
         </button>
         {open && !isCollapsed && (
           <div className={cn(
-            "ml-3 pl-3.5 border-l border-foreground/10 space-y-1 mt-1 transition-all duration-350",
+            "ml-3 pl-3.5 border-l border-border space-y-1 mt-1 transition-all duration-200",
             !isOpen && "max-lg:hidden"
           )}>
             {item.children.map((child) => (
@@ -230,17 +230,17 @@ function NavItemComponent({
     <Link
       href={item.href ?? "#"}
       className={cn(
-        "flex items-center px-3 py-2 text-xs transition-all duration-250 rounded-xl font-bold select-none",
+        "flex items-center px-2.5 py-2 text-xs transition-all duration-150 rounded-[var(--radius-sm)] font-semibold select-none",
         isActive
-          ? "bg-white dark:bg-white/10 text-foreground shadow-[0_8px_16px_-4px_rgba(0,0,0,0.04)] border border-white/25"
-          : "text-foreground/75 hover:bg-white/25 dark:hover:bg-white/5 hover:text-foreground",
+          ? "bg-muted text-foreground border border-border shadow-[var(--shadow-card)]"
+          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
         // Collapsed styling
         isCollapsed ? "justify-center px-0 gap-0" : "gap-2.5",
         !isOpen && "max-lg:justify-center max-lg:px-0 max-lg:gap-0",
       )}
       title={isCollapsed ? item.title : undefined}
     >
-      <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive ? "text-accent" : "text-foreground/50")} />
+      <item.icon className={cn("w-4 h-4 shrink-0 transition-colors", isActive ? "text-accent" : "text-muted-foreground")} />
       <span className={cn(
         "flex-1 transition-all duration-200",
         isCollapsed ? "hidden" : "block",
@@ -250,7 +250,7 @@ function NavItemComponent({
       </span>
       {item.badge && !(isCollapsed || !isOpen) && (
         <span className={cn(
-          "text-[9px] font-black bg-destructive text-destructive-foreground px-2 py-0.5 rounded-full shadow-sm transition-all duration-200",
+          "text-[9px] font-black bg-destructive text-destructive-foreground px-2 py-0.5 rounded-[var(--radius-pill)] shadow-sm transition-all duration-150",
           isCollapsed ? "hidden" : "block",
           !isOpen && "max-lg:hidden"
         )}>
@@ -308,11 +308,11 @@ export function Sidebar() {
 
   return (
     <>
-      {/* Mobile Backdrop overlay */}
+      {/* Mobile backdrop */}
       {isOpen && (
         <div
           onClick={() => setIsOpen(false)}
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-40 lg:hidden cursor-pointer animate-in fade-in duration-200"
+          className="fixed inset-0 bg-foreground/45 backdrop-blur-sm z-40 lg:hidden cursor-pointer animate-in fade-in duration-200"
         />
       )}
 
@@ -328,10 +328,10 @@ export function Sidebar() {
             : "max-lg:hidden fixed left-0 w-16 h-[calc(100vh-2rem)] my-4 ml-4 z-30"
         )}
       >
-        {/* Sidebar Collapse Toggle Button (Desktop only) */}
+        {/* Sidebar collapse toggle */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-3 top-16 w-6 h-6 rounded-full border border-border/80 bg-background hover:bg-accent/10 text-foreground items-center justify-center cursor-pointer shadow-md hover:scale-110 transition-all duration-200 z-50"
+          className="hidden lg:flex absolute -right-3 top-16 w-6 h-6 rounded-[var(--radius-sm)] border border-border bg-surface hover:bg-muted text-foreground items-center justify-center cursor-pointer shadow-[var(--shadow-card)] transition-all duration-150 z-50"
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
           {isCollapsed
@@ -341,17 +341,17 @@ export function Sidebar() {
 
         <aside
           className={cn(
-            "w-full h-full flex flex-col surface-card overflow-hidden font-sans text-foreground transition-all duration-300 shadow-[var(--shadow-elevated)]",
-            isOpen ? "max-lg:rounded-none" : "rounded-[24px]"
+            "w-full h-full flex flex-col surface-card overflow-hidden font-sans text-foreground transition-all duration-300",
+            isOpen ? "max-lg:rounded-none" : "rounded-[var(--radius-card)]"
           )}
         >
-          {/* Premium Business-Class App Header */}
+          {/* App header */}
           <div className={cn(
-            "flex items-center h-16 bg-muted/30 border-b border-border shrink-0 select-none transition-all duration-300",
-            isCollapsed ? "justify-center px-2 gap-0" : "px-5 gap-3",
+            "flex items-center h-14 bg-muted/35 border-b border-border shrink-0 select-none transition-all duration-300",
+            isCollapsed ? "justify-center px-2 gap-0" : "px-4 gap-3",
             !isOpen && "max-lg:justify-center max-lg:px-2 max-lg:gap-0"
           )}>
-            <div className="w-8 h-8 bg-accent flex items-center justify-center rounded-xl shadow-[var(--shadow-glow-accent)] border border-accent/30 shrink-0">
+            <div className="w-8 h-8 bg-accent flex items-center justify-center rounded-[var(--radius-sm)] shadow-[var(--shadow-glow-accent)] border border-accent/30 shrink-0">
               <Database className="w-4 h-4 text-accent-foreground" />
             </div>
             
@@ -360,20 +360,20 @@ export function Sidebar() {
               isCollapsed ? "hidden" : "flex",
               !isOpen && "max-lg:hidden"
             )}>
-              <div className="font-extrabold text-xs tracking-wider uppercase text-foreground leading-none"> </div>
-              <div className="text-[9px] text-muted-foreground font-bold tracking-tight mt-1.5 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-credit animate-ping inline-block"></span>
-                Enterprise ERP Suite
+              <div className="font-extrabold text-xs tracking-wider uppercase text-foreground leading-none">Rokado</div>
+              <div className="text-[9px] text-muted-foreground font-bold tracking-tight mt-1.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-credit inline-block"></span>
+                Accounting Workspace
               </div>
             </div>
           </div>
 
-          {/* Nav groups grouped by classic accounting master layouts */}
-          <nav className="flex-1 overflow-y-auto p-4 space-y-5">
+          {/* Navigation */}
+          <nav className="flex-1 overflow-y-auto p-3 space-y-4">
             {NAV_GROUPS.map((group) => (
               <div key={group.group} className="space-y-1.5">
                 <div className={cn(
-                  "text-[9px] font-black text-foreground/45 uppercase tracking-widest px-3 mb-2 select-none transition-all duration-250",
+                  "text-[9px] font-black text-muted-foreground uppercase tracking-widest px-2.5 mb-2 select-none transition-all duration-150",
                   isCollapsed ? "opacity-0 h-0 my-0 overflow-hidden" : "opacity-100",
                   !isOpen && "max-lg:opacity-0 max-lg:h-0 max-lg:my-0 max-lg:overflow-hidden"
                 )}>
@@ -394,9 +394,9 @@ export function Sidebar() {
             ))}
           </nav>
 
-          {/* Modern Active System Footer */}
+          {/* System footer */}
           <div className={cn(
-            "px-5 py-4 border-t border-border bg-muted/30 shrink-0 text-[10px] text-muted-foreground font-semibold select-none flex justify-between items-center transition-all duration-300",
+            "px-4 py-3 border-t border-border bg-muted/35 shrink-0 text-[10px] text-muted-foreground font-semibold select-none flex justify-between items-center transition-all duration-300",
             isCollapsed ? "flex-col gap-2 px-2 py-3" : "flex-row",
             !isOpen && "max-lg:flex-col max-lg:gap-2 max-lg:px-2 max-lg:py-3"
           )}>
@@ -405,15 +405,15 @@ export function Sidebar() {
               isCollapsed ? "hidden" : "flex",
               !isOpen && "max-lg:hidden"
             )}>
-              Fiscal Year: <strong className="text-foreground font-bold">2026–27</strong>
+              Fiscal Year: <strong className="text-foreground font-bold">2026-27</strong>
             </span>
             <span className={cn(
-              "text-credit font-bold uppercase tracking-wider text-[9px] bg-credit/10 px-2 py-0.5 rounded-full border border-credit/20 transition-all",
-              isCollapsed ? "px-1 py-1 w-6 h-6 flex items-center justify-center rounded-full" : "",
-              !isOpen && "max-lg:px-1 max-lg:py-1 max-lg:w-6 max-lg:h-6 max-lg:flex max-lg:items-center max-lg:justify-center max-lg:rounded-full"
+              "text-credit font-bold uppercase tracking-wider text-[9px] bg-credit/10 px-2 py-0.5 rounded-[var(--radius-pill)] border border-credit/20 transition-all flex items-center gap-1.5",
+              isCollapsed ? "px-1 py-1 w-6 h-6 justify-center" : "",
+              !isOpen && "max-lg:px-1 max-lg:py-1 max-lg:w-6 max-lg:h-6 max-lg:flex max-lg:items-center max-lg:justify-center"
             )} title="Secure Session">
-              <span className={cn(isCollapsed ? "hidden" : "inline", !isOpen && "max-lg:hidden")}>● Secure</span>
-              <span className={cn(isCollapsed ? "inline" : "hidden", !isOpen ? "max-lg:inline" : "max-lg:hidden")}>●</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-credit inline-block shrink-0" />
+              <span className={cn(isCollapsed ? "hidden" : "inline", !isOpen && "max-lg:hidden")}>Secure</span>
             </span>
           </div>
         </aside>

@@ -50,24 +50,24 @@ export function Notifications() {
     switch (severity) {
       case "danger":
         return {
-          bg: "bg-rose-500/10 border-rose-500/20 dark:bg-rose-500/5 dark:border-rose-500/10",
-          text: "text-rose-600 dark:text-rose-400",
-          iconColor: "text-rose-500",
+          bg: "bg-debit/10 border-debit/20",
+          text: "text-debit",
+          iconColor: "text-debit",
           icon: AlertCircle,
         };
       case "warning":
         return {
-          bg: "bg-amber-500/10 border-amber-500/20 dark:bg-amber-500/5 dark:border-amber-500/10",
-          text: "text-amber-600 dark:text-amber-400",
-          iconColor: "text-amber-500",
+          bg: "bg-panel-orange/10 border-panel-orange/25",
+          text: "text-panel-orange-fg dark:text-panel-orange",
+          iconColor: "text-panel-orange-fg dark:text-panel-orange",
           icon: AlertTriangle,
         };
       case "info":
       default:
         return {
-          bg: "bg-blue-500/10 border-blue-500/20 dark:bg-blue-500/5 dark:border-blue-500/10",
-          text: "text-blue-600 dark:text-blue-400",
-          iconColor: "text-blue-500",
+          bg: "bg-accent/10 border-accent/20",
+          text: "text-accent",
+          iconColor: "text-accent",
           icon: Info,
         };
     }
@@ -93,11 +93,11 @@ export function Notifications() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative w-9 h-9 rounded-xl text-muted-foreground hover:text-foreground border border-border/80 bg-background/40 hover:bg-muted/70 transition-all duration-200 cursor-pointer"
+          className="relative border border-border bg-surface hover:bg-muted cursor-pointer"
         >
           <Bell className="w-4 h-4" />
           {activeCount > 0 && (
-            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white ring-2 ring-background animate-pulse">
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-[var(--radius-pill)] bg-debit text-[9px] font-black text-debit-foreground ring-2 ring-background">
               {activeCount}
             </span>
           )}
@@ -107,7 +107,7 @@ export function Notifications() {
       <PopoverContent
         align="end"
         sideOffset={8}
-        className="w-80 md:w-96 p-0 border border-border/80 bg-card/95 dark:bg-card/85 backdrop-blur-2xl rounded-2xl shadow-xl overflow-hidden font-sans"
+        className="surface-elevated w-80 md:w-96 p-0 rounded-[var(--radius-card)] overflow-hidden font-sans"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/60 bg-muted/40">
@@ -116,7 +116,7 @@ export function Notifications() {
               Notification Desk
             </span>
             {activeCount > 0 && (
-              <span className="text-[9px] bg-rose-500 text-white font-bold px-1.5 py-0.5 rounded-full">
+              <span className="text-[9px] bg-debit text-debit-foreground font-bold px-1.5 py-0.5 rounded-[var(--radius-pill)]">
                 {activeCount} Active
               </span>
             )}
@@ -140,8 +140,8 @@ export function Notifications() {
             </div>
           ) : activeCount === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-6 text-center text-muted-foreground gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                <Check className="w-5 h-5 text-emerald-500" />
+              <div className="w-10 h-10 rounded-[var(--radius-pill)] bg-credit/10 border border-credit/20 flex items-center justify-center">
+                <Check className="w-5 h-5 text-credit" />
               </div>
               <div>
                 <p className="font-extrabold text-xs text-foreground uppercase tracking-wider mb-1">
@@ -162,7 +162,7 @@ export function Notifications() {
                   <div
                     key={item.id}
                     className={cn(
-                      "flex flex-col gap-2 p-3 border rounded-xl shadow-sm transition-all duration-200",
+                      "flex flex-col gap-2 p-3 border rounded-[var(--radius-card)] shadow-sm transition-all duration-150",
                       styles.bg
                     )}
                   >
@@ -184,7 +184,7 @@ export function Notifications() {
                           variant="ghost"
                           size="sm"
                           className={cn(
-                            "h-7 text-[10px] font-black gap-1 cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded-lg px-2.5",
+                            "h-7 text-[10px] font-black gap-1 cursor-pointer hover:bg-muted rounded-lg px-2.5",
                             styles.text
                           )}
                         >
@@ -202,7 +202,7 @@ export function Notifications() {
 
         {/* Footer */}
         <div className="px-4 py-2 border-t border-border/60 bg-muted/40 text-[9px] text-center text-muted-foreground font-bold tracking-tight select-none">
-          Active Co:  ERP SUITE
+          Active Co: ERP Suite
         </div>
       </PopoverContent>
     </Popover>

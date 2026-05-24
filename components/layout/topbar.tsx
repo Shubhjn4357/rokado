@@ -41,14 +41,14 @@ export function TopBar() {
   }, []);
 
   return (
-    <header className="h-14 flex items-center justify-between gap-3 px-4 mt-3 mr-3 ml-2 surface-card text-foreground rounded-[var(--radius-card)] shrink-0 font-sans text-xs select-none">
+    <header className="h-14 flex items-center justify-between gap-3 px-3 mt-3 mr-3 ml-2 surface-card text-foreground rounded-[var(--radius-card)] shrink-0 font-sans text-xs select-none">
 
       {/* Left: hamburger (mobile) + company name */}
       <div className="flex items-center gap-2 shrink-0">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden w-8 h-8 rounded-xl hover:bg-muted cursor-pointer"
+          className="lg:hidden cursor-pointer"
           onClick={() => window.dispatchEvent(new CustomEvent("erp:toggle-sidebar"))}
         >
           <Menu className="w-4 h-4" />
@@ -56,11 +56,11 @@ export function TopBar() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border bg-muted/30 hover:bg-muted/80 text-foreground cursor-pointer transition-all duration-200 group outline-none select-none">
+            <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] border border-border bg-muted/35 hover:bg-muted text-foreground cursor-pointer transition-all duration-150 group outline-none select-none">
               <Building2 className="w-3.5 h-3.5 text-accent shrink-0 group-hover:scale-105 transition-transform" />
               <div className="flex flex-col items-start leading-none">
                 <span className="font-black text-foreground text-xs tracking-tight truncate max-w-[120px]">
-                  {companiesList.find(c => c.id === user?.companyId)?.name || "  House"}
+                  {companiesList.find(c => c.id === user?.companyId)?.name || "Primary Company"}
                 </span>
                 <span className="text-[8px] text-muted-foreground font-semibold mt-0.5 uppercase tracking-wider">
                   {companiesList.find(c => c.id === user?.companyId)?.role || role || "Owner"}
@@ -69,7 +69,7 @@ export function TopBar() {
               <ChevronDown className="w-3 h-3 text-muted-foreground shrink-0 group-hover:text-foreground transition-colors" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56 rounded-xl border border-border bg-surface-elevated backdrop-blur-2xl shadow-(--shadow-elevated) p-1 font-sans text-xs">
+          <DropdownMenuContent align="start" className="w-56 rounded-[var(--radius-card)] border border-border bg-surface-elevated shadow-[var(--shadow-elevated)] p-1 font-sans text-xs">
             <DropdownMenuLabel className="px-3 py-2 text-[10px] text-muted-foreground font-bold uppercase tracking-wider">
               Switch Organization
             </DropdownMenuLabel>
@@ -122,49 +122,49 @@ export function TopBar() {
         </DropdownMenu>
       </div>
 
-      {/* Centre: search trigger — slim pill */}
+      {/* Centre: search trigger */}
       <button
         onClick={() => window.dispatchEvent(new CustomEvent("erp:command-palette"))}
-        className="flex-1 max-w-64 hidden sm:flex items-center gap-2 h-8 px-3 bg-muted border border-border rounded-xl text-muted-foreground hover:text-foreground hover:border-accent/40 transition-all duration-200 cursor-pointer group"
+        className="flex-1 max-w-72 hidden sm:flex items-center gap-2 h-8 px-3 bg-muted/70 border border-border rounded-[var(--radius-sm)] text-muted-foreground hover:text-foreground hover:border-ring/40 transition-all duration-150 cursor-pointer group"
       >
         <Search className="w-3.5 h-3.5 shrink-0 group-hover:text-accent transition-colors" />
-        <span className="text-[11px] font-medium flex-1 text-left">Search…</span>
+        <span className="text-[11px] font-medium flex-1 text-left">Search...</span>
         <kbd className="text-[9px] font-mono bg-background border border-border px-1 py-0.5 rounded font-bold opacity-60">Alt+G</kbd>
       </button>
 
       {/* Right: icon-only actions */}
       <div className="flex items-center gap-1 ml-auto shrink-0">
 
-        {/* Sync status — icon only, text on hover via title */}
+        {/* Sync status */}
         {isSyncing ? (
-          <div title="Syncing with cloud…" className="w-8 h-8 flex items-center justify-center rounded-xl text-panel-yellow-fg dark:text-panel-yellow cursor-default">
+          <div title="Syncing with cloud..." className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-panel-yellow-fg dark:text-panel-yellow cursor-default">
             <RefreshCw className="w-3.5 h-3.5 animate-spin" />
           </div>
         ) : !isOnline ? (
           <button
-            title={`Offline — ${pendingCount} pending`}
+            title={`Offline - ${pendingCount} pending`}
             onClick={() => syncNow()}
-            className="w-8 h-8 flex items-center justify-center rounded-xl text-destructive hover:bg-destructive/10 transition-colors cursor-pointer animate-pulse"
+            className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-destructive hover:bg-destructive/10 transition-colors cursor-pointer"
           >
             <CloudOff className="w-3.5 h-3.5" />
           </button>
         ) : (
           <button
-            title="Synced — click to force sync"
+            title="Synced - click to force sync"
             onClick={() => syncNow()}
-            className="w-8 h-8 flex items-center justify-center rounded-xl text-credit hover:bg-credit/10 transition-colors cursor-pointer"
+            className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-credit hover:bg-credit/10 transition-colors cursor-pointer"
           >
             <Cloud className="w-3.5 h-3.5" />
           </button>
         )}
 
-        {/* Hotkeys — icon only */}
+        {/* Hotkeys */}
         <Button
           variant="ghost"
           size="icon"
           title="Keyboard shortcuts"
           onClick={() => window.dispatchEvent(new CustomEvent("erp:toggle-shortcuts-sidebar"))}
-          className="hidden lg:inline-flex w-8 h-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted cursor-pointer"
+          className="hidden lg:inline-flex cursor-pointer"
         >
           <Keyboard className="w-3.5 h-3.5" />
         </Button>
@@ -178,7 +178,7 @@ export function TopBar() {
             variant="ghost"
             size="icon"
             title={theme === "dark" ? "Switch to light" : "Switch to dark"}
-            className="w-8 h-8 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
+            className="cursor-pointer"
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
             {theme === "dark" ? <Sun className="w-3.5 h-3.5" /> : <Moon className="w-3.5 h-3.5" />}
@@ -194,7 +194,7 @@ export function TopBar() {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                className="h-8 gap-2 px-2 hover:bg-muted rounded-xl font-bold transition-all duration-200 cursor-pointer flex items-center"
+                className="h-8 gap-2 px-2 font-bold cursor-pointer"
               >
                 <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[10px] text-accent-foreground font-extrabold uppercase shrink-0">
                   {name ? name.substring(0, 2) : "US"}
@@ -202,7 +202,7 @@ export function TopBar() {
                 <ChevronDown className="w-3 h-3 text-muted-foreground hidden sm:block shrink-0" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 rounded-xl border-border bg-surface-elevated backdrop-blur-2xl shadow-(--shadow-elevated) p-1 font-sans text-xs">
+            <DropdownMenuContent align="end" className="w-48 rounded-[var(--radius-card)] border border-border bg-surface-elevated shadow-[var(--shadow-elevated)] p-1 font-sans text-xs">
               <DropdownMenuLabel className="px-3 py-2">
                 <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Signed in as</div>
                 <div className="text-foreground font-black text-xs mt-0.5 truncate">{name}</div>
