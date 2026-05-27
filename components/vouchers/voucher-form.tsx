@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, Fragment } from "react";
 import { useRouter } from "next/navigation";
 import {
   Card,
@@ -119,16 +119,17 @@ export function PartyAutocomplete({
     l.group.toLowerCase().includes(query.toLowerCase())
   );
 
+  // Use pointerdown (works for both mouse and touch) to detect outside taps
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleOutside = (e: PointerEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
         const selected = ledgers.find((l) => l.id === value);
         setQuery(selected ? selected.name : "");
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleOutside);
+    return () => document.removeEventListener("pointerdown", handleOutside);
   }, [value, ledgers]);
 
   const selectItem = (item: typeof ledgers[0]) => {
@@ -168,8 +169,9 @@ export function PartyAutocomplete({
       case "Escape":
         e.preventDefault();
         setIsOpen(false);
-        const selected = ledgers.find((l) => l.id === value);
-        setQuery(selected ? selected.name : "");
+        // eslint-disable-next-line no-case-declarations
+        const selectedEsc = ledgers.find((l) => l.id === value);
+        setQuery(selectedEsc ? selectedEsc.name : "");
         break;
       case "Tab":
         if (filtered[highlightedIndex]) {
@@ -180,59 +182,57 @@ export function PartyAutocomplete({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <div ref={containerRef} className={cn("relative w-full", className)}>
-          <Input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setIsOpen(true);
-              setHighlightedIndex(0);
-            }}
-            onFocus={() => setIsOpen(true)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="w-full bg-background/50 border-border/85 pr-8 font-medium text-xs rounded-lg h-9 focus:bg-background shadow-inner transition-all duration-200"
-          />
-          <div className="absolute right-2.5 top-2.5 flex items-center pointer-events-none text-muted-foreground/60">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+    <div ref={containerRef} className={cn("relative w-full", className)}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+            setHighlightedIndex(0);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="w-full bg-background/50 border border-border/85 pr-8 font-medium text-xs rounded-lg h-9 px-3 focus:bg-background shadow-inner transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/40"
+        />
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-muted-foreground/60">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
         </div>
-      </PopoverTrigger>
-      
-      <PopoverContent
-        className="p-0 z-50 w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-xl py-1"
-        align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        {filtered.length > 0 ? (
-          filtered.map((item, idx) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => selectItem(item)}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors rounded-none border-none",
-                idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70 bg-transparent text-foreground"
-              )}
-            >
-              <span className="truncate pr-2 font-medium">{item.name}</span>
-              <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-70 bg-muted px-2 py-0.5 rounded shrink-0">
-                {item.group.replace("_", " ")}
-              </span>
-            </button>
-          ))
-        ) : (
-          <div className="py-2 text-center text-xs text-muted-foreground">No matches found</div>
-        )}
-      </PopoverContent>
-    </Popover>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-[200] left-0 right-0 top-full mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/98 text-popover-foreground shadow-2xl backdrop-blur-xl py-1">
+          {filtered.length > 0 ? (
+            filtered.map((item, idx) => (
+              <button
+                key={item.id}
+                type="button"
+                // onPointerDown prevents input blur → prevents outside-click handler
+                // from firing before onClick completes (critical for touch)
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => selectItem(item)}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-2.5 sm:py-1.5 text-left text-xs transition-colors rounded-none border-none cursor-pointer",
+                  idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70 active:bg-accent/20 bg-transparent text-foreground"
+                )}
+              >
+                <span className="truncate pr-2 font-medium">{item.name}</span>
+                <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-70 bg-muted px-2 py-0.5 rounded shrink-0">
+                  {item.group.replace("_", " ")}
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="py-2 text-center text-xs text-muted-foreground">No matches found</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -274,24 +274,26 @@ export function ItemAutocomplete({
     i.category.toLowerCase().includes(query.toLowerCase())
   );
 
+  // Use pointerdown (works for both mouse and touch) to detect outside taps
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleOutside = (e: PointerEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
         const selected = items.find((i) => i.id === value);
         setQuery(selected ? selected.name : "");
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("pointerdown", handleOutside);
+    return () => document.removeEventListener("pointerdown", handleOutside);
   }, [value, items]);
 
   const selectItem = (item: typeof items[0]) => {
-    onChange(item.id);
     setQuery(item.name);
     setIsOpen(false);
     if (onSelectCallback) {
       onSelectCallback(item);
+    } else {
+      onChange(item.id);
     }
   };
 
@@ -326,8 +328,9 @@ export function ItemAutocomplete({
       case "Escape":
         e.preventDefault();
         setIsOpen(false);
-        const selected = items.find((i) => i.id === value);
-        setQuery(selected ? selected.name : "");
+        // eslint-disable-next-line no-case-declarations
+        const selectedEsc = items.find((i) => i.id === value);
+        setQuery(selectedEsc ? selectedEsc.name : "");
         break;
       case "Tab":
         if (filtered[highlightedIndex]) {
@@ -338,62 +341,60 @@ export function ItemAutocomplete({
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
-      <PopoverTrigger asChild>
-        <div ref={containerRef} className={cn("relative w-full", className)}>
-          <Input
-            ref={inputRef}
-            type="text"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setIsOpen(true);
-              setHighlightedIndex(0);
-            }}
-            onFocus={() => setIsOpen(true)}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="w-full bg-background/50 border-border/85 pr-8 font-medium text-xs rounded-lg h-9 focus:bg-background shadow-inner transition-all duration-200"
-          />
-          <div className="absolute right-2.5 top-2.5 flex items-center pointer-events-none text-muted-foreground/60">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-            </svg>
-          </div>
+    <div ref={containerRef} className={cn("relative w-full", className)}>
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+            setHighlightedIndex(0);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+          className="w-full bg-background/50 border border-border/85 pr-8 font-medium text-xs rounded-lg h-9 px-3 focus:bg-background shadow-inner transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/40"
+        />
+        <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-muted-foreground/60">
+          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+          </svg>
         </div>
-      </PopoverTrigger>
+      </div>
 
-      <PopoverContent
-        className="p-0 z-50 w-[var(--radix-popover-trigger-width)] max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/95 text-popover-foreground shadow-2xl backdrop-blur-xl py-1"
-        align="start"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onCloseAutoFocus={(e) => e.preventDefault()}
-      >
-        {filtered.length > 0 ? (
-          filtered.map((item, idx) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => selectItem(item)}
-              className={cn(
-                "w-full flex items-center justify-between px-3 py-1.5 text-left text-xs transition-colors rounded-none border-none",
-                idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70 bg-transparent text-foreground"
-              )}
-            >
-              <div className="truncate pr-2">
-                <span className="font-semibold block text-left">{item.name}</span>
-                <span className="text-[10px] text-muted-foreground block text-left">Cat: {item.category} • Rate: ₹{item.saleRate}</span>
-              </div>
-              <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-80 bg-accent/10 text-accent px-1.5 py-0.5 rounded shrink-0">
-                {item.gstPercent}% GST
-              </span>
-            </button>
-          ))
-        ) : (
-          <div className="py-2 text-center text-xs text-muted-foreground">No matches found</div>
-        )}
-      </PopoverContent>
-    </Popover>
+      {isOpen && (
+        <div className="absolute z-[200] left-0 right-0 top-full mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-popover/98 text-popover-foreground shadow-2xl backdrop-blur-xl py-1">
+          {filtered.length > 0 ? (
+            filtered.map((item, idx) => (
+              <button
+                key={item.id}
+                type="button"
+                // onPointerDown prevents input blur → prevents outside-click handler
+                // from firing before onClick completes (critical for touch)
+                onPointerDown={(e) => e.preventDefault()}
+                onClick={() => selectItem(item)}
+                className={cn(
+                  "w-full flex items-center justify-between px-3 py-2.5 sm:py-1.5 text-left text-xs transition-colors rounded-none border-none cursor-pointer",
+                  idx === highlightedIndex ? "bg-accent/15 text-accent font-semibold" : "hover:bg-muted/70 active:bg-accent/20 bg-transparent text-foreground"
+                )}
+              >
+                <div className="truncate pr-2">
+                  <span className="font-semibold block text-left">{item.name}</span>
+                  <span className="text-[10px] text-muted-foreground block text-left">Cat: {item.category} • Rate: ₹{item.saleRate}</span>
+                </div>
+                <span className="text-[9px] uppercase tracking-wider font-extrabold opacity-80 bg-accent/10 text-accent px-1.5 py-0.5 rounded shrink-0">
+                  {item.gstPercent}% GST
+                </span>
+              </button>
+            ))
+          ) : (
+            <div className="py-2 text-center text-xs text-muted-foreground">No matches found</div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -441,6 +442,12 @@ export function VoucherForm({
   const [lrNumber, setLrNumber] = useState("");
   const [dispatchDate, setDispatchDate] = useState("");
   const [freightAmount, setFreightAmount] = useState("");
+  // --- STATE FOR RECEIPT/PAYMENT BILL SETTLEMENT ROWS ---
+  const [billSettlementRows, setBillSettlementRows] = useState<Array<{ partyLedgerId: string; billRef: string; amount: string; narration: string }>>([
+    { partyLedgerId: "", billRef: "", amount: "", narration: "" }
+  ]);
+  // Whether receipt/payment is in "bill settlement" mode (using As Invoice)
+  const isReceiptPaymentInvoice = entryMode === "invoice" && (voucherType === "receipt" || voucherType === "payment");
 
   // Fetch ledgers and items for autocomplete dropdowns
   useEffect(() => {
@@ -571,7 +578,7 @@ export function VoucherForm({
   const invoiceDiscountAmt = showDiscount ? (invoiceSubtotal * discountPercent) / 100 : 0;
   const taxableAmount = invoiceSubtotal - invoiceDiscountAmt;
 
-  const invoiceTax = showGst && invoiceTaxLedgerId && invoiceTaxLedgerId !== "none"
+  const invoiceTax = showGst
     ? invoiceItems.reduce((sum, item) => {
         if (!item.inventoryItemId) return sum;
         const gstRate = parseFloat(item.gstPercent) || 0;
@@ -581,7 +588,43 @@ export function VoucherForm({
       }, 0)
     : 0;
 
+  const gstBreakdown = useMemo(() => {
+    const breakdown: Record<number, { taxable: number; tax: number }> = {};
+    invoiceItems.forEach(item => {
+      if (!item.inventoryItemId) return;
+      const rate = parseFloat(item.gstPercent) || 0;
+      const amt = parseFloat(item.amount) || 0;
+      const itemProportionAmt = showDiscount ? amt * (1 - discountPercent / 100) : amt;
+      
+      if (!breakdown[rate]) {
+        breakdown[rate] = { taxable: 0, tax: 0 };
+      }
+      breakdown[rate].taxable += itemProportionAmt;
+      breakdown[rate].tax += (itemProportionAmt * rate) / 100;
+    });
+    return breakdown;
+  }, [invoiceItems, showDiscount, discountPercent]);
+
   const invoiceGrandTotal = taxableAmount + invoiceTax;
+
+  // --- BILL SETTLEMENT MATHS (Receipt/Payment mode) ---
+  const billSettlementTotal = billSettlementRows.reduce((sum, r) => sum + (parseFloat(r.amount) || 0), 0);
+
+  const updateBillRow = (index: number, field: string, val: string) => {
+    setBillSettlementRows(prev => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: val };
+      return copy;
+    });
+  };
+
+  const addBillRow = () => {
+    setBillSettlementRows(prev => [...prev, { partyLedgerId: "", billRef: "", amount: "", narration: "" }]);
+  };
+
+  const removeBillRow = (index: number) => {
+    setBillSettlementRows(prev => prev.filter((_, i) => i !== index));
+  };
 
   const updateVoucherEntryRow = (index: number, field: string, val: any) => {
     setEntries(prev => {
@@ -640,6 +683,19 @@ export function VoucherForm({
     });
   };
 
+  const handleToggleGst = () => {
+    setShowGst(prev => {
+      const nextVal = !prev;
+      if (nextVal && (!invoiceTaxLedgerId || invoiceTaxLedgerId === "none")) {
+        const dutiesLedger = ledgersOptions.find(l => l.group === "duties_taxes");
+        if (dutiesLedger) {
+          setInvoiceTaxLedgerId(dutiesLedger.id);
+        }
+      }
+      return nextVal;
+    });
+  };
+
   const addInvoiceRow = () => {
     setInvoiceItems(prev => [...prev, { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", gstPercent: "18", narration: "" }]);
   };
@@ -669,6 +725,47 @@ export function VoucherForm({
         amount: parseFloat(item.amount),
         narration: item.narration || undefined
       }));
+    } else if (isReceiptPaymentInvoice) {
+      // --- BILL SETTLEMENT MODE (Receipt / Payment As Invoice) ---
+      if (!invoiceSalesPurchaseId) {
+        toast({
+          title: "Missing Cash/Bank A/c",
+          description: "Please select the Cash or Bank account to settle against.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (billSettlementRows.every(r => !r.partyLedgerId || !r.amount)) {
+        toast({
+          title: "No Bill Lines",
+          description: "Please add at least one party/bill entry with an amount.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For Receipt: Cash/Bank is Dr, Party A/c is Cr
+      // For Payment: Party A/c is Dr, Cash/Bank is Cr
+      const isPayment = voucherType === "payment";
+
+      // Cash/Bank consolidated entry
+      compiledEntries.push({
+        ledgerId: invoiceSalesPurchaseId,
+        type: isPayment ? ("cr" as const) : ("dr" as const),
+        amount: billSettlementTotal,
+        narration: `${voucherType.toUpperCase()} — Cash/Bank Settlement A/c`
+      });
+
+      // Individual party bill settlement lines
+      billSettlementRows.forEach(row => {
+        if (!row.partyLedgerId || !row.amount) return;
+        compiledEntries.push({
+          ledgerId: row.partyLedgerId,
+          type: isPayment ? ("dr" as const) : ("cr" as const),
+          amount: parseFloat(row.amount),
+          narration: row.narration || (row.billRef ? `Bill Ref: ${row.billRef}` : `${voucherType.toUpperCase()} settlement`)
+        });
+      });
     } else {
       // Compile Invoice Mode into double entry lines
       if (!invoicePartyId) {
@@ -844,7 +941,7 @@ export function VoucherForm({
               )}
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
-              As Invoice (Billing / Items)
+              {voucherType === "receipt" || voucherType === "payment" ? "As Invoice (Bill Settlement)" : "As Invoice (Billing / Items)"}
             </button>
           </div>
         </div>
@@ -1033,7 +1130,7 @@ export function VoucherForm({
         )}
 
         {/* AS INVOICE MODE - ITEM BILLING INTERFACE */}
-        {entryMode === "invoice" && (
+        {entryMode === "invoice" && !isReceiptPaymentInvoice && (
           <div className="space-y-4">
             
             {/* PARTY SELECT & INVOICE LEDGERS SECTION */}
@@ -1186,136 +1283,287 @@ export function VoucherForm({
                 </table>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/60 bg-muted/10 gap-4 font-sans">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={addInvoiceRow}
-                    className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold bg-background h-8"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-accent" />
-                    Add Stock Item Row (Alt+A)
-                  </Button>
+              <div className="border-t border-border/60 bg-muted/10 p-4 font-sans space-y-4">
+                {/* Actions & Filters row */}
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={addInvoiceRow}
+                      className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold bg-background h-8"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-accent" />
+                      Add Stock Item Row (Alt+A)
+                    </Button>
 
-                  <Button
-                    type="button"
-                    variant={showDiscount ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => setShowDiscount(prev => !prev)}
-                    className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold h-8"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-accent" />
-                    {showDiscount ? "Remove Discount" : "Add Discount"}
-                  </Button>
+                    <Button
+                      type="button"
+                      variant={showDiscount ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setShowDiscount(prev => !prev)}
+                      className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold h-8"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-accent" />
+                      {showDiscount ? "Remove Discount" : "Add Discount"}
+                    </Button>
 
-                  <Button
-                    type="button"
-                    variant={showGst ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => setShowGst(prev => !prev)}
-                    className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold h-8"
-                  >
-                    <Plus className="w-3.5 h-3.5 text-accent" />
-                    {showGst ? "Remove GST" : "Add GST"}
-                  </Button>
+                    <Button
+                      type="button"
+                      variant={showGst ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={handleToggleGst}
+                      className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold h-8"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-accent" />
+                      {showGst ? "Remove GST" : "Add GST"}
+                    </Button>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {showDiscount && (
+                      <div className="flex items-center gap-2 bg-accent/5 p-2 rounded-lg border border-accent/20">
+                        <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Discount Rate (%)</span>
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.1"
+                          value={discountPercent || ""}
+                          onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+                          className="w-16 h-8 text-center font-mono font-bold bg-background border-border/60 rounded-lg text-xs"
+                        />
+                      </div>
+                    )}
+
+                    {showGst && (
+                      <div className="flex flex-wrap items-center gap-4 bg-emerald-500/5 p-2 px-3 rounded-lg border border-emerald-500/20 text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Duties Ledger</span>
+                          <Select
+                            onValueChange={setInvoiceTaxLedgerId}
+                            value={invoiceTaxLedgerId}
+                          >
+                            <SelectTrigger className="w-40 h-8 bg-background border-border/80 rounded-lg text-xs font-bold">
+                              <SelectValue placeholder="No Duties/Taxes" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl">
+                              <SelectItem value="none" className="text-xs font-semibold">No tax posting</SelectItem>
+                              {ledgersOptions
+                                .filter(l => l.group === "duties_taxes")
+                                .map(l => (
+                                  <SelectItem key={l.id} value={l.id} className="text-xs font-semibold">
+                                    {l.name}
+                                  </SelectItem>
+                                ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center gap-2 font-semibold">
+                          <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Supply Type</span>
+                          <span className="bg-emerald-500/10 text-emerald-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wide">
+                            {gstSupplyType === "intra" ? "Intra-State (CGST + SGST)" : "Inter-State (IGST)"}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground">
+                          <span>GST List:</span>
+                          <span className="bg-muted px-1.5 py-0.5 rounded font-mono font-bold text-foreground">
+                            {gstSupplyType === "intra" ? "CGST, SGST" : "IGST"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {showDiscount && (
-                  <div className="flex items-center gap-2 bg-accent/5 p-2 rounded-lg border border-accent/20">
-                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Discount Rate (%)</span>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.1"
-                      value={discountPercent || ""}
-                      onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
-                      className="w-16 h-8 text-center font-mono font-bold bg-background border-border/60 rounded-lg text-xs"
-                    />
-                  </div>
-                )}
-
-                {showGst && (
-                  <div className="flex items-center gap-4 bg-emerald-500/5 p-2 px-3 rounded-lg border border-emerald-500/20 text-xs">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Duties Ledger</span>
-                      <Select
-                        onValueChange={setInvoiceTaxLedgerId}
-                        value={invoiceTaxLedgerId}
-                      >
-                        <SelectTrigger className="w-40 h-8 bg-background border-border/80 rounded-lg text-xs font-bold">
-                          <SelectValue placeholder="No Duties/Taxes" />
-                        </SelectTrigger>
-                        <SelectContent className="rounded-xl">
-                          <SelectItem value="none" className="text-xs font-semibold">No tax posting</SelectItem>
-                          {ledgersOptions
-                            .filter(l => l.group === "duties_taxes")
-                            .map(l => (
-                              <SelectItem key={l.id} value={l.id} className="text-xs font-semibold">
-                                {l.name}
-                              </SelectItem>
-                            ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex items-center gap-2 font-semibold">
-                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Supply Type</span>
-                      <span className="bg-emerald-500/10 text-emerald-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wide">
-                        {gstSupplyType === "intra" ? "Intra-State (CGST + SGST)" : "Inter-State (IGST)"}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground">
-                      <span>GST List:</span>
-                      <span className="bg-muted px-1.5 py-0.5 rounded font-mono font-bold text-foreground">
-                        {gstSupplyType === "intra" ? "CGST, SGST" : "IGST"}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                {/* DYNAMIC BILL INVOICE TOTALS */}
-                <div className="flex items-center gap-6 font-mono text-xs font-bold text-muted-foreground select-none">
-                  <div className="text-right">
+                {/* Invoice totals row */}
+                <div className="flex flex-wrap justify-end pt-3.5 border-t border-border/50 gap-4 sm:gap-6 font-mono text-xs font-bold text-muted-foreground select-none max-sm:w-full max-sm:flex-col max-sm:gap-2">
+                  <div className="text-right max-sm:flex max-sm:justify-between max-sm:items-center">
                     <span className="block text-[9px] opacity-70">SUBTOTAL</span>
                     <span className="text-sm font-extrabold text-primary">₹{invoiceSubtotal.toFixed(2)}</span>
                   </div>
+
                   {showDiscount && invoiceDiscountAmt > 0 && (
-                    <div className="text-right border-l pl-6 border-border/70">
+                    <div className="text-right border-l pl-6 border-border/70 max-sm:border-l-0 max-sm:pl-0 max-sm:flex max-sm:justify-between max-sm:items-center">
                       <span className="block text-[9px] opacity-70 text-rose-500">DISCOUNT ({discountPercent}%)</span>
                       <span className="text-sm font-extrabold text-rose-500">-₹{invoiceDiscountAmt.toFixed(2)}</span>
                     </div>
                   )}
-                  {showGst && invoiceTaxLedgerId && invoiceTaxLedgerId !== "none" && invoiceTax > 0 && (
+
+                  {showGst && invoiceTax > 0 && (
                     <>
-                      {gstSupplyType === "intra" ? (
-                        <>
-                          <div className="text-right border-l pl-6 border-border/70">
-                            <span className="block text-[9px] opacity-70">CGST (CENTRAL)</span>
-                            <span className="text-sm font-extrabold text-accent">₹{(invoiceTax / 2).toFixed(2)}</span>
+                      {Object.entries(gstBreakdown).map(([rateStr, data]) => {
+                        const rate = parseFloat(rateStr) || 0;
+                        if (data.tax <= 0) return null;
+                        return gstSupplyType === "intra" ? (
+                          <Fragment key={rate}>
+                            <div className="text-right border-l pl-6 border-border/70 max-sm:border-l-0 max-sm:pl-0 max-sm:flex max-sm:justify-between max-sm:items-center">
+                              <span className="block text-[9px] opacity-70 text-accent uppercase">CGST {rate / 2}%</span>
+                              <span className="text-sm font-extrabold text-accent">₹{(data.tax / 2).toFixed(2)}</span>
+                            </div>
+                            <div className="text-right border-l pl-6 border-border/70 max-sm:border-l-0 max-sm:pl-0 max-sm:flex max-sm:justify-between max-sm:items-center">
+                              <span className="block text-[9px] opacity-70 text-accent uppercase">SGST {rate / 2}%</span>
+                              <span className="text-sm font-extrabold text-accent">₹{(data.tax / 2).toFixed(2)}</span>
+                            </div>
+                          </Fragment>
+                        ) : (
+                          <div key={rate} className="text-right border-l pl-6 border-border/70 max-sm:border-l-0 max-sm:pl-0 max-sm:flex max-sm:justify-between max-sm:items-center">
+                            <span className="block text-[9px] opacity-70 text-accent uppercase">IGST {rate}%</span>
+                            <span className="text-sm font-extrabold text-accent">₹{data.tax.toFixed(2)}</span>
                           </div>
-                          <div className="text-right border-l pl-6 border-border/70">
-                            <span className="block text-[9px] opacity-70">SGST (STATE)</span>
-                            <span className="text-sm font-extrabold text-accent">₹{(invoiceTax / 2).toFixed(2)}</span>
-                          </div>
-                        </>
-                      ) : (
-                        <div className="text-right border-l pl-6 border-border/70">
-                          <span className="block text-[9px] opacity-70">IGST (INTEGRATED)</span>
-                          <span className="text-sm font-extrabold text-accent">₹{invoiceTax.toFixed(2)}</span>
-                        </div>
-                      )}
+                        );
+                      })}
                     </>
                   )}
-                  <div className="text-right border-l pl-6 border-border/70">
+
+                  <div className="text-right border-l pl-6 border-border/70 max-sm:border-l-0 max-sm:pl-0 max-sm:flex max-sm:justify-between max-sm:items-center">
                     <span className="block text-[9px] opacity-70">GRAND TOTAL</span>
                     <span className="text-base font-black text-emerald-600">₹{invoiceGrandTotal.toFixed(2)}</span>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* RECEIPT / PAYMENT BILL SETTLEMENT MODE */}
+        {isReceiptPaymentInvoice && (
+          <div className="space-y-4">
+            {/* Cash/Bank Account selector */}
+            <div className="bg-accent/5 p-4 rounded-xl border border-accent/25">
+              <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
+                {voucherType === "receipt" ? "Cash / Bank Account (Received Into)" : "Cash / Bank Account (Paid From)"}
+              </label>
+              <Select onValueChange={setInvoiceSalesPurchaseId} value={invoiceSalesPurchaseId}>
+                <SelectTrigger className="w-full max-w-xs h-9 bg-background border-border/80 rounded-lg text-xs font-bold">
+                  <SelectValue placeholder="Select cash or bank account" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {ledgersOptions
+                    .filter(l => l.group === "bank" || l.group === "cash")
+                    .map(l => (
+                      <SelectItem key={l.id} value={l.id} className="text-xs font-semibold">
+                        {l.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Bill Settlement Table */}
+            <div className="border border-border/70 rounded-xl bg-background/30 overflow-hidden shadow-inner">
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-border/70 bg-muted/40 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      <th className="px-3 py-2.5">Party / Ledger Account</th>
+                      <th className="px-3 py-2.5 w-[160px]">Bill / Invoice Ref</th>
+                      <th className="px-3 py-2.5 w-[140px] text-right">Amount (₹)</th>
+                      <th className="px-3 py-2.5 w-[200px]">Narration</th>
+                      <th className="px-3 py-2.5 w-[45px]"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/45">
+                    {billSettlementRows.map((row, index) => (
+                      <tr key={index} className="hover:bg-muted/15 transition-colors group">
+                        <td className="p-2">
+                          <PartyAutocomplete
+                            value={row.partyLedgerId}
+                            onChange={(val) => updateBillRow(index, "partyLedgerId", val)}
+                            ledgers={ledgersOptions.filter(l =>
+                              l.group === "sundry_debtors" ||
+                              l.group === "sundry_creditors" ||
+                              l.group === "bank" ||
+                              l.group === "cash"
+                            )}
+                            placeholder={voucherType === "receipt" ? "Debtor / party paid us..." : "Creditor / party we're paying..."}
+                          />
+                        </td>
+
+                        <td className="p-2">
+                          <Input
+                            value={row.billRef}
+                            onChange={(e) => updateBillRow(index, "billRef", e.target.value)}
+                            placeholder="Bill no. / Invoice ref"
+                            className="h-9 bg-background/55 border-border/70 rounded-lg text-xs font-mono font-semibold"
+                          />
+                        </td>
+
+                        <td className="p-2">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={row.amount}
+                            onFocus={(e) => { if (e.target.value === "0") e.target.select(); }}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^0-9.]/g, "");
+                              updateBillRow(index, "amount", v);
+                            }}
+                            placeholder="0.00"
+                            className="h-9 text-right font-mono font-bold text-xs bg-background/55 border-border/70 rounded-lg text-primary"
+                          />
+                        </td>
+
+                        <td className="p-2">
+                          <Input
+                            value={row.narration}
+                            onChange={(e) => updateBillRow(index, "narration", e.target.value)}
+                            placeholder="Narration / remark"
+                            className="h-9 bg-background/55 border-border/70 rounded-lg text-xs"
+                          />
+                        </td>
+
+                        <td className="p-2 text-center">
+                          {billSettlementRows.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeBillRow(index)}
+                              className="h-8 w-8 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer: Add Row + Total */}
+              <div className="border-t border-border/60 bg-muted/10 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addBillRow}
+                  className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold bg-background h-8"
+                >
+                  <Plus className="w-3.5 h-3.5 text-accent" />
+                  Add Party / Bill Line
+                </Button>
+
+                <div className="flex items-center gap-6 font-mono text-xs font-bold text-muted-foreground select-none">
+                  <div className="text-right">
+                    <span className="block text-[9px] opacity-70">{voucherType === "receipt" ? "TOTAL RECEIVED" : "TOTAL PAID"}</span>
+                    <span className="text-base font-black text-emerald-600">₹{billSettlementTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Info hint */}
+            <div className="flex items-start gap-2 text-[10px] text-muted-foreground bg-muted/30 rounded-lg px-3 py-2 border border-border/40">
+              <DollarSign className="w-3.5 h-3.5 shrink-0 mt-0.5 text-accent" />
+              <span>
+                <strong className="text-foreground">How it works:</strong> Each row settles one party's outstanding bill.
+                {voucherType === "receipt" ? " The total received amount will be posted to your selected Cash/Bank account." : " The total paid amount will be credited from your selected Cash/Bank account."}
+              </span>
             </div>
           </div>
         )}
