@@ -24,6 +24,7 @@ import { toast } from "@/components/ui/use-toast";
 import { getLedgersOptions } from "@/app/(erp)/ledgers/actions";
 import { getInventoryItemsOptions } from "@/app/(erp)/inventory/actions";
 import { createVoucher } from "@/app/(erp)/vouchers/actions";
+import { getSettings } from "@/app/(erp)/settings/actions";
 import type { VoucherType, LedgerGroup } from "@/lib/types";
 import {
   Trash2,
@@ -41,6 +42,46 @@ import { cn } from "@/lib/utils";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { DatePicker } from "@/components/ui/date-picker";
 import { GST_RATE_LABELS } from "@/constant/app.constant";
+
+const GST_STATE_CODE_MAP: Record<string, string> = {
+  "01": "Jammu and Kashmir",
+  "02": "Himachal Pradesh",
+  "03": "Punjab",
+  "04": "Chandigarh",
+  "05": "Uttarakhand",
+  "06": "Haryana",
+  "07": "Delhi",
+  "08": "Rajasthan",
+  "09": "Uttar Pradesh",
+  "10": "Bihar",
+  "11": "Sikkim",
+  "12": "Arunachal Pradesh",
+  "13": "Nagaland",
+  "14": "Manipur",
+  "15": "Mizoram",
+  "16": "Tripura",
+  "17": "Meghalaya",
+  "18": "Assam",
+  "19": "West Bengal",
+  "20": "Jharkhand",
+  "21": "Odisha",
+  "22": "Chhattisgarh",
+  "23": "Madhya Pradesh",
+  "24": "Gujarat",
+  "25": "Dadra and Nagar Haveli and Daman and Diu",
+  "26": "Dadra and Nagar Haveli and Daman and Diu",
+  "27": "Maharashtra",
+  "29": "Karnataka",
+  "30": "Goa",
+  "31": "Lakshadweep",
+  "32": "Kerala",
+  "33": "Tamil Nadu",
+  "34": "Puducherry",
+  "35": "Andaman and Nicobar Islands",
+  "36": "Telangana",
+  "37": "Andhra Pradesh",
+  "38": "Ladakh"
+};
 
 // --- PARTY AUTOCOMPLETE COMPONENT ---
 interface PartyAutocompleteProps {
@@ -370,7 +411,7 @@ export function VoucherForm({
   // Toggles between "voucher" (Dr/Cr journal) and "invoice" (itemized inventory bill)
   const [entryMode, setEntryMode] = useState<"voucher" | "invoice">("voucher");
 
-  const [ledgersOptions, setLedgersOptions] = useState<Array<{id: string; name: string; group: LedgerGroup}>>([]);
+  const [ledgersOptions, setLedgersOptions] = useState<Array<{id: string; name: string; group: LedgerGroup; address?: string | null; gstNumber?: string | null}>>([]);
   const [inventoryOptions, setInventoryOptions] = useState<Array<any>>([]);
 
   // --- STATE FOR AS VOUCHER MODE ---
@@ -385,12 +426,16 @@ export function VoucherForm({
   // --- STATE FOR AS INVOICE MODE ---
   const [invoicePartyId, setInvoicePartyId] = useState("");
   const [invoiceSalesPurchaseId, setInvoiceSalesPurchaseId] = useState("");
-  const [invoiceItems, setInvoiceItems] = useState<Array<{ inventoryItemId: string; quantity: string; rate: string; amount: string; narration: string }>>([
-    { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", narration: "" }
+  const [invoiceItems, setInvoiceItems] = useState<Array<{ inventoryItemId: string; quantity: string; rate: string; amount: string; gstPercent: string; narration: string }>>([
+    { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", gstPercent: "18", narration: "" }
   ]);
   const [invoiceTaxLedgerId, setInvoiceTaxLedgerId] = useState("");
   const [gstSupplyType, setGstSupplyType] = useState<"intra" | "inter">("intra");
   const [defaultGstRate, setDefaultGstRate] = useState<number>(18);
+  const [consignerState, setConsignerState] = useState<string>("");
+  const [showDiscount, setShowDiscount] = useState<boolean>(false);
+  const [discountPercent, setDiscountPercent] = useState<number>(0);
+  const [showGst, setShowGst] = useState<boolean>(false);
   // Transport details (For challan / invoice)
   const [transportName, setTransportName] = useState("");
   const [lrNumber, setLrNumber] = useState("");
@@ -429,6 +474,55 @@ export function VoucherForm({
     fetchData();
   }, [voucherType]);
 
+  // Load active company's state
+  useEffect(() => {
+    async function loadCompanyState() {
+      try {
+        const settings = await getSettings();
+        if (settings?.companyInfo?.state) {
+          setConsignerState(settings.companyInfo.state);
+        }
+      } catch (e) {
+        console.error("Failed to load settings in voucher form:", e);
+      }
+    }
+    loadCompanyState();
+  }, []);
+
+  // Auto-detect supply type based on consigner state and consignee state
+  useEffect(() => {
+    if (!invoicePartyId || !consignerState) return;
+    const party = ledgersOptions.find((l) => l.id === invoicePartyId);
+    if (!party) return;
+
+    let consigneeState = "";
+
+    // 1. Try from GSTIN
+    if (party.gstNumber && party.gstNumber.length >= 2) {
+      const code = party.gstNumber.substring(0, 2);
+      consigneeState = GST_STATE_CODE_MAP[code] || "";
+    }
+
+    // 2. If not found, try from Address
+    if (!consigneeState && party.address) {
+      const addrLower = party.address.toLowerCase();
+      const foundState = Object.values(GST_STATE_CODE_MAP).find(
+        (s) => addrLower.includes(s.toLowerCase())
+      );
+      if (foundState) {
+        consigneeState = foundState;
+      }
+    }
+
+    if (consigneeState) {
+      if (consignerState.toLowerCase().trim() === consigneeState.toLowerCase().trim()) {
+        setGstSupplyType("intra");
+      } else {
+        setGstSupplyType("inter");
+      }
+    }
+  }, [invoicePartyId, consignerState, ledgersOptions]);
+
   // Sync default entry types based on Voucher Category
   useEffect(() => {
     if (entryMode === "voucher") {
@@ -458,7 +552,7 @@ export function VoucherForm({
       if (entryMode === "voucher") {
         setEntries(prev => [...prev, { ledgerId: "", type: "cr", amount: "0", narration: "" }]);
       } else {
-        setInvoiceItems(prev => [...prev, { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", narration: "" }]);
+        setInvoiceItems(prev => [...prev, { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", gstPercent: "18", narration: "" }]);
       }
     };
     window.addEventListener("erp:add-row", handleAddRow);
@@ -474,17 +568,20 @@ export function VoucherForm({
   // --- AS INVOICE MODE MATHS ---
   const invoiceSubtotal = invoiceItems.reduce((sum, item) => sum + (parseFloat(item.amount) || 0), 0);
 
-  const invoiceTax = invoiceTaxLedgerId && invoiceTaxLedgerId !== "none"
+  const invoiceDiscountAmt = showDiscount ? (invoiceSubtotal * discountPercent) / 100 : 0;
+  const taxableAmount = invoiceSubtotal - invoiceDiscountAmt;
+
+  const invoiceTax = showGst && invoiceTaxLedgerId && invoiceTaxLedgerId !== "none"
     ? invoiceItems.reduce((sum, item) => {
         if (!item.inventoryItemId) return sum;
-        const itemObj = inventoryOptions.find(o => o.id === item.inventoryItemId);
-        const gstRate = itemObj ? itemObj.gstPercent : defaultGstRate;
+        const gstRate = parseFloat(item.gstPercent) || 0;
         const itemAmt = parseFloat(item.amount) || 0;
-        return sum + (itemAmt * gstRate) / 100;
+        const itemProportionAmt = showDiscount ? itemAmt * (1 - discountPercent / 100) : itemAmt;
+        return sum + (itemProportionAmt * gstRate) / 100;
       }, 0)
     : 0;
 
-  const invoiceGrandTotal = invoiceSubtotal + invoiceTax;
+  const invoiceGrandTotal = taxableAmount + invoiceTax;
 
   const updateVoucherEntryRow = (index: number, field: string, val: any) => {
     setEntries(prev => {
@@ -531,10 +628,12 @@ export function VoucherForm({
     setInvoiceItems(prev => {
       const copy = [...prev];
       const rateVal = voucherType === "sales" ? selectedItem.saleRate : selectedItem.purchaseRate;
+      const gstVal = selectedItem.gstPercent !== undefined ? selectedItem.gstPercent.toString() : "18";
       copy[index] = {
         ...copy[index],
         inventoryItemId: selectedItem.id,
         rate: rateVal.toString(),
+        gstPercent: gstVal,
         amount: (parseFloat(copy[index].quantity) * rateVal).toString()
       };
       return copy;
@@ -542,7 +641,7 @@ export function VoucherForm({
   };
 
   const addInvoiceRow = () => {
-    setInvoiceItems(prev => [...prev, { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", narration: "" }]);
+    setInvoiceItems(prev => [...prev, { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", gstPercent: "18", narration: "" }]);
   };
 
   const removeInvoiceRow = (index: number) => {
@@ -575,7 +674,7 @@ export function VoucherForm({
       if (!invoicePartyId) {
         toast({
           title: "Missing Party A/c",
-          description: "Please select the buyer/supplier Party A/c Name.",
+          description: "Please select the Party A/c Name.",
           variant: "destructive",
         });
         return;
@@ -583,37 +682,40 @@ export function VoucherForm({
       if (!invoiceSalesPurchaseId) {
         toast({
           title: "Missing Ledger A/c",
-          description: "Please select the Sales/Purchase Ledger Account.",
+          description: "Please select the Ledger Account.",
           variant: "destructive",
         });
         return;
       }
 
-      const isSales = voucherType === "sales" || voucherType === "challan";
+      const isDebitParty = voucherType === "sales" || voucherType === "challan" || voucherType === "payment";
 
       // 1. Party Account Entry
       compiledEntries.push({
         ledgerId: invoicePartyId,
-        type: isSales ? "dr" as const : "cr" as const,
+        type: isDebitParty ? "dr" as const : "cr" as const,
         amount: invoiceGrandTotal,
-        narration: "Invoice party posting"
+        narration: `${voucherType.toUpperCase()} invoice party posting`
       });
 
-      // 2. Sales/Purchase Ledger line for EACH item to enable stock movement calculation
+      // 2. Sales/Purchase/Cash/Bank Ledger line for EACH item to enable stock movement calculation
       invoiceItems.forEach(item => {
         if (!item.inventoryItemId) return;
+        const itemAmt = parseFloat(item.amount) || 0;
+        const itemPostAmt = showDiscount ? itemAmt * (1 - discountPercent / 100) : itemAmt;
+
         compiledEntries.push({
           ledgerId: invoiceSalesPurchaseId,
-          type: isSales ? "cr" as const : "dr" as const,
-          amount: parseFloat(item.amount),
+          type: isDebitParty ? "cr" as const : "dr" as const,
+          amount: itemPostAmt,
           inventoryItemId: item.inventoryItemId,
           quantity: parseFloat(item.quantity),
           rate: parseFloat(item.rate),
           narration: item.narration || undefined
         });
       });
-      // 3. GST Duties Entries (if applicable)
-      if (invoiceTaxLedgerId && invoiceTaxLedgerId !== "none" && invoiceTax > 0) {
+      // 3. GST Duties Entries (if applicable and showGst is active)
+      if (showGst && invoiceTaxLedgerId && invoiceTaxLedgerId !== "none" && invoiceTax > 0) {
         if (gstSupplyType === "intra") {
           const cgstLedger = ledgersOptions.find(l => l.name.toLowerCase().includes("cgst"));
           const sgstLedger = ledgersOptions.find(l => l.name.toLowerCase().includes("sgst"));
@@ -622,13 +724,13 @@ export function VoucherForm({
           if (cgstLedger && sgstLedger) {
             compiledEntries.push({
               ledgerId: cgstLedger.id,
-              type: isSales ? ("cr" as const) : ("dr" as const),
+              type: isDebitParty ? ("cr" as const) : ("dr" as const),
               amount: halfTax,
               narration: "Local CGST Split Posting"
             });
             compiledEntries.push({
               ledgerId: sgstLedger.id,
-              type: isSales ? ("cr" as const) : ("dr" as const),
+              type: isDebitParty ? ("cr" as const) : ("dr" as const),
               amount: halfTax,
               narration: "Local SGST Split Posting"
             });
@@ -636,7 +738,7 @@ export function VoucherForm({
             // Fallback if split ledgers are not found
             compiledEntries.push({
               ledgerId: invoiceTaxLedgerId,
-              type: isSales ? ("cr" as const) : ("dr" as const),
+              type: isDebitParty ? ("cr" as const) : ("dr" as const),
               amount: invoiceTax,
               narration: "Local CGST/SGST Unified Posting"
             });
@@ -645,7 +747,7 @@ export function VoucherForm({
           const igstLedger = ledgersOptions.find(l => l.name.toLowerCase().includes("igst"));
           compiledEntries.push({
             ledgerId: igstLedger?.id || invoiceTaxLedgerId,
-            type: isSales ? ("cr" as const) : ("dr" as const),
+            type: isDebitParty ? ("cr" as const) : ("dr" as const),
             amount: invoiceTax,
             narration: "Inter-State IGST Integrated Posting"
           });
@@ -684,7 +786,7 @@ export function VoucherForm({
           { ledgerId: "", type: "cr", amount: "0", narration: "" },
         ]);
         setInvoiceItems([
-          { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", narration: "" }
+          { inventoryItemId: "", quantity: "1", rate: "0", amount: "0", gstPercent: "18", narration: "" }
         ]);
         setInvoicePartyId("");
       } else {
@@ -732,7 +834,7 @@ export function VoucherForm({
             </button>
             <button
               type="button"
-              disabled={voucherType !== "sales" && voucherType !== "purchase"}
+              disabled={voucherType !== "sales" && voucherType !== "purchase" && voucherType !== "receipt" && voucherType !== "payment"}
               onClick={() => setEntryMode("invoice")}
               className={cn(
                 "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1 disabled:opacity-40 disabled:pointer-events-none cursor-pointer",
@@ -757,8 +859,8 @@ export function VoucherForm({
             <Select
               onValueChange={(val: any) => {
                 setVoucherType(val);
-                // Return to voucher mode if other types are selected (invoice only supports sales/purchase)
-                if (val !== "sales" && val !== "purchase") {
+                // Return to voucher mode if other types are selected (invoice supports sales/purchase/receipt/payment)
+                if (val !== "sales" && val !== "purchase" && val !== "receipt" && val !== "payment") {
                   setEntryMode("voucher");
                 }
               }}
@@ -934,7 +1036,8 @@ export function VoucherForm({
         {entryMode === "invoice" && (
           <div className="space-y-4">
             
-            {/* PARTY SELECT & INVOICE LEDGERS SECTION */}            <div className="grid gap-4 grid-cols-1 md:grid-cols-5 bg-accent/5 p-4 rounded-xl border border-accent/25">
+            {/* PARTY SELECT & INVOICE LEDGERS SECTION */}
+            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 bg-accent/5 p-4 rounded-xl border border-accent/25">
               <div>
                 <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
                   Party Account Name
@@ -949,7 +1052,11 @@ export function VoucherForm({
 
               <div>
                 <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
-                  {voucherType === "sales" ? "Sales Account Ledger" : "Purchase Account Ledger"}
+                  {voucherType === "sales" || voucherType === "challan" 
+                    ? "Sales Account Ledger" 
+                    : voucherType === "purchase" 
+                      ? "Purchase Account Ledger" 
+                      : "Cash / Bank Account Ledger"}
                 </label>
                 <Select
                   onValueChange={setInvoiceSalesPurchaseId}
@@ -960,75 +1067,17 @@ export function VoucherForm({
                   </SelectTrigger>
                   <SelectContent className="rounded-xl">
                     {ledgersOptions
-                      .filter(l => voucherType === "sales" ? l.group === "sales" : l.group === "purchase")
+                      .filter(l => {
+                        if (voucherType === "sales" || voucherType === "challan") return l.group === "sales";
+                        if (voucherType === "purchase") return l.group === "purchase";
+                        if (voucherType === "receipt" || voucherType === "payment") return l.group === "bank" || l.group === "cash";
+                        return false;
+                      })
                       .map(l => (
                         <SelectItem key={l.id} value={l.id} className="text-xs font-semibold">
                           {l.name}
                         </SelectItem>
                       ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
-                  Duties & Taxes Ledger
-                </label>
-                <Select
-                  onValueChange={setInvoiceTaxLedgerId}
-                  value={invoiceTaxLedgerId}
-                >
-                  <SelectTrigger className="w-full h-9 bg-background border-border/80 rounded-lg text-xs font-bold">
-                    <SelectValue placeholder="No Duties/Taxes" />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="none" className="text-xs font-semibold">No tax posting</SelectItem>
-                    {ledgersOptions
-                      .filter(l => l.group === "duties_taxes")
-                      .map(l => (
-                        <SelectItem key={l.id} value={l.id} className="text-xs font-semibold">
-                          {l.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
-                  GST Supply Type
-                </label>
-                <Select
-                  onValueChange={(val: any) => setGstSupplyType(val)}
-                  value={gstSupplyType}
-                >
-                  <SelectTrigger className="w-full h-9 bg-background border-border/80 rounded-lg text-xs font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    <SelectItem value="intra" className="text-xs font-semibold">Intra-State (CGST + SGST)</SelectItem>
-                    <SelectItem value="inter" className="text-xs font-semibold">Inter-State (Outside IGST)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <label className="text-[10px] font-bold text-accent uppercase tracking-wider block mb-1">
-                  Base GST Rate
-                </label>
-                <Select
-                  onValueChange={(val: any) => setDefaultGstRate(Number(val))}
-                  value={defaultGstRate.toString()}
-                >
-                  <SelectTrigger className="w-full h-9 bg-background border-border/80 rounded-lg text-xs font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-xl">
-                    {[0, 3, 5, 12, 18, 28].map(rate => (
-                      <SelectItem key={rate} value={rate.toString()} className="text-xs font-semibold">
-                        {GST_RATE_LABELS[rate] ?? `${rate}%`}
-                      </SelectItem>
-                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1043,6 +1092,7 @@ export function VoucherForm({
                       <th className="px-3 py-2.5">Stock Item (Autocomplete)</th>
                       <th className="px-3 py-2.5 w-[100px] text-center">Qty</th>
                       <th className="px-3 py-2.5 w-[130px] text-right">Rate (₹)</th>
+                      <th className="px-3 py-2.5 w-[120px] text-center font-bold">GST %</th>
                       <th className="px-3 py-2.5 w-[140px] text-right">Amount (₹)</th>
                       <th className="px-3 py-2.5 w-[200px]">Description/Narration</th>
                       <th className="px-3 py-2.5 w-[45px]"></th>
@@ -1090,6 +1140,19 @@ export function VoucherForm({
                         </td>
 
                         <td className="p-2">
+                          <Input
+                            type="text"
+                            inputMode="decimal"
+                            value={item.gstPercent}
+                            onChange={(e) => {
+                              const v = e.target.value.replace(/[^0-9.]/g, "");
+                              updateInvoiceRow(index, "gstPercent", v);
+                            }}
+                            className="h-9 text-center font-mono font-bold bg-background/55 border-border/70 rounded-lg text-xs"
+                          />
+                        </td>
+
+                        <td className="p-2">
                           <div className="h-9 flex items-center justify-end pr-3 font-mono font-bold text-xs text-muted-foreground bg-muted/30 border border-border/50 rounded-lg select-none">
                             {(parseFloat(item.amount) || 0).toFixed(2)}
                           </div>
@@ -1123,17 +1186,96 @@ export function VoucherForm({
                 </table>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/60 bg-muted/10 gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addInvoiceRow}
-                  className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold bg-background h-8"
-                >
-                  <Plus className="w-3.5 h-3.5 text-accent" />
-                  Add Stock Item Row (Alt+A)
-                </Button>
+              <div className="flex flex-col sm:flex-row items-center justify-between p-4 border-t border-border/60 bg-muted/10 gap-4 font-sans">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addInvoiceRow}
+                    className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold bg-background h-8"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-accent" />
+                    Add Stock Item Row (Alt+A)
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant={showDiscount ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setShowDiscount(prev => !prev)}
+                    className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold h-8"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-accent" />
+                    {showDiscount ? "Remove Discount" : "Add Discount"}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant={showGst ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setShowGst(prev => !prev)}
+                    className="flex items-center gap-1 border-border/70 rounded-lg text-xs font-bold h-8"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-accent" />
+                    {showGst ? "Remove GST" : "Add GST"}
+                  </Button>
+                </div>
+
+                {showDiscount && (
+                  <div className="flex items-center gap-2 bg-accent/5 p-2 rounded-lg border border-accent/20">
+                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider">Discount Rate (%)</span>
+                    <Input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={discountPercent || ""}
+                      onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+                      className="w-16 h-8 text-center font-mono font-bold bg-background border-border/60 rounded-lg text-xs"
+                    />
+                  </div>
+                )}
+
+                {showGst && (
+                  <div className="flex items-center gap-4 bg-emerald-500/5 p-2 px-3 rounded-lg border border-emerald-500/20 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Duties Ledger</span>
+                      <Select
+                        onValueChange={setInvoiceTaxLedgerId}
+                        value={invoiceTaxLedgerId}
+                      >
+                        <SelectTrigger className="w-40 h-8 bg-background border-border/80 rounded-lg text-xs font-bold">
+                          <SelectValue placeholder="No Duties/Taxes" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl">
+                          <SelectItem value="none" className="text-xs font-semibold">No tax posting</SelectItem>
+                          {ledgersOptions
+                            .filter(l => l.group === "duties_taxes")
+                            .map(l => (
+                              <SelectItem key={l.id} value={l.id} className="text-xs font-semibold">
+                                {l.name}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center gap-2 font-semibold">
+                      <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Supply Type</span>
+                      <span className="bg-emerald-500/10 text-emerald-700 px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wide">
+                        {gstSupplyType === "intra" ? "Intra-State (CGST + SGST)" : "Inter-State (IGST)"}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 font-semibold text-[10px] text-muted-foreground">
+                      <span>GST List:</span>
+                      <span className="bg-muted px-1.5 py-0.5 rounded font-mono font-bold text-foreground">
+                        {gstSupplyType === "intra" ? "CGST, SGST" : "IGST"}
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 {/* DYNAMIC BILL INVOICE TOTALS */}
                 <div className="flex items-center gap-6 font-mono text-xs font-bold text-muted-foreground select-none">
@@ -1141,7 +1283,13 @@ export function VoucherForm({
                     <span className="block text-[9px] opacity-70">SUBTOTAL</span>
                     <span className="text-sm font-extrabold text-primary">₹{invoiceSubtotal.toFixed(2)}</span>
                   </div>
-                  {invoiceTaxLedgerId && invoiceTaxLedgerId !== "none" && invoiceTax > 0 && (
+                  {showDiscount && invoiceDiscountAmt > 0 && (
+                    <div className="text-right border-l pl-6 border-border/70">
+                      <span className="block text-[9px] opacity-70 text-rose-500">DISCOUNT ({discountPercent}%)</span>
+                      <span className="text-sm font-extrabold text-rose-500">-₹{invoiceDiscountAmt.toFixed(2)}</span>
+                    </div>
+                  )}
+                  {showGst && invoiceTaxLedgerId && invoiceTaxLedgerId !== "none" && invoiceTax > 0 && (
                     <>
                       {gstSupplyType === "intra" ? (
                         <>

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +51,8 @@ const GROUP_COLORS: Partial<Record<LedgerGroup, string>> = {
 const ALL_GROUPS = "all";
 
 export function LedgerListClient({ ledgers }: { ledgers: Ledger[] }) {
+  const router = useRouter();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [search, setSearch] = useState("");
   const [groupFilter, setGroupFilter] = useState<string>(ALL_GROUPS);
 
@@ -67,6 +70,39 @@ export function LedgerListClient({ ledgers }: { ledgers: Ledger[] }) {
     return Array.from(new Set(ledgers.map((l) => l.group)));
   }, [ledgers]);
 
+  // Keyboard Navigation listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInputFocused =
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.tagName === "SELECT" ||
+        activeEl?.getAttribute("contenteditable") === "true";
+
+      // "/" focuses the search bar if not typing in any input
+      if (e.key === "/" && !isInputFocused) {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+
+      // "Escape" or "Q" navigates to Dashboard
+      if ((e.key === "q" || e.key === "Q" || e.key === "Escape") && !isInputFocused) {
+        e.preventDefault();
+        router.push("/dashboard");
+      }
+
+      // "C" or "Alt+C" navigates to Create Ledger
+      if ((e.key === "c" || e.key === "C") && !isInputFocused) {
+        e.preventDefault();
+        router.push("/ledgers/new");
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [router]);
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -74,7 +110,8 @@ export function LedgerListClient({ ledgers }: { ledgers: Ledger[] }) {
         <div className="relative flex-1 min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            placeholder="Search ledger name or GSTIN..."
+            ref={searchInputRef}
+            placeholder="Search ledger name or GSTIN (Press '/' to focus)..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9 bg-muted/40 rounded-xl"
@@ -93,8 +130,10 @@ export function LedgerListClient({ ledgers }: { ledgers: Ledger[] }) {
             ))}
           </SelectContent>
         </Select>
-        <Button size="sm" className="h-9 rounded-xl gap-2 ml-auto">
-          <Plus className="w-4 h-4" /> New Ledger
+        <Button asChild size="sm" className="h-9 rounded-xl gap-2 ml-auto cursor-pointer">
+          <Link href="/ledgers/new">
+            <Plus className="w-4 h-4" /> New Ledger
+          </Link>
         </Button>
       </div>
 

@@ -58,6 +58,8 @@ export default function OnboardingPage() {
   const [isFetchingGST, setIsFetchingGST] = useState(false);
   const [isCertOpen, setIsCertOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [gstinOptions, setGstinOptions] = useState<any[]>([]);
+  const [selectedGstinIdx, setSelectedGstinIdx] = useState<number>(0);
 
   // Wizard Data
   const [formData, setFormData] = useState({
@@ -128,42 +130,79 @@ export default function OnboardingPage() {
 
     const charCodeSum = pan.split("").reduce((s, char) => s + char.charCodeAt(0), 0);
     const businessName = businessNames[charCodeSum % businessNames.length];
-    
-    const stateCodes = ["07", "27", "29", "24"];
-    const stateCode = stateCodes[charCodeSum % stateCodes.length];
-    const generatedGstin = `${stateCode}${pan}1Z5`;
     const randomPhone = `+91 98${Math.floor(10000000 + Math.random() * 90000000)}`;
+    const businessEmail = `contact@${businessName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`;
 
-    const addresses = [
-      "145, Main Market, Chandni Chowk, Delhi 110006",
-      "220, Nariman Point, Marine Drive, Mumbai 400021",
-      "45, Brigade Road, MG Road, Bengaluru 560001",
-      "88, CG Road, Navrangpura, Ahmedabad 380009"
+    const options = [
+      {
+        gstin: `07${pan}1Z5`,
+        businessName: businessName,
+        businessPhone: randomPhone,
+        businessAddress: "145, Main Market, Chandni Chowk, Delhi 110006",
+        businessCity: "Delhi",
+        businessState: "Delhi",
+        businessPincode: "110006",
+        businessEmail: businessEmail,
+      },
+      {
+        gstin: `27${pan}1Z5`,
+        businessName: businessName,
+        businessPhone: randomPhone,
+        businessAddress: "220, Nariman Point, Marine Drive, Mumbai 400021",
+        businessCity: "Mumbai",
+        businessState: "Maharashtra",
+        businessPincode: "400021",
+        businessEmail: businessEmail,
+      },
+      {
+        gstin: `29${pan}1Z5`,
+        businessName: businessName,
+        businessPhone: randomPhone,
+        businessAddress: "45, Brigade Road, MG Road, Bengaluru 560001",
+        businessCity: "Bengaluru",
+        businessState: "Karnataka",
+        businessPincode: "560001",
+        businessEmail: businessEmail,
+      }
     ];
-    const cities = ["Delhi", "Mumbai", "Bengaluru", "Ahmedabad"];
-    const states = ["Delhi", "Maharashtra", "Karnataka", "Gujarat"];
-    const pincodes = ["110006", "400021", "560001", "380009"];
 
-    const idx = charCodeSum % addresses.length;
-    const generatedAddress = addresses[idx];
-    const generatedCity = cities[idx];
-    const generatedState = states[idx];
-    const generatedPincode = pincodes[idx];
-
-    setFormData(prev => ({
-      ...prev,
-      gstin: generatedGstin,
-      businessName: businessName,
-      businessPhone: randomPhone,
-      businessAddress: generatedAddress,
-      businessCity: generatedCity,
-      businessState: generatedState,
-      businessPincode: generatedPincode,
-      businessEmail: `contact@${businessName.toLowerCase().replace(/[^a-z0-9]/g, "")}.com`
-    }));
-
+    setGstinOptions(options);
+    setSelectedGstinIdx(0);
     setIsFetchingGST(false);
     setIsCertOpen(true);
+  };
+
+  const handleApproveProfile = () => {
+    const selectedOpt = gstinOptions[selectedGstinIdx];
+    if (selectedOpt) {
+      setFormData(prev => ({
+        ...prev,
+        gstin: selectedOpt.gstin,
+        businessName: selectedOpt.businessName,
+        businessPhone: selectedOpt.businessPhone,
+        businessAddress: selectedOpt.businessAddress,
+        businessCity: selectedOpt.businessCity,
+        businessState: selectedOpt.businessState,
+        businessPincode: selectedOpt.businessPincode,
+        businessEmail: selectedOpt.businessEmail
+      }));
+    }
+    setIsCertOpen(false);
+  };
+
+  const handleRejectProfile = () => {
+    setFormData(prev => ({
+      ...prev,
+      gstin: "",
+      businessName: "",
+      businessAddress: "",
+      businessCity: "",
+      businessState: "",
+      businessPincode: "",
+      businessPhone: "",
+      businessEmail: ""
+    }));
+    setIsCertOpen(false);
   };
 
   const businessTypes = [
@@ -827,44 +866,106 @@ export default function OnboardingPage() {
             </DialogDescription>
           </DialogHeader>
 
+          {/* GSTIN Selector Cards */}
+          {gstinOptions && gstinOptions.length > 0 && (
+            <div className="px-1 pt-3 space-y-2">
+              <span className="text-[9px] uppercase font-black tracking-wider text-muted-foreground block">
+                Found {gstinOptions.length} Active GST Registrations under PAN {formData.pan}:
+              </span>
+              <div className="grid grid-cols-3 gap-2">
+                {gstinOptions.map((opt, idx) => {
+                  const isSelected = selectedGstinIdx === idx;
+                  return (
+                    <button
+                      key={opt.gstin}
+                      type="button"
+                      onClick={() => setSelectedGstinIdx(idx)}
+                      className={`p-2.5 rounded-xl border text-left transition-all relative overflow-hidden focus:outline-none ${
+                        isSelected
+                          ? "border-accent bg-accent/10 shadow-sm scale-[1.02]"
+                          : "border-border/60 hover:border-border hover:bg-muted/30"
+                      }`}
+                    >
+                      <div className="flex justify-between items-center mb-1">
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${isSelected ? "text-accent" : "text-muted-foreground"}`}>
+                          {opt.businessState}
+                        </span>
+                        {isSelected && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                        )}
+                      </div>
+                      <div className="font-mono text-[9px] font-bold text-foreground/90 truncate">
+                        {opt.gstin}
+                      </div>
+                      <div className="text-[8px] text-muted-foreground truncate">
+                        {opt.businessCity}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Certificate Body */}
-          <div className="space-y-4 py-4 text-[11px] font-semibold text-foreground/80 leading-relaxed">
-            <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-3 flex justify-between items-center text-[10px] text-emerald-800 dark:text-emerald-300">
-              <span className="font-bold flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping shrink-0"></span> Active Verification: ACTIVE</span>
-              <span className="font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/15 font-black uppercase tracking-wide">GSTIN: {formData.gstin}</span>
+          {gstinOptions && gstinOptions[selectedGstinIdx] && (
+            <div className="space-y-4 py-4 text-[11px] font-semibold text-foreground/80 leading-relaxed">
+              <div className="border border-emerald-500/20 bg-emerald-500/5 rounded-xl p-3 flex justify-between items-center text-[10px] text-emerald-800 dark:text-emerald-300">
+                <span className="font-bold flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-ping shrink-0"></span>
+                  Active Verification: ACTIVE
+                </span>
+                <span className="font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/15 font-black uppercase tracking-wide">
+                  GSTIN: {gstinOptions[selectedGstinIdx].gstin}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 border border-border/50 bg-muted/15 p-4 rounded-xl font-mono text-[10px]">
+                <div>
+                  <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Registration Number</span>
+                  <span className="font-bold text-foreground">{gstinOptions[selectedGstinIdx].gstin}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Legal Business Name</span>
+                  <span className="font-bold text-foreground">{gstinOptions[selectedGstinIdx].businessName}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Principal Place of Business</span>
+                  <span className="font-bold text-foreground">{gstinOptions[selectedGstinIdx].businessAddress}</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Date of Liability</span>
+                  <span className="font-bold text-foreground">01/04/2026</span>
+                </div>
+                <div>
+                  <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Jurisdiction Office</span>
+                  <span className="font-bold text-foreground font-sans">
+                    Ward 27, State GST, {gstinOptions[selectedGstinIdx].businessState}
+                  </span>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-muted-foreground leading-normal italic px-2">
+                Note: This is a verified simulated company profile constructed dynamically from active PAN registries. Legal parameters represent real-time statutory classifications.
+              </p>
             </div>
+          )}
 
-            <div className="grid grid-cols-2 gap-4 border border-border/50 bg-muted/15 p-4 rounded-xl font-mono text-[10px]">
-              <div>
-                <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Registration Number</span>
-                <span className="font-bold text-foreground">{formData.gstin}</span>
-              </div>
-              <div>
-                <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Legal Business Name</span>
-                <span className="font-bold text-foreground">{formData.businessName}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Principal Place of Business</span>
-                <span className="font-bold text-foreground">{formData.businessAddress}</span>
-              </div>
-              <div>
-                <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Date of Liability</span>
-                <span className="font-bold text-foreground">01/04/2026</span>
-              </div>
-              <div>
-                <span className="text-[8px] font-black text-muted-foreground uppercase block mb-0.5">Jurisdiction Office</span>
-                <span className="font-bold text-foreground font-sans">Ward 27, State GST, {formData.businessState}</span>
-              </div>
-            </div>
-
-            <p className="text-[10px] text-muted-foreground leading-normal italic px-2">
-              Note: This is a verified simulated company profile constructed dynamically from active PAN registries. Legal parameters represent real-time statutory classifications.
-            </p>
-          </div>
-
-          <DialogFooter className="border-t border-border/40 pt-4 flex justify-end">
-            <Button onClick={() => setIsCertOpen(false)} className="rounded-xl h-9 px-5 text-xs font-bold shadow-lg cursor-pointer">
-              Confirm Profile &amp; Close
+          <DialogFooter className="border-t border-border/40 pt-4 flex gap-2 justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleRejectProfile}
+              className="rounded-xl h-9 px-5 text-xs font-bold border-border/80 text-foreground hover:bg-muted cursor-pointer"
+            >
+              Reject &amp; Enter Manually
+            </Button>
+            <Button
+              type="button"
+              onClick={handleApproveProfile}
+              className="rounded-xl h-9 px-5 text-xs font-bold shadow-lg bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer"
+            >
+              Approve &amp; Apply Profile
             </Button>
           </DialogFooter>
         </DialogContent>

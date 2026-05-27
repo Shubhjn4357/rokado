@@ -62,6 +62,14 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
   const router = useRouter();
   const [isDetailed, setIsDetailed] = useState(true);
   const [showConfig, setShowConfig] = useState(false);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  const handleExport = () => {
+    toast({
+      title: "Export Completed",
+      description: "Ledger Vouchers printed to Excel sheet.",
+    });
+  };
   
   // Edit & Delete state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -132,6 +140,77 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
     }
   };
 
+  // Keyboard Event Shortcuts Hook
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInputFocused =
+        activeEl?.tagName === "INPUT" ||
+        activeEl?.tagName === "TEXTAREA" ||
+        activeEl?.tagName === "SELECT" ||
+        activeEl?.getAttribute("contenteditable") === "true";
+
+      // Function keys work regardless of input focus (like standard Tally)
+      if (e.key === "F1") {
+        e.preventDefault();
+        setIsDetailed((prev) => !prev);
+      } else if (e.key === "F2") {
+        e.preventDefault();
+        const today = new Date().toISOString().split("T")[0];
+        setDateFrom("2026-04-01");
+        setDateTo(today);
+        toast({
+          title: "Period Reset",
+          description: "Period set to current Financial Year (01-Apr-2026 to Present).",
+        });
+      } else if (e.key === "F12") {
+        e.preventDefault();
+        setShowConfig((prev) => !prev);
+      }
+
+      // Letter/alt shortcuts only work when not typing in inputs
+      if (!isInputFocused) {
+        if (e.key === "q" || e.key === "Q") {
+          e.preventDefault();
+          router.push("/ledgers");
+        }
+        if (e.key === "f" || e.key === "F") {
+          e.preventDefault();
+          setIsDetailed((prev) => !prev);
+        }
+        if (e.key === "o" || e.key === "O") {
+          e.preventDefault();
+          setShowConfig((prev) => !prev);
+        }
+        if (e.key === "c" || e.key === "C") {
+          e.preventDefault();
+          setIsEditDialogOpen(true);
+        }
+        if (e.key === "d" || e.key === "D") {
+          e.preventDefault();
+          handleDelete();
+        }
+        if ((e.key === "e" || e.key === "E") && e.altKey) {
+          e.preventDefault();
+          handleExport();
+        } else if (e.key === "e" || e.key === "E") {
+          e.preventDefault();
+          handleExport();
+        }
+        if ((e.key === "p" || e.key === "P") && e.altKey) {
+          e.preventDefault();
+          window.print();
+        } else if (e.key === "p" || e.key === "P") {
+          e.preventDefault();
+          window.print();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isDetailed, ledger, router]);
+
   // Date filtering state
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -196,28 +275,38 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
       {/* LEFT REPORTING PANEL */}
       <div className="flex-1 flex flex-col min-w-0">
         
-        {/* Tally App Style Top Utility bar */}
-        <div className="h-10 bg-primary/95 text-primary-foreground/90 flex items-center justify-between px-4 text-xs font-bold border-b border-border">
-          <div className="flex items-center gap-4">
-            <span className="text-accent-yellow">P: Print</span>
-            <span>E: Export</span>
-            <span>M: E-Mail</span>
-            <span>O: Upload</span>
-            <span>G: Language</span>
-            <span>K: Keyboard</span>
+        {/* Modern premium Shortcut Bar */}
+        <div className="hidden md:flex h-11 bg-muted/40 backdrop-blur-md text-foreground/80 items-center justify-between px-6 text-xs font-bold border-b border-border select-none">
+          <div className="flex items-center gap-5">
+            <button onClick={() => window.print()} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
+              <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">P</kbd> Print
+            </button>
+            <button onClick={handleExport} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
+              <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px] text-muted-foreground">E</kbd> Export
+            </button>
+            <button onClick={() => toast({ title: "Email Sent", description: "Ledger has been emailed." })} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
+              <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px] text-muted-foreground">M</kbd> E-Mail
+            </button>
+            <button onClick={() => setIsDetailed(prev => !prev)} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
+              <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px] text-muted-foreground">F1</kbd> {isDetailed ? "Condensed" : "Detailed"}
+            </button>
+            <button onClick={() => setShowConfig(prev => !prev)} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
+              <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px] text-muted-foreground">F12</kbd> Configure
+            </button>
           </div>
           <div className="flex items-center gap-3">
-            <span className="text-accent-yellow">  House</span>
-            <span className="text-[10px] bg-accent-indigo text-white px-2 py-0.5 rounded">Tally Prime v4.0</span>
+            <span className="text-[10px] bg-accent/15 text-accent border border-accent/20 px-2.5 py-0.5 rounded-full font-sans tracking-wide">
+              Tally Prime Integration
+            </span>
           </div>
         </div>
 
-        {/* Tally Vouchers Light Green Accent Banner */}
-        <div className="bg-card/60 backdrop-blur-md border-b border-border/80 px-6 py-3.5 flex items-center justify-between gap-4 shrink-0 text-sm font-bold">
+        {/* Tally Vouchers Light Indigo Accent Banner */}
+        <div className="bg-card/65 backdrop-blur-md border-b border-border/80 px-6 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shrink-0 text-sm font-bold">
           <div>
             <div className="text-[10px] text-muted-foreground tracking-wider uppercase">Ledger Account Display</div>
-            <h1 className="text-lg font-extrabold uppercase mt-0.5 tracking-tight flex items-center gap-3">
-              Ledger: <span className="underline decoration-2 underline-offset-4">{ledger.name}</span>
+            <h1 className="text-lg font-extrabold uppercase mt-0.5 tracking-tight flex flex-wrap items-center gap-3">
+              Ledger: <span className="underline decoration-accent decoration-2 underline-offset-4">{ledger.name}</span>
               <div className="flex items-center gap-1.5 ml-2 normal-case shrink-0">
                 <Button
                   onClick={() => setIsEditDialogOpen(true)}
@@ -237,44 +326,55 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
             </h1>
           </div>
 
-          <div className="flex items-center gap-6 text-xs">
-            <div className="text-right">
-              <span className="text-[9px] text-muted-foreground uppercase block">Ledger Group</span>
-              <span>{LEDGER_GROUP_LABELS[ledger.group as LedgerGroup] ?? ledger.group}</span>
+          <div className="flex flex-wrap items-center gap-4 sm:gap-6 text-xs max-sm:w-full">
+            <div className="text-left sm:text-right">
+              <span className="text-[9px] text-muted-foreground uppercase block leading-none mb-1">Ledger Group</span>
+              <Badge variant="outline" className="text-[10px] font-bold border-accent/25 bg-accent/5 text-accent rounded-md py-0.5">
+                {LEDGER_GROUP_LABELS[ledger.group as LedgerGroup] ?? ledger.group}
+              </Badge>
             </div>
             {ledger.gstNumber && (
-              <div className="text-right border-l pl-6 border-border/60">
-                <span className="text-[9px] text-muted-foreground uppercase block">GSTIN</span>
-                <span className="font-mono text-[11px]">{ledger.gstNumber}</span>
+              <div className="text-left sm:text-right border-l pl-4 sm:pl-6 border-border/60">
+                <span className="text-[9px] text-muted-foreground uppercase block mb-1">GSTIN</span>
+                <span className="font-mono text-[11px] bg-muted px-2 py-0.5 rounded border border-border">{ledger.gstNumber}</span>
               </div>
             )}
-            <div className="text-right border-l pl-6 border-border/60 font-mono">
-              <span className="text-[9px] text-muted-foreground uppercase block">Report Period</span>
-              <span className="bg-muted px-2 py-0.5 rounded border border-border text-foreground/80">
-                {dateFrom ? formatDate(new Date(dateFrom).getTime()) : "Beginning"} to {dateTo ? formatDate(new Date(dateTo).getTime()) : "Present"}
+            <div className="text-left sm:text-right border-l pl-4 sm:pl-6 border-border/60 font-mono">
+              <span className="text-[9px] text-muted-foreground uppercase block mb-1">Report Period</span>
+              <span className="bg-muted px-2 py-0.5 rounded border border-border text-foreground/80 text-[10px]">
+                {dateFrom ? formatDate(new Date(dateFrom).getTime()) : "Start"} - {dateTo ? formatDate(new Date(dateTo).getTime()) : "End"}
               </span>
             </div>
+
+            {/* Mobile Drawer Trigger */}
+            <Button
+              type="button"
+              onClick={() => setIsDrawerOpen(true)}
+              className="lg:hidden h-8 px-3 rounded-lg text-xs font-bold bg-accent text-accent-foreground hover:bg-accent/90 cursor-pointer flex items-center gap-1.5 transition-all max-sm:w-full max-sm:justify-center"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" /> Shortcuts
+            </Button>
           </div>
         </div>
 
         {/* Dynamic Period Date filter inputs */}
-        <div className="bg-background/10 backdrop-blur-md border-b border-border/40 px-6 py-2 flex items-center gap-4 shrink-0 text-xs font-semibold">
-          <div className="flex items-center gap-2">
-            <span>Period From:</span>
+        <div className="bg-background/10 backdrop-blur-md border-b border-border/40 px-6 py-2.5 flex flex-wrap items-center gap-4 shrink-0 text-xs font-semibold max-sm:flex-col max-sm:items-start max-sm:w-full">
+          <div className="flex items-center gap-2 max-sm:w-full">
+            <span className="shrink-0">Period From:</span>
             <Input
               type="date"
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
-              className="h-7 w-32 border-input bg-background/50 text-foreground rounded px-1.5 focus:bg-background text-xs font-mono"
+              className="h-7 w-32 max-sm:w-full border-input bg-background/50 text-foreground rounded px-1.5 focus:bg-background text-xs font-mono"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <span>To:</span>
+          <div className="flex items-center gap-2 max-sm:w-full">
+            <span className="shrink-0">To:</span>
             <Input
               type="date"
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
-              className="h-7 w-32 border-input bg-background/50 text-foreground rounded px-1.5 focus:bg-background text-xs font-mono"
+              className="h-7 w-32 max-sm:w-full border-input bg-background/50 text-foreground rounded px-1.5 focus:bg-background text-xs font-mono"
             />
           </div>
           {(dateFrom || dateTo) && (
@@ -286,7 +386,7 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
                 setDateFrom("");
                 setDateTo("");
               }}
-              className="h-6 rounded text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 text-[10px] font-bold"
+              className="h-6 rounded text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 text-[10px] font-bold max-sm:w-full"
             >
               Clear Filter
             </Button>
@@ -480,16 +580,16 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
       </div>
 
       {/* RIGHT MENU BAR (TALLY ERP SIDEBAR ACTION MENU) */}
-      <div className="w-[180px] bg-primary/95 text-primary-foreground flex flex-col border-l border-border shrink-0 font-sans p-1.5 select-none space-y-1">
+      <div className="hidden lg:flex w-[180px] bg-card flex-col border-l border-border shrink-0 font-sans p-2 select-none space-y-1.5 shadow-[var(--shadow-card)]">
         <div className="text-[10px] text-muted-foreground uppercase tracking-widest font-black text-center py-2 border-b border-border/40 select-none">
-          Tally Side Bar
+          Action Sidebar
         </div>
 
         <button
           onClick={() => setIsDetailed(prev => !prev)}
-          className="w-full text-left bg-secondary/50 hover:bg-secondary/70 border border-border/40 rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer"
+          className="w-full text-left bg-muted/65 hover:bg-muted/90 hover:border-accent/40 border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer group"
         >
-          <span className="text-accent-yellow block font-mono text-[9px] uppercase tracking-wider mb-0.5">F1: Format</span>
+          <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">F1: Format</span>
           <span>{isDetailed ? "Condensed" : "Detailed Mode"}</span>
         </button>
 
@@ -499,43 +599,157 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
             setDateFrom("2026-04-01");
             setDateTo(today);
           }}
-          className="w-full text-left bg-secondary/50 hover:bg-secondary/70 border border-border/40 rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer"
+          className="w-full text-left bg-muted/65 hover:bg-muted/90 hover:border-accent/40 border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer group"
         >
-          <span className="text-accent-yellow block font-mono text-[9px] uppercase tracking-wider mb-0.5">F2: Period</span>
+          <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">F2: Period</span>
           <span>Financial Year</span>
         </button>
 
         <button
           onClick={() => setShowConfig(prev => !prev)}
-          className="w-full text-left bg-secondary/50 hover:bg-secondary/70 border border-border/40 rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer"
+          className="w-full text-left bg-muted/65 hover:bg-muted/90 hover:border-accent/40 border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer group"
         >
-          <span className="text-accent-yellow block font-mono text-[9px] uppercase tracking-wider mb-0.5">F12: Configure</span>
+          <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">F12: Configure</span>
           <span>{showConfig ? "Hide Config" : "Show Config"}</span>
         </button>
 
         <button
-          onClick={() => {
-            toast({
-              title: "Export Completed",
-              description: "Ledger Vouchers printed to Excel sheet.",
-            });
-          }}
-          className="w-full text-left bg-secondary/50 hover:bg-secondary/70 border border-border/40 rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer"
+          onClick={handleExport}
+          className="w-full text-left bg-muted/65 hover:bg-muted/90 hover:border-accent/40 border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer group"
         >
-          <span className="text-accent-yellow block font-mono text-[9px] uppercase tracking-wider mb-0.5">Alt+E: Excel</span>
+          <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">Alt+E: Excel</span>
           <span>Export Ledger</span>
+        </button>
+
+        <button
+          onClick={() => setIsEditDialogOpen(true)}
+          className="w-full text-left bg-muted/65 hover:bg-muted/90 hover:border-accent/40 border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer group"
+        >
+          <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">C: Edit</span>
+          <span>Edit Account</span>
+        </button>
+
+        <button
+          onClick={handleDelete}
+          className="w-full text-left bg-rose-500/10 hover:bg-rose-500/15 hover:border-rose-500/40 border border-rose-500/25 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm text-rose-600 cursor-pointer group"
+        >
+          <span className="text-rose-500 block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">D: Delete</span>
+          <span>Delete Account</span>
         </button>
 
         <div className="flex-1"></div>
 
         <button
           onClick={() => router.push("/ledgers")}
-          className="w-full text-left bg-destructive hover:bg-destructive/80 border border-destructive/20 rounded-lg px-2.5 py-2.5 transition-all text-xs font-bold shadow-sm mt-auto text-destructive-foreground cursor-pointer"
+          className="w-full text-left bg-destructive/10 hover:bg-destructive/20 border border-destructive/20 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm mt-auto text-destructive cursor-pointer group"
         >
-          <span className="text-accent-yellow block font-mono text-[9px] uppercase tracking-wider mb-0.5">Q: Quit</span>
+          <span className="text-destructive block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">Q: Quit</span>
           <span>Gateway exit</span>
         </button>
       </div>
+
+      {/* MOBILE DRAWER SIDEBAR */}
+      {isDrawerOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsDrawerOpen(false)}
+            className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-50 lg:hidden cursor-pointer animate-in fade-in duration-200"
+          />
+          {/* Drawer Panel */}
+          <div className="fixed inset-y-0 right-0 w-[240px] bg-card border-l border-border shadow-2xl p-4 flex flex-col font-sans select-none space-y-2 z-50 lg:hidden animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3 mb-2">
+              <span className="text-xs uppercase font-black tracking-widest text-muted-foreground">
+                Action Menu
+              </span>
+              <button
+                onClick={() => setIsDrawerOpen(false)}
+                className="text-xs font-bold text-muted-foreground hover:text-foreground cursor-pointer px-2.5 py-1 rounded-lg hover:bg-muted"
+              >
+                ✕ Close
+              </button>
+            </div>
+            
+            <div className="space-y-2.5 flex-1">
+              <button
+                onClick={() => {
+                  setIsDetailed(prev => !prev);
+                  setIsDrawerOpen(false);
+                }}
+                className="w-full text-left bg-muted/80 hover:bg-muted border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold text-foreground cursor-pointer"
+              >
+                <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5">F1: Format</span>
+                <span>{isDetailed ? "Condensed" : "Detailed Mode"}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const today = new Date().toISOString().split("T")[0];
+                  setDateFrom("2026-04-01");
+                  setDateTo(today);
+                  setIsDrawerOpen(false);
+                }}
+                className="w-full text-left bg-muted/80 hover:bg-muted border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold text-foreground cursor-pointer"
+              >
+                <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5">F2: Period</span>
+                <span>Financial Year</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setShowConfig(prev => !prev);
+                  setIsDrawerOpen(false);
+                }}
+                className="w-full text-left bg-muted/80 hover:bg-muted border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold text-foreground cursor-pointer"
+              >
+                <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5">F12: Configure</span>
+                <span>{showConfig ? "Hide Config" : "Show Config"}</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleExport();
+                  setIsDrawerOpen(false);
+                }}
+                className="w-full text-left bg-muted/80 hover:bg-muted border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold text-foreground cursor-pointer"
+              >
+                <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5">Alt+E: Excel</span>
+                <span>Export Ledger</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setIsEditDialogOpen(true);
+                  setIsDrawerOpen(false);
+                }}
+                className="w-full text-left bg-muted/80 hover:bg-muted border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold text-foreground cursor-pointer"
+              >
+                <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5">C: Edit</span>
+                <span>Edit Account</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  handleDelete();
+                  setIsDrawerOpen(false);
+                }}
+                className="w-full text-left bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 text-rose-600 rounded-xl px-3 py-2.5 transition-all text-xs font-bold cursor-pointer"
+              >
+                <span className="text-rose-500 block font-mono text-[9px] uppercase tracking-wider mb-0.5">D: Delete</span>
+                <span>Delete Account</span>
+              </button>
+            </div>
+
+            <button
+              onClick={() => router.push("/ledgers")}
+              className="w-full text-left bg-destructive hover:bg-destructive/90 border border-destructive/20 rounded-xl px-3 py-2.5 transition-all text-xs font-bold text-white cursor-pointer mt-auto"
+            >
+              <span className="text-accent-yellow block font-mono text-[9px] uppercase tracking-wider mb-0.5">Q: Quit</span>
+              <span>Gateway exit</span>
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Edit Ledger Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

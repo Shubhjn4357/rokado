@@ -27,6 +27,11 @@ export async function savePosBill(input: PosSaveInput): Promise<{ success: true;
     if (!input.items || input.items.length === 0) {
       return { success: false, error: "Cart is empty" };
     }
+    for (const item of input.items) {
+      if (item.quantity <= 0) {
+        return { success: false, error: "All items must have a quantity of at least 1." };
+      }
+    }
 
     const session = await getSession();
     if (!session || !session.companyId) {

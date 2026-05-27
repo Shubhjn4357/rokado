@@ -391,6 +391,14 @@ export function POSBillingClient({ initialInventory }: { initialInventory: Inven
       });
       return;
     }
+    if (cart.some(item => item.cartQuantity <= 0)) {
+      toast({
+        title: "Invalid Quantity",
+        description: "All items in the cart must have a quantity of at least 1.",
+        variant: "destructive",
+      });
+      return;
+    }
     if (!customerLedgerId && !walkInCustomerName) {
       toast({
         title: "Customer Required",
@@ -571,7 +579,19 @@ export function POSBillingClient({ initialInventory }: { initialInventory: Inven
             
             {/* Customer Selection */}
             <div className="p-4 border border-border/50 rounded-2xl bg-muted/15 space-y-3">
-              <div className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Party/Customer Selection</div>
+              <div className="flex items-center justify-between">
+                <div className="text-[10px] font-black text-muted-foreground uppercase tracking-wider">Party/Customer Selection</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWalkInCustomerName("Walk-in Customer");
+                    setCustomerLedgerId(null);
+                  }}
+                  className="text-[9px] font-black uppercase bg-primary/10 text-primary hover:bg-primary/20 px-2 py-0.5 rounded transition-colors cursor-pointer border-none"
+                >
+                  ⚡ Walk-in Customer
+                </button>
+              </div>
               <div className="space-y-3">
                 <POSCustomerAutocomplete
                   value={customerLedgerId}
@@ -811,7 +831,19 @@ export function POSBillingClient({ initialInventory }: { initialInventory: Inven
           <div className="flex-1 overflow-y-auto p-4 space-y-4 text-xs select-none">
             {/* Customer details */}
             <div className="p-4 border border-border rounded-xl bg-muted/15 space-y-3">
-              <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Party / Customer</div>
+              <div className="flex items-center justify-between">
+                <div className="text-[9px] font-black text-muted-foreground uppercase tracking-widest">Party / Customer</div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWalkInCustomerName("Walk-in Customer");
+                    setCustomerLedgerId(null);
+                  }}
+                  className="text-[9px] font-black uppercase bg-primary/10 text-primary hover:bg-primary/20 px-2 py-0.5 rounded transition-colors cursor-pointer border-none"
+                >
+                  ⚡ Walk-in Customer
+                </button>
+              </div>
               <POSCustomerAutocomplete
                 value={customerLedgerId}
                 onChange={(val) => {

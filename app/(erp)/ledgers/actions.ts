@@ -66,6 +66,8 @@ export async function getLedgersOptions() {
       id: ledgers.id,
       name: ledgers.name,
       group: ledgers.group as any,
+      address: ledgers.address,
+      gstNumber: ledgers.gstNumber,
     })
     .from(ledgers)
     .where(eq(ledgers.isActive as any, true))
