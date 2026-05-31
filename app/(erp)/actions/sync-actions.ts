@@ -112,6 +112,12 @@ export async function processSyncQueueAction(): Promise<{
           .set({ status: "completed", processedAt: Date.now() })
           .where(eq(syncQueue.id, record.id));
         processed++;
+      } else if (res.status === 409) {
+        await db
+          .update(syncQueue)
+          .set({ status: "conflict" })
+          .where(eq(syncQueue.id, record.id));
+        failed++;
       } else {
         // Increment retries, mark dead after 3
         const newRetries = (record.retries ?? 0) + 1;
@@ -144,3 +150,49 @@ export async function processSyncQueueAction(): Promise<{
 
   return { processed, failed, remaining: remaining.length };
 }
+
+/**
+ * Fetch all sync conflicts logged in SQLite.
+ */
+export async function getSyncConflictsAction(): Promise<any[]> {
+  try {
+    const rows = await db
+      .select()
+      .from(syncQueue)
+      .where(eq(syncQueue.status, "conflict"));
+    return rows;
+  } catch (err) {
+    console.error("[Sync] Failed to fetch conflicts:", err);
+    return [];
+  }
+}
+
+/**
+ * Resolve a sync conflict.
+ * - local: force retry by setting status back to 'pending'
+ * - server: accept cloud state by marking as 'completed'
+ */
+export async function resolveConflictAction(
+  id: string,
+  resolution: "local" | "server"
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const newStatus = resolution === "local" ? "pending" : "completed";
+    await db
+      .update(syncQueue)
+      .set({
+        status: newStatus,
+        retries: 0,
+        processedAt: resolution === "server" ? Date.now() : null
+      })
+      .where(eq(syncQueue.id, id));
+    return { success: true };
+  } catch (err) {
+    console.error("[Sync] Failed to resolve conflict:", err);
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to resolve conflict"
+    };
+  }
+}
+

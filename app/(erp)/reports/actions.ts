@@ -260,45 +260,148 @@ export async function getGSTReportData(dateFrom?: string | null, dateTo?: string
     const fromDate = dateFrom ? new Date(dateFrom).getTime() : undefined;
     const toDate = dateTo ? new Date(dateTo).getTime() : undefined;
 
-    const [outputGSTResult, inputGSTResult, journalGSTResult] = await Promise.all([
-      db
-        .select({ total: sum(vouchers.gstTotal) })
-        .from(vouchers)
-        .where(
-          and(
-            eq(vouchers.companyId as any, companyId),
-            eq(vouchers.type, "sales"),
-            fromDate ? gte(vouchers.date, fromDate) : undefined,
-            toDate ? lte(vouchers.date, toDate) : undefined
-          )
-        ),
-      db
-        .select({ total: sum(vouchers.gstTotal) })
-        .from(vouchers)
-        .where(
-          and(
-            eq(vouchers.companyId as any, companyId),
-            eq(vouchers.type, "purchase"),
-            fromDate ? gte(vouchers.date, fromDate) : undefined,
-            toDate ? lte(vouchers.date, toDate) : undefined
-          )
-        ),
-      db
-        .select({ total: sum(vouchers.gstTotal) })
-        .from(vouchers)
-        .where(
-          and(
-            eq(vouchers.companyId as any, companyId),
-            eq(vouchers.type as any, "journal"),
-            fromDate ? gte(vouchers.date, fromDate) : undefined,
-            toDate ? lte(vouchers.date, toDate) : undefined
-          )
+    // 1. Fetch sales vouchers to compute GSTR-1 outward supplies
+    const salesVouchers = await db
+      .select({
+        id: vouchers.id,
+        number: vouchers.number,
+        date: vouchers.date,
+        gstTotal: vouchers.gstTotal,
+        totalAmount: vouchers.totalAmount,
+        grandTotal: vouchers.grandTotal,
+        partyName: ledgers.name,
+        partyGst: ledgers.gstNumber,
+      })
+      .from(vouchers)
+      .leftJoin(ledgers, eq(vouchers.partyLedgerId, ledgers.id))
+      .where(
+        and(
+          eq(vouchers.companyId as any, companyId),
+          eq(vouchers.type, "sales"),
+          eq(vouchers.status, "posted"),
+          fromDate ? gte(vouchers.date, fromDate) : undefined,
+          toDate ? lte(vouchers.date, toDate) : undefined
         )
-    ]);
+      );
 
-    const outputGST = Number(outputGSTResult[0]?.total ?? 0);
-    const inputGST = Number(inputGSTResult[0]?.total ?? 0);
-    const journalGST = Number(journalGSTResult[0]?.total ?? 0);
+    // 2. Fetch purchase vouchers to compute GSTR-3B ITC credit
+    const purchaseVouchers = await db
+      .select({
+        id: vouchers.id,
+        number: vouchers.number,
+        date: vouchers.date,
+        gstTotal: vouchers.gstTotal,
+        totalAmount: vouchers.totalAmount,
+        grandTotal: vouchers.grandTotal,
+        partyName: ledgers.name,
+        partyGst: ledgers.gstNumber,
+      })
+      .from(vouchers)
+      .leftJoin(ledgers, eq(vouchers.partyLedgerId, ledgers.id))
+      .where(
+        and(
+          eq(vouchers.companyId as any, companyId),
+          eq(vouchers.type, "purchase"),
+          eq(vouchers.status, "posted"),
+          fromDate ? gte(vouchers.date, fromDate) : undefined,
+          toDate ? lte(vouchers.date, toDate) : undefined
+        )
+      );
+
+    // 3. Compile B2B vs B2C Outward Supplies (GSTR-1)
+    let b2bSalesTaxable = 0;
+    let b2bSalesTax = 0;
+    let b2bSalesCount = 0;
+    let b2cSalesTaxable = 0;
+    let b2cSalesTax = 0;
+    let b2cSalesCount = 0;
+
+    salesVouchers.forEach(v => {
+      const tax = Number(v.gstTotal || 0);
+      const taxable = Number(v.totalAmount || 0) - tax;
+      if (v.partyGst && v.partyGst.trim().length >= 10) {
+        b2bSalesTax += tax;
+        b2bSalesTaxable += taxable;
+        b2bSalesCount++;
+      } else {
+        b2cSalesTax += tax;
+        b2cSalesTaxable += taxable;
+        b2cSalesCount++;
+      }
+    });
+
+    // 4. Fetch all journal GST entries
+    const [journalGSTResult] = await db
+      .select({ total: sum(vouchers.gstTotal) })
+      .from(vouchers)
+      .where(
+        and(
+          eq(vouchers.companyId as any, companyId),
+          eq(vouchers.type as any, "journal"),
+          fromDate ? gte(vouchers.date, fromDate) : undefined,
+          toDate ? lte(vouchers.date, toDate) : undefined
+        )
+      );
+    const journalGST = Number(journalGSTResult?.total ?? 0);
+
+    // 5. Build Slab-wise splits (5%, 12%, 18%, 28%) from sales entries joined with items
+    const salesVoucherIds = salesVouchers.map(v => v.id);
+    const slabBreakdown: Record<number, { taxable: number; tax: number; count: number }> = {
+      5: { taxable: 0, tax: 0, count: 0 },
+      12: { taxable: 0, tax: 0, count: 0 },
+      18: { taxable: 0, tax: 0, count: 0 },
+      28: { taxable: 0, tax: 0, count: 0 },
+    };
+
+    if (salesVoucherIds.length > 0) {
+      const salesLineItems = await db
+        .select({
+          amount: voucherEntries.amount,
+          quantity: voucherEntries.quantity,
+          rate: voucherEntries.rate,
+          gstPercent: inventoryItems.gstPercent,
+        })
+        .from(voucherEntries)
+        .innerJoin(inventoryItems, eq(voucherEntries.inventoryItemId, inventoryItems.id))
+        .where(sql`${voucherEntries.voucherId} IN (${sql.raw(salesVoucherIds.map(id => `'${id}'`).join(","))})`);
+
+      salesLineItems.forEach(item => {
+        const rate = Number(item.gstPercent || 0);
+        const amt = Number(item.amount || 0);
+        const tax = (amt * rate) / 100;
+        
+        if (slabBreakdown[rate] !== undefined) {
+          slabBreakdown[rate].taxable += amt;
+          slabBreakdown[rate].tax += tax;
+          slabBreakdown[rate].count++;
+        } else {
+          slabBreakdown[rate] = { taxable: amt, tax: tax, count: 1 };
+        }
+      });
+    }
+
+    // 6. Compute ITC details from purchases
+    let totalITC = 0;
+    let b2bITCTaxable = 0;
+    let b2bITCTax = 0;
+    let otherITCTaxable = 0;
+    let otherITCTax = 0;
+
+    purchaseVouchers.forEach(v => {
+      const tax = Number(v.gstTotal || 0);
+      const taxable = Number(v.totalAmount || 0) - tax;
+      totalITC += tax;
+      if (v.partyGst && v.partyGst.trim().length >= 10) {
+        b2bITCTax += tax;
+        b2bITCTaxable += taxable;
+      } else {
+        otherITCTax += tax;
+        otherITCTaxable += taxable;
+      }
+    });
+
+    const outputGST = b2bSalesTax + b2cSalesTax;
+    const inputGST = totalITC;
     const netGST = outputGST - inputGST + journalGST;
 
     return {
@@ -306,10 +409,27 @@ export async function getGSTReportData(dateFrom?: string | null, dateTo?: string
       inputGST,
       journalGST,
       netGST,
+      b2bSales: { taxable: b2bSalesTaxable, tax: b2bSalesTax, count: b2bSalesCount },
+      b2cSales: { taxable: b2cSalesTaxable, tax: b2cSalesTax, count: b2cSalesCount },
+      slabs: slabBreakdown,
+      itc: { total: totalITC, b2b: { taxable: b2bITCTaxable, tax: b2bITCTax }, other: { taxable: otherITCTaxable, tax: otherITCTax } },
+      salesInvoicesCount: salesVouchers.length,
+      purchaseInvoicesCount: purchaseVouchers.length,
     };
   } catch (err) {
     console.error("Failed to fetch GST report data:", err);
-    return { outputGST: 0, inputGST: 0, journalGST: 0, netGST: 0 };
+    return {
+      outputGST: 0,
+      inputGST: 0,
+      journalGST: 0,
+      netGST: 0,
+      b2bSales: { taxable: 0, tax: 0, count: 0 },
+      b2cSales: { taxable: 0, tax: 0, count: 0 },
+      slabs: {},
+      itc: { total: 0, b2b: { taxable: 0, tax: 0 }, other: { taxable: 0, tax: 0 } },
+      salesInvoicesCount: 0,
+      purchaseInvoicesCount: 0,
+    };
   }
 }
 

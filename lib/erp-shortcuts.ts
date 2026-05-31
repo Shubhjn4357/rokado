@@ -19,10 +19,16 @@ export const ERP_NAVIGATION_SHORTCUTS: readonly ERPShortcut[] = [
 ] as const;
 
 export const ERP_ACTION_SHORTCUTS: readonly ERPShortcut[] = [
-  { key: "Alt+C", label: "Create Ledger", description: "Quick ledger setup", route: "/ledgers/new" },
-  { key: "Alt+I", label: "Create Item", description: "Add stock item", route: "/inventory/new" },
-  { key: "Alt+G", label: "Go To / Search", description: "Open command center", eventName: "erp:command-palette" },
-  { key: "Alt+A", label: "Add Row", description: "Append row in active voucher form", eventName: "erp:add-row" },
+  { key: "Alt+C", label: "Create On-The-Fly", description: "Create Ledger/Item from select box", eventName: "erp:create-on-the-fly" },
+  { key: "Ctrl+Enter", label: "Alter On-The-Fly", description: "Alter Ledger/Item from select box", eventName: "erp:alter-on-the-fly" },
+  { key: "Ctrl+H", label: "Change Mode", description: "Toggle Voucher / Invoice mode", eventName: "erp:switch-voucher-mode" },
+  { key: "Ctrl+D", label: "Delete Row", description: "Remove active line item", eventName: "erp:delete-row" },
+  { key: "Ctrl+A", label: "Accept / Save", description: "Save voucher / active form", eventName: "erp:save" },
+  { key: "Ctrl+Q", label: "Quit Screen", description: "Discard changes & exit", eventName: "erp:quit" },
+  { key: "Alt+F1", label: "Detailed View", description: "Toggle nested ledger list", eventName: "erp:detailed-view" },
+  { key: "PgUp", label: "Prev Voucher", description: "Review previous entry", eventName: "erp:prev-voucher" },
+  { key: "PgDn", label: "Next Voucher", description: "Review next entry", eventName: "erp:next-voucher" },
+  { key: "Alt+A", label: "Add Row", description: "Append row in active voucher", eventName: "erp:add-row" },
   { key: "Ctrl+S", label: "Save Form", description: "Submit active form", eventName: "erp:save" },
 ] as const;
 

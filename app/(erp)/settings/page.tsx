@@ -39,6 +39,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { getSettings, saveCompanySettings, saveFinancialSettings, saveTaxSettings, saveNotificationSettings } from "./actions";
+import { backupDatabaseAction, restoreDatabaseAction } from "./backup-actions";
+import { getSyncConflictsAction, resolveConflictAction } from "../actions/sync-actions";
 import { toast } from "@/components/ui/use-toast";
 import {
   Select,
@@ -55,7 +57,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { generateRandomBillAction } from "./seeder-actions";
 import { exportTallyXmlAction, exportGstr1JsonAction } from "./export-actions";
 import { StateEnum, CurrencyEnum, CurrencySymbolEnum } from "@/constant/app.constant";
 
@@ -75,224 +76,6 @@ import {
   getCurrentUserAction,
 } from "@/app/onboarding/setup/actions";
 
-interface SeederVoucher {
-  id?: string;
-  partyName: string;
-  type: "sales" | "purchase";
-  amount: number;
-  subtotal: number;
-  taxAmount: number;
-  itemName: string;
-  quantity: number;
-  date: number;
-}
-
-interface SeedResult {
-  success: true;
-  count: number;
-  totalTargetAmount: number;
-  totalTaxableSubtotal: number;
-  totalTaxAmount: number;
-  vouchers: SeederVoucher[];
-}
-
-function SeederConsole() {
-  const [targetAmount, setTargetAmount] = useState<number>(25000);
-  const [voucherType, setVoucherType] = useState<"sales" | "purchase" | "mixed">("mixed");
-  const [gstPercent, setGstPercent] = useState<number>(18);
-  const [count, setCount] = useState<number>(1);
-  const [isPending, setIsPending] = useState(false);
-  const [seedResult, setSeedResult] = useState<SeedResult | null>(null);
-  const mountedRef = useRef(true);
-
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const triggerSeed = async () => {
-    setIsPending(true);
-    setSeedResult(null);
-    try {
-      const res = await generateRandomBillAction({
-        targetAmount,
-        voucherType,
-        gstPercent,
-        count,
-      });
-
-      if (mountedRef.current) {
-        if (res.success) {
-          setSeedResult(res as SeedResult);
-          toast({
-            title: `${res.count ?? 1} Voucher${(res.count ?? 1) > 1 ? 's' : ''} Seeded!`,
-            description: `Generated ₹${(res.totalTargetAmount ?? 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })} in demo data.`,
-          });
-        } else {
-          toast({
-            title: "Seeding Failed",
-            description: res.error || "Unknown error",
-            variant: "destructive",
-          });
-        }
-      }
-    } catch (err) {
-      if (mountedRef.current) {
-        toast({
-          title: "Error Seeding",
-          description: "Something went wrong during execution.",
-          variant: "destructive",
-        });
-      }
-    } finally {
-      if (mountedRef.current) {
-        setIsPending(false);
-      }
-    }
-  };
-
-  return (
-    <div className="space-y-6 font-sans">
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-3 bg-muted/20 p-5 rounded-2xl border border-border/60">
-        <div>
-          <Label htmlFor="seed-amount" className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
-            Target Invoice Amount (₹)
-          </Label>
-          <Input
-            id="seed-amount"
-            type="number"
-            min="100"
-            max="500000"
-            value={targetAmount}
-            onChange={(e) => setTargetAmount(Math.max(1, parseFloat(e.target.value) || 0))}
-            className="h-10 text-xs font-bold bg-background/55 border-border rounded-lg"
-          />
-          <span className="text-[10px] text-muted-foreground mt-1.5 block">
-            Exact double-entry lines will resolve to this sum.
-          </span>
-        </div>
-
-        <div>
-          <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
-            Transaction Voucher Type
-          </Label>
-          <Select
-            onValueChange={(val: any) => setVoucherType(val)}
-            value={voucherType}
-          >
-            <SelectTrigger className="w-full h-10 bg-background border-border rounded-lg text-xs font-bold">
-              <SelectValue placeholder="Select Type" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="sales" className="text-xs font-semibold">Sales Invoice (F8)</SelectItem>
-              <SelectItem value="purchase" className="text-xs font-semibold">Purchase Voucher (F9)</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div>
-          <Label className="text-xs font-bold text-muted-foreground uppercase tracking-wider block mb-2">
-            GST Duties Rate (%)
-          </Label>
-          <Select
-            onValueChange={(val: any) => setGstPercent(parseInt(val))}
-            value={String(gstPercent)}
-          >
-            <SelectTrigger className="w-full h-10 bg-background border-border rounded-lg text-xs font-bold">
-              <SelectValue placeholder="GST Bracket" />
-            </SelectTrigger>
-            <SelectContent className="rounded-xl">
-              <SelectItem value="0" className="text-xs font-semibold">0% — Exempt / Nil</SelectItem>
-              <SelectItem value="5" className="text-xs font-semibold">5% — Low Rate</SelectItem>
-              <SelectItem value="12" className="text-xs font-semibold">12% — Standard Rate</SelectItem>
-              <SelectItem value="18" className="text-xs font-semibold">18% — Higher Rate</SelectItem>
-              <SelectItem value="28" className="text-xs font-semibold">28% — Premium / Luxury Rate</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex justify-end border-t border-border/30 pt-4">
-        <Button
-          type="button"
-          onClick={triggerSeed}
-          disabled={isPending || targetAmount <= 0}
-          className="rounded-xl h-10 px-6 font-bold text-xs bg-amber-500 hover:bg-amber-600 shadow-md flex items-center gap-2 cursor-pointer text-white border-none"
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Compiling Balanced Ledger Entries...
-            </>
-          ) : (
-            <>
-              <Sparkles className="w-4 h-4 text-white animate-pulse" />
-              One-Click Generate Random Bill
-            </>
-          )}
-        </Button>
-      </div>
-
-      {seedResult && (
-        <Card className="border border-emerald-500/25 bg-emerald-500/5 rounded-2xl overflow-hidden p-5 space-y-4">
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-extrabold text-sm">
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-            <span>Success! {seedResult.count} Voucher{seedResult.count > 1 ? "s" : ""} Seeded into SQLite</span>
-          </div>
-
-          {/* Totals summary */}
-          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 text-xs font-bold font-mono">
-            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
-              <div className="text-muted-foreground text-[10px] uppercase">Total Vouchers</div>
-              <div className="text-primary text-sm font-extrabold">{seedResult.count}</div>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
-              <div className="text-muted-foreground text-[10px] uppercase">Total Target Amount</div>
-              <div className="text-primary text-sm font-extrabold">₹{seedResult.totalTargetAmount.toFixed(2)}</div>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
-              <div className="text-muted-foreground text-[10px] uppercase">Taxable Subtotal</div>
-              <div className="text-primary text-sm">₹{seedResult.totalTaxableSubtotal.toFixed(2)}</div>
-            </div>
-
-            <div className="space-y-1.5 p-3 rounded-lg bg-background/50 border border-border/40">
-              <div className="text-muted-foreground text-[10px] uppercase">Duties &amp; Taxes Added ({gstPercent}%)</div>
-              <div className="text-accent text-sm">₹{seedResult.totalTaxAmount.toFixed(2)}</div>
-            </div>
-          </div>
-
-          {/* Per-voucher breakdown */}
-          {seedResult.vouchers.length > 0 && (
-            <div className="max-h-48 overflow-y-auto space-y-1.5 pr-1">
-              {seedResult.vouchers.map((v: SeederVoucher, i: number) => (
-                <div key={i} className="flex items-center justify-between text-xs px-3 py-2 rounded-md bg-background/40 border border-border/30">
-                  <div className="flex flex-col">
-                    <span className="font-semibold text-foreground">{v.partyName}</span>
-                    <span className="text-muted-foreground">{v.itemName} × {v.quantity}</span>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-primary">₹{v.amount.toFixed(2)}</span>
-                    <span className="text-muted-foreground capitalize">{v.type}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="text-center font-bold text-xs text-muted-foreground uppercase pt-2 select-none border-t border-border/30">
-            Balanced Double-Entry Audit Posted: <span className="text-emerald-600 dark:text-emerald-400 font-black">₹{seedResult.totalTargetAmount.toFixed(2)}</span>
-          </div>
-        </Card>
-
-      )}
-    </div>
-  );
-}
-
 function SettingsContent() {
   const searchParams = useSearchParams();
   const initialTab = searchParams.get("tab") || "profile";
@@ -301,6 +84,133 @@ function SettingsContent() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userCompanies, setUserCompanies] = useState<any[]>([]);
   const [orgMembers, setOrgMembers] = useState<any[]>([]);
+
+  // Backup & Restore states
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync conflicts state
+  const [conflicts, setConflicts] = useState<any[]>([]);
+  const [resolvingId, setResolvingId] = useState<string | null>(null);
+
+  const loadConflicts = async () => {
+    try {
+      const list = await getSyncConflictsAction();
+      setConflicts(list);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const res = await backupDatabaseAction();
+      if (res.success && res.data) {
+        const blob = new Blob([res.data], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `rokado_erp_backup_${new Date().toISOString().split("T")[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({
+          title: "Database Exported",
+          description: "JSON database backup downloaded successfully.",
+        });
+      } else {
+        throw new Error(res.error || "Failed to download backup");
+      }
+    } catch (err) {
+      toast({
+        title: "Backup Failed",
+        description: err instanceof Error ? err.message : "Database export failed.",
+        variant: "destructive",
+      });
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm("WARNING: Restoring will overwrite all active transactions, ledger sheets, inventory lists, and settings. Are you absolutely sure you want to proceed?")) {
+      e.target.value = "";
+      return;
+    }
+
+    setRestoreLoading(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const text = event.target?.result;
+        if (typeof text !== "string") {
+          toast({
+            title: "Restore Failed",
+            description: "Could not read file.",
+            variant: "destructive",
+          });
+          setRestoreLoading(false);
+          return;
+        }
+
+        const res = await restoreDatabaseAction(text);
+        if (res.success) {
+          toast({
+            title: "Database Restored",
+            description: "All database sheets populated successfully. Reloading workspace...",
+          });
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+        } else {
+          toast({
+            title: "Restore Failed",
+            description: res.error || "Database write transaction failed.",
+            variant: "destructive",
+          });
+          setRestoreLoading(false);
+        }
+      };
+      reader.readAsText(file);
+    } catch (err) {
+      toast({
+        title: "Restore Failed",
+        description: "An unexpected error occurred during import.",
+        variant: "destructive",
+      });
+      setRestoreLoading(false);
+    }
+  };
+
+  const handleResolveConflict = async (id: string, resolution: "local" | "server") => {
+    setResolvingId(id);
+    try {
+      const res = await resolveConflictAction(id, resolution);
+      if (res.success) {
+        toast({
+          title: "Conflict Resolved",
+          description: resolution === "local" ? "Forced local change to retry sync." : "Accepted cloud server state and discarded local write.",
+        });
+        await loadConflicts();
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (err) {
+      toast({
+        title: "Resolution Failed",
+        description: err instanceof Error ? err.message : "Failed to solve sync conflict.",
+        variant: "destructive",
+      });
+    } finally {
+      setResolvingId(null);
+    }
+  };
 
   // Profile Form State
   const [profileName, setProfileName] = useState("");
@@ -476,6 +386,7 @@ function SettingsContent() {
       await loadUserData();
       await loadCompanies();
       await loadMembers();
+      await loadConflicts();
 
       const settings = await getSettings();
       if (mountedRef.current && settings) {
@@ -813,7 +724,7 @@ function SettingsContent() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <TabsList className="flex flex-wrap gap-1.5 bg-muted/40 p-1 rounded-2xl border border-border/30 h-auto w-full">
+        <TabsList id="tour-settings-tabs" className="flex flex-wrap gap-1.5 bg-muted/40 p-1 rounded-2xl border border-border/30 h-auto w-full">
           <TabsTrigger value="profile" className="cursor-pointer text-[11px] font-extrabold py-2 px-3.5 rounded-xl flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
             <User className="h-3.5 w-3.5 text-blue-500" />
             My Profile
@@ -846,9 +757,13 @@ function SettingsContent() {
             <Layers className="h-3.5 w-3.5 text-indigo-500" />
             CA Export
           </TabsTrigger>
-          <TabsTrigger value="random-seeder" className="cursor-pointer text-[11px] font-extrabold py-2 px-3.5 rounded-xl flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
-            <Sparkles className="h-3.5 w-3.5 text-amber-500 animate-pulse" />
-            Random Seeder
+          <TabsTrigger value="backup" className="cursor-pointer text-[11px] font-extrabold py-2 px-3.5 rounded-xl flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+            <Download className="h-3.5 w-3.5 text-blue-500" />
+            Data Backup &amp; Restore
+          </TabsTrigger>
+          <TabsTrigger value="conflicts" className="cursor-pointer text-[11px] font-extrabold py-2 px-3.5 rounded-xl flex items-center gap-1.5 data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-sm transition-all">
+            <ShieldAlert className="h-3.5 w-3.5 text-red-500" />
+            Sync Conflicts
           </TabsTrigger>
         </TabsList>
 
@@ -2216,20 +2131,175 @@ function SettingsContent() {
           </Card>
         </TabsContent>
 
-        {/* Tab 9: Random Seeder */}
-        <TabsContent value="random-seeder">
-          <Card className="w-full border-border/80 bg-card/65 dark:bg-card/45 backdrop-blur-2xl shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-amber-500/5 via-transparent to-amber-500/5 border-b border-border/60 py-5 px-6">
+
+
+        {/* Tab 10: Portable JSON Database Backups */}
+        <TabsContent value="backup">
+          <Card className="w-full border-border/80 bg-card/65 dark:bg-card/45 backdrop-blur-2xl shadow-xl rounded-2xl overflow-hidden font-sans">
+            <CardHeader className="bg-gradient-to-r from-blue-500/5 via-transparent to-blue-500/5 border-b border-border/60 py-5 px-6">
               <CardTitle className="text-lg font-extrabold flex items-center gap-2 text-primary">
-                <Sparkles className="w-5 h-5 text-amber-500 animate-pulse" />
-                Dynamic Demo Random Seeder Panel
+                <Download className="w-5 h-5 text-blue-500" />
+                Portable JSON Database Backups
               </CardTitle>
               <CardDescription className="text-xs text-muted-foreground mt-0.5">
-                Generate highly realistic, balanced transactions on the fly to test accounting sheets, inventory triggers, and dashboard graphs.
+                Export your entire ERP database sheet to a portable JSON file, or restore a complete accounting ledger copy transactionally.
               </CardDescription>
             </CardHeader>
-            <CardContent className="p-6 space-y-6">
-              <SeederConsole />
+            <CardContent className="p-6 space-y-6 text-xs">
+              <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+                
+                {/* Export Section */}
+                <div className="surface-inset p-5 rounded-2xl border border-border/40 space-y-4">
+                  <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2">
+                    <Download className="w-4 h-4 text-blue-500" />
+                    Download Active Workspace Backup
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Downloads all active business sheets (including companies, customers, suppliers, inventory items, transactions, audit logs, and settings) as a portable, database-agnostic JSON package. Excellent for offsite archives!
+                  </p>
+                  <Button
+                    onClick={handleBackup}
+                    disabled={backupLoading}
+                    className="w-full rounded-xl h-10 font-bold bg-blue-500 hover:bg-blue-600 text-white cursor-pointer shadow-md flex items-center justify-center gap-2 border-none active:scale-[0.98] transition-all"
+                  >
+                    {backupLoading ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Exporting Active Sheets...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 text-white" />
+                        Download Backup (.json)
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Import Section */}
+                <div className="surface-inset p-5 rounded-2xl border border-border/40 space-y-4">
+                  <h3 className="font-extrabold text-sm text-foreground flex items-center gap-2 text-amber-500">
+                    <PlusCircle className="w-4 h-4 text-amber-500" />
+                    Restore Ledger Backup File
+                  </h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    Select a previously downloaded `.json` database file. Restoring will delete the active workspace and re-populate all relational tables in a single atomic database transaction. This cannot be undone!
+                  </p>
+                  
+                  <div className="relative">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".json"
+                      onChange={handleRestore}
+                      disabled={restoreLoading}
+                      className="hidden"
+                    />
+                    <Button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={restoreLoading}
+                      className="w-full rounded-xl h-10 font-bold bg-amber-500 hover:bg-amber-600 text-white cursor-pointer shadow-md flex items-center justify-center gap-2 border-none active:scale-[0.98] transition-all"
+                    >
+                      {restoreLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Restoring Relational Tables...
+                        </>
+                      ) : (
+                        <>
+                          <PlusCircle className="w-4 h-4 text-white" />
+                          Select &amp; Restore Backup
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Tab 11: Multi-User Sync Conflicts */}
+        <TabsContent value="conflicts">
+          <Card className="w-full border-border/80 bg-card/65 dark:bg-card/45 backdrop-blur-2xl shadow-xl rounded-2xl overflow-hidden font-sans">
+            <CardHeader className="bg-gradient-to-r from-red-500/5 via-transparent to-red-500/5 border-b border-border/60 py-5 px-6 flex flex-row items-center justify-between flex-wrap gap-4">
+              <div>
+                <CardTitle className="text-lg font-extrabold flex items-center gap-2 text-primary">
+                  <ShieldAlert className="w-5 h-5 text-red-500" />
+                  Sync Conflict Resolution Desk
+                </CardTitle>
+                <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                  Review and resolve multi-user transactional conflicts with the cloud database.
+                </CardDescription>
+              </div>
+              <Button onClick={loadConflicts} variant="outline" className="h-9 border-border rounded-xl font-bold cursor-pointer hover:bg-muted text-xs gap-1.5">
+                <RefreshCw className="w-3.5 h-3.5" />
+                Refresh Conflicts
+              </Button>
+            </CardHeader>
+            <CardContent className="p-6">
+              {conflicts.length === 0 ? (
+                <div className="py-14 text-center text-xs font-semibold text-credit bg-credit/5 border border-dashed border-credit/20 rounded-2xl flex flex-col items-center justify-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-credit/10 border border-credit/20 flex items-center justify-center text-credit">
+                    <Check className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm uppercase tracking-wide">Sync Channel Clean</h3>
+                    <p className="text-muted-foreground text-xs font-semibold mt-1">There are no unresolved multi-user sync conflicts logged in SQLite.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="text-xs font-bold text-muted-foreground border-b border-border/40 pb-2">
+                    Found {conflicts.length} unresolved conflict{conflicts.length > 1 ? "s" : ""}
+                  </div>
+                  
+                  <div className="divide-y divide-border/40 border border-border/50 bg-background/50 rounded-xl overflow-hidden">
+                    {conflicts.map((c) => {
+                      const payload = JSON.parse(c.payload || "{}");
+                      return (
+                        <div key={c.id} className="p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs font-semibold text-primary hover:bg-muted/10 transition-colors">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-[10px] font-extrabold uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20 px-2 py-0.5 rounded-full">
+                                Conflict Status
+                              </span>
+                              <span className="font-extrabold text-foreground capitalize">
+                                {c.entity} ({c.action})
+                              </span>
+                            </div>
+                            <div className="text-[10px] text-muted-foreground/80 font-mono">
+                              ID: {c.id} • Registered: {new Date(c.createdAt).toLocaleDateString()}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground max-w-lg mt-1 font-mono break-all p-2 rounded bg-background/70 border border-border/40">
+                              {JSON.stringify(payload)}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              onClick={() => handleResolveConflict(c.id, "local")}
+                              disabled={resolvingId === c.id}
+                              className="h-8 rounded-lg bg-accent text-[10px] font-extrabold text-accent-foreground cursor-pointer shadow border-none px-3"
+                            >
+                              Force Local (Overwrite Cloud)
+                            </Button>
+                            <Button
+                              onClick={() => handleResolveConflict(c.id, "server")}
+                              disabled={resolvingId === c.id}
+                              variant="outline"
+                              className="h-8 rounded-lg border-border text-[10px] font-extrabold cursor-pointer hover:bg-muted px-3"
+                            >
+                              Use Server (Discard Local)
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

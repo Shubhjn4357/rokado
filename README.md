@@ -33,20 +33,20 @@ This is a complete ERP (Enterprise Resource Planning) system designed specifical
 
 ✅ **Complete ERP Core**: Command palette, keyboard shortcuts, ledger management, voucher entry  
 ✅ **POS System**: Billing, customer selection, discounts, payment modes, GST calculation, stock deduction, PDF printing  
-✅ **Reports Module**: Trial Balance, P&L, Balance Sheet, GST Reports, Outstanding, Stock Summary, Day Book, Audit Trail  
-✅ **Onboarding**: Welcome screen, Business Setup Wizard, Migration Wizard, Excel Import Engine  
-✅ **Settings**: Company configuration, feature toggles, appearance, shortcuts, backup, users  
+✅ **Reports Module**: Trial Balance, P&L, Balance Sheet, GST Reports, Outstanding, Stock Summary, Day Book, and Audit Trail  
+✅ **Interactive Onboarding**: Fully route-aware 10-step guided tour (`nextstepjs` + `motion`) introducing dashboard, vouchers, ledgers, detailed reports, and backup consoles  
+✅ **Settings & Backups**: Company configuration, feature toggles, and **Data Backup & Restore** (.json database exports/restores)  
 ✅ **Advanced Accounting**: GST auto-calculation, ledger balance materialization, voucher cancellation/detail, bank reconciliation  
 ✅ **Inventory Management**: Add/edit items, stock movements, item details, barcode support, multi-warehouse  
 ✅ **Transport & Delivery**: Challan notes, freight accounting  
-✅ **UI Polish**: Notification center, dark/light theme, mobile responsive, print layouts, loading states  
-✅ **Data Export**: Excel/PDF/Tally XML export, CA tools  
-✅ **Sync Engine**: Multi-device sync with conflict resolution and exponential backoff retry  
+✅ **UI Polish**: Notification center, dark/light theme, mobile responsive, print layouts, loading states, and premium glassmorphic visual app icon  
+✅ **Data Export**: Excel, PDF, Tally XML, CSV, PNG, and JSON unified export center  
+✅ **Sync Engine & Conflict Desk**: Multi-device sync queue table with exponential backoff retry, remote Turso support, and an interactive **Sync Conflict Resolution Desk** with local/server override buttons  
+✅ **PWA Support**: Progressive Web App caching service worker (`sw.js`) enabling 100% offline asset loading  
 
 ## Project Structure
 
 ```
-apps/web/
 ├── app/
 │   ├── onboarding/
 │   │   ├── page.tsx              ← Welcome screen
@@ -63,7 +63,7 @@ apps/web/
 │       └── settings/page.tsx     ← System settings
 ├── components/
 │   ├── layout/                   ← Layout components (sidebar, topbar)
-│   ├── command-palette/          ← Global search and actions
+│   ├── ui/                       ← Reusable UI components (shadcn/ui)
 │   ├── dashboard/                ← Dashboard widgets
 │   ├── ledgers/                  ← Ledger-specific components
 │   ├── vouchers/                 ← Voucher-specific components
@@ -73,24 +73,23 @@ apps/web/
 │   ├── onboarding/               ← Onboarding-specific components
 │   └── print/                    ← Print layouts (invoices, receipts)
 ├── hooks/
-│   ├── use-erp-shortcuts.ts      ← Keyboard shortcuts (Ctrl+K, F4-F9, Alt+C, Ctrl+S)
-│   └── use-command-palette.ts    ← Command palette logic
-└── lib/
-    ├── utils.ts                  ← Utility functions
-    ├── types.ts                  ← TypeScript types
-    ├── accounting/
-    │   └── balance-engine.ts     ← Ledger balance materialization
-    ├── import/
-    │   └── excel-import.ts       ← Excel import engine
-    ├── export/
-    │   ├── excel.ts              ← Excel export
-    │   ├── pdf.ts                ← PDF export
-    │   └── tally-xml.ts          ← Tally XML export
-    └── bill-pdf.ts               ← Bill PDF generation
-
-packages/
-├── database/                     ← Drizzle ORM schema and db client
-└── sync-engine/                  ← Sync queue processing, conflict resolution, remote sync
+│   ├── use-erp-shortcuts.ts      ← Keyboard shortcuts (F2-F12, Alt+Enter, Ctrl+S)
+│   ├── use-offline-sync.ts       ← Live connection status monitoring
+│   └── use-spatial-navigation.ts ← Tally-like arrow key and Enter navigation
+├── lib/
+│   ├── utils.ts                  ← Utility functions
+│   ├── types.ts                  ← TypeScript types
+│   ├── database/                 ← Drizzle ORM schema, client config, and SQLite db
+│   ├── accounting/
+│   │   └── balance-engine.ts     ← Ledger balance materialization
+│   ├── import/
+│   │   └── excel-import.ts       ← Excel import engine
+│   ├── export/
+│   │   ├── excel.ts              ← Excel export
+│   │   ├── pdf.ts                ← PDF export
+│   │   └── tally-xml.ts          ← Tally XML export
+│   └── bill-pdf.ts               ← Bill PDF generation
+└── src-tauri/                    ← Tauri config, cargo manifest, and multi-platform app assets
 ```
 
 ## Environment Setup
@@ -228,36 +227,45 @@ pnpm dev
 - Bank Reconciliation (CSV import + matching)
 - Audit Trail Report (entity/action/date filtering)
 
-### Onboarding
+### Onboarding & Walkthroughs
 - Welcome screen (checks for existing company)
 - Business Setup Wizard (5 steps: details, type, GST, opening balances, go-live)
 - Migration Wizard (supports Excel, Tally XML, Vyapar CSV, manual)
 - Excel Import Engine (auto-column mapping, validation, error reporting)
+- **Interactive Walkthrough**: Fully route-aware 10-step tour with an elegant, progress-aware custom glassmorphic card component.
 
-### Settings
+### Settings & Backups
 - Company information (name, GSTIN, PAN, address, logo, fiscal year)
 - Feature toggles (Inventory, GST, Barcode, Multi-warehouse)
 - Appearance (Dark/Light/System theme, invoice design, font size)
 - Shortcuts reference and customization
-- Backup/Restore (manual + auto-backup scheduling)
+- **Portable JSON Backups**: One-click download of all relational sheets and transaction-safe restores.
 - Users (Phase 5 - multi-user access foundation)
 
-### Sync Engine (Phase 10)
+### Sync Engine & Conflict Desk
 - Sync queue processing with exponential backoff retry
-- Conflict resolution (last-write-wins)
+- Conflict resolution (last-write-wins / local-server choices)
 - Device ID tracking
 - Remote sync capability (Turso)
 - Sync status indicators in UI
-- Conflict alerts and resolution
+- **Sync Conflict Resolution Desk**: Real-time side-by-side JSON diffs allowing forced local push or remote server acceptance.
+
+### Progressive Web App (PWA)
+- Stale-While-Revalidate caching worker (`sw.js`) enabling instantaneous 100% offline startup.
 
 ## Development Commands
 
-- `pnpm dev` - Start development server on http://localhost:3000
-- `pnpm build` - Create optimized production build
-- `pnpm start` - Start production server
-- `pnpm check-types` - Run TypeScript compiler
-- `pnpm lint` - Run ESLint with max warnings 0
-- `pnpm test` - Run tests (if configured)
+- `pnpm dev` - Start Next.js development server on http://localhost:3000
+- `pnpm build` - Create optimized production web build
+- `pnpm start` - Start production web server
+- `pnpm typecheck` - Run TypeScript compiler (`tsc --noEmit`)
+- `pnpm lint` - Run ESLint checks
+
+### Tauri Desktop App Commands
+
+- `pnpm tauri:dev` - Run the Tauri desktop window in development mode
+- `pnpm tauri:build` - Build the native desktop installer/executable
+- `pnpm tauri icon ./app/icon.png` - Automatically regenerate all multi-platform app launcher, taskbar, store, and device icons from the high-fidelity premium master app icon
 
 ## Deployment
 
@@ -279,4 +287,4 @@ MIT License - Feel free to use, modify, and distribute this ERP system for your 
 For issues, questions, or contributions, please refer to the project documentation or contact the development team.
 
 ---
-*Built with ❤️ for Indian wholesale textile businesses*
+*Built with ❤️ for Indian businesses*

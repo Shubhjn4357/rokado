@@ -1,7 +1,7 @@
 "use client";
 
 import { formatDate } from "@/lib/types";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, Fragment } from "react";
 import { fetchAuditLogsAction } from "./actions";
 import {
   Card,
@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Sparkles } from "lucide-react";
 import { Calendar } from "@/components/ui/calendar";
 import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 
@@ -34,6 +34,7 @@ export default function AuditPage() {
   const [actionType, setActionType] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [auditEntries, setAuditEntries] = useState<Array<any>>([]);
+  const [expandedRowId, setExpandedRowId] = useState<string | null>(null);
 
   // Default to last 30 days
   useEffect(() => {
@@ -197,26 +198,98 @@ export default function AuditPage() {
               </thead>
               <tbody className="divide-y">
                 {auditEntries.map((entry, index) => (
-                  <tr key={entry.id} className="hover:bg-muted">
-                    <td className="px-6 py-4 text-left text-sm">
-                      {formatDate(new Date(entry.timestamp))}
-                    </td>
-                    <td className="px-6 py-4 text-left text-sm capitalize">
-                      {entry.entityType}
-                    </td>
-                    <td className="px-6 py-4 text-left text-sm capitalize">
-                      {entry.action}
-                    </td>
-                    <td className="px-6 py-4 text-left text-sm font-mono">
-                      {entry.entityId}
-                    </td>
-                    <td className="px-6 py-4 text-left text-sm">
-                      {entry.performedBy || "System"}
-                    </td>
-                    <td className="px-6 py-4 text-left text-sm max-w-[200px] break-words">
-                      {formatChangesSummary(entry.changes)}
-                    </td>
-                  </tr>
+                  <Fragment key={entry.id}>
+                    <tr
+                      onClick={() => setExpandedRowId(expandedRowId === entry.id ? null : entry.id)}
+                      className="hover:bg-muted/50 cursor-pointer select-none transition-colors border-b border-border/30"
+                    >
+                      <td className="px-6 py-4 text-left text-sm font-semibold">
+                        {formatDate(new Date(entry.timestamp))}
+                      </td>
+                      <td className="px-6 py-4 text-left text-sm capitalize font-medium text-foreground/80">
+                        {entry.entityType}
+                      </td>
+                      <td className="px-6 py-4 text-left text-sm">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider ${
+                          entry.action === "CREATE"
+                            ? "bg-credit/10 text-credit border border-credit/20"
+                            : entry.action === "DELETE" || entry.action === "CANCEL"
+                            ? "bg-destructive/10 text-destructive border border-destructive/20"
+                            : "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                        }`}>
+                          {entry.action}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-left text-sm font-mono text-muted-foreground">
+                        {entry.entityId}
+                      </td>
+                      <td className="px-6 py-4 text-left text-sm font-semibold">
+                        {entry.performedBy || "System"}
+                      </td>
+                      <td className="px-6 py-4 text-left text-sm max-w-[200px] break-words text-muted-foreground leading-normal">
+                        {formatChangesSummary(entry.changes)}
+                      </td>
+                    </tr>
+                    {expandedRowId === entry.id && (
+                      <tr className="bg-muted/10 border-b border-border/40 animate-in fade-in slide-in-from-top-1 duration-150">
+                        <td colSpan={6} className="px-6 py-4">
+                          <div className="space-y-4 text-xs font-sans">
+                            <h4 className="font-extrabold text-sm text-foreground flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                              <Sparkles className="w-4 h-4 text-accent animate-pulse" />
+                              Visual Ledger Difference Comparison
+                            </h4>
+                            <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
+                              
+                              {/* Left Side: Preceding State */}
+                              <div className="space-y-2 p-4 rounded-2xl bg-destructive/5 border border-destructive/10">
+                                <h5 className="font-extrabold text-[9px] text-destructive uppercase tracking-widest flex items-center gap-1.5 mb-2.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-destructive inline-block" />
+                                  State Before Change
+                                </h5>
+                                <div className="font-mono p-3 rounded-xl bg-background/55 border border-border/30 max-h-48 overflow-y-auto text-[10.5px] leading-relaxed max-w-full break-words space-y-1 custom-scrollbar">
+                                  {entry.changes.before && Object.keys(entry.changes.before).length > 0 ? (
+                                    Object.entries(entry.changes.before).map(([key, val]) => {
+                                      const isModified = entry.changes.after?.[key] !== val;
+                                      return (
+                                        <div key={key} className={isModified ? "bg-destructive/10 text-destructive line-through px-1.5 py-0.5 rounded border border-destructive/10" : "opacity-60 px-1"}>
+                                          <strong className="font-bold">{key}</strong>: {JSON.stringify(val)}
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <span className="text-muted-foreground italic">No preceding state (Initial Record Creation)</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Right Side: Final State */}
+                              <div className="space-y-2 p-4 rounded-2xl bg-credit/5 border border-credit/10">
+                                <h5 className="font-extrabold text-[9px] text-credit uppercase tracking-widest flex items-center gap-1.5 mb-2.5">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-credit inline-block" />
+                                  State After Change
+                                </h5>
+                                <div className="font-mono p-3 rounded-xl bg-background/55 border border-border/30 max-h-48 overflow-y-auto text-[10.5px] leading-relaxed max-w-full break-words space-y-1 custom-scrollbar">
+                                  {entry.changes.after && Object.keys(entry.changes.after).length > 0 ? (
+                                    Object.entries(entry.changes.after).map(([key, val]) => {
+                                      const isModified = entry.changes.before?.[key] !== val;
+                                      return (
+                                        <div key={key} className={isModified ? "bg-credit/10 text-credit font-black px-1.5 py-0.5 rounded border border-credit/10" : "opacity-75 px-1"}>
+                                          <strong className="font-bold">{key}</strong>: {JSON.stringify(val)}
+                                        </div>
+                                      );
+                                    })
+                                  ) : (
+                                    <span className="text-muted-foreground italic">No final state (Complete Database Purge)</span>
+                                  )}
+                                </div>
+                              </div>
+
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </Table>

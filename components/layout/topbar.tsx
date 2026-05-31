@@ -3,8 +3,9 @@
 import {
   Search, Moon, Sun, Keyboard, ChevronDown, Menu,
   User, LogOut, ShieldAlert, RefreshCw, CloudOff, Cloud,
-  Building2, Plus, Settings2, Check
+  Building2, Plus, Settings2, Check, HelpCircle
 } from "lucide-react";
+import { useNextStep } from "nextstepjs";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
@@ -31,6 +32,8 @@ export function TopBar() {
   const [companiesList, setCompaniesList] = useState<any[]>([]);
   const [switching, setSwitching] = useState(false);
 
+  const { startNextStep } = useNextStep();
+
   useEffect(() => {
     setMounted(true);
     async function loadCompanies() {
@@ -40,8 +43,21 @@ export function TopBar() {
     loadCompanies();
   }, []);
 
+  // Auto-start onboarding tour for first-time users
+  useEffect(() => {
+    if (mounted) {
+      const completed = localStorage.getItem("erp:onboarding-completed");
+      if (!completed) {
+        const timer = setTimeout(() => {
+          startNextStep("onboarding");
+        }, 800);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [mounted, startNextStep]);
+
   return (
-    <header className="h-14 flex items-center justify-between gap-3 px-3 mt-3 mr-3 ml-2 surface-card text-foreground rounded-[var(--radius-card)] shrink-0 font-sans text-xs select-none">
+    <header className="h-14 flex items-center justify-between gap-3 px-6 border-b border-border/80 bg-surface text-foreground shrink-0 font-sans text-xs select-none">
 
       {/* Left: hamburger (mobile) + company name */}
       <div className="flex items-center gap-2 shrink-0">
@@ -124,6 +140,7 @@ export function TopBar() {
 
       {/* Centre: search trigger */}
       <button
+        id="tour-topbar-search"
         onClick={() => window.dispatchEvent(new CustomEvent("erp:command-palette"))}
         className="flex-1 max-w-72 hidden sm:flex items-center gap-2 h-8 px-3 bg-muted/70 border border-border rounded-[var(--radius-sm)] text-muted-foreground hover:text-foreground hover:border-ring/40 transition-all duration-150 cursor-pointer group"
       >
@@ -158,13 +175,25 @@ export function TopBar() {
           </button>
         )}
 
+        {/* Onboarding walkthrough guide */}
+        <Button
+          variant="ghost"
+          size="icon"
+          title="Onboarding Walkthrough"
+          onClick={() => startNextStep("onboarding")}
+          className="flex cursor-pointer text-accent hover:bg-accent/10"
+        >
+          <HelpCircle className="w-3.5 h-3.5" />
+        </Button>
+
         {/* Hotkeys */}
         <Button
+          id="tour-topbar-shortcuts"
           variant="ghost"
           size="icon"
           title="Keyboard shortcuts"
           onClick={() => window.dispatchEvent(new CustomEvent("erp:toggle-shortcuts-sidebar"))}
-          className="hidden lg:inline-flex cursor-pointer"
+          className="flex cursor-pointer"
         >
           <Keyboard className="w-3.5 h-3.5" />
         </Button>

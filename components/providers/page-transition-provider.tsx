@@ -29,8 +29,8 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
 
       timerRef.current = setTimeout(() => {
         setTransitionState("idle");
-      }, 220);
-    }, 120);
+      }, 320);
+    }, 140);
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
@@ -51,16 +51,15 @@ export function PageTransitionProvider({ children }: PageTransitionProviderProps
         opacity: transitionState === "exit" ? 0 : 1,
         transform:
           transitionState === "exit"
-            ? "translateY(4px)"
-            : transitionState === "enter"
-            ? "translateY(0px)"
-            : "translateY(0px)",
+            ? "scale(0.985) translateY(6px)"
+            : "scale(1) translateY(0px)",
         transition:
           transitionState === "exit"
-            ? "opacity 120ms ease-out, transform 120ms ease-out"
+            ? "opacity 140ms cubic-bezier(0.16, 1, 0.3, 1), transform 140ms cubic-bezier(0.16, 1, 0.3, 1)"
             : transitionState === "enter"
-            ? "opacity 220ms ease-out, transform 220ms ease-out"
+            ? "opacity 320ms cubic-bezier(0.16, 1, 0.3, 1), transform 320ms cubic-bezier(0.16, 1, 0.3, 1)"
             : "none",
+        willChange: "transform, opacity",
       }}
     >
       {displayChildren}

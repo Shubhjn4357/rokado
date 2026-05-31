@@ -130,7 +130,7 @@ export function LedgerListClient({ ledgers }: { ledgers: Ledger[] }) {
             ))}
           </SelectContent>
         </Select>
-        <Button asChild size="sm" className="h-9 rounded-xl gap-2 ml-auto cursor-pointer">
+        <Button id="tour-new-ledger-btn" asChild size="sm" className="h-9 rounded-xl gap-2 ml-auto cursor-pointer">
           <Link href="/ledgers/new">
             <Plus className="w-4 h-4" /> New Ledger
           </Link>

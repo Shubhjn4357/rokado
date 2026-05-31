@@ -167,7 +167,7 @@
 
   * {
     @apply border-border;
-    border-color: color-mix(in srgb, var(--border) 72%, transparent);
+    border-color: color-mix(in srgb, var(--border) 42%, transparent);
   }
 
   html {
@@ -218,7 +218,7 @@
 
 .surface-card {
   background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   box-shadow: var(--shadow-card);
 }
 
@@ -262,7 +262,7 @@
 .glass-card-premium,
 .glass-container {
   background: var(--surface);
-  border: 1px solid color-mix(in srgb, var(--border) 82%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
   box-shadow: var(--shadow-card);
 }
 

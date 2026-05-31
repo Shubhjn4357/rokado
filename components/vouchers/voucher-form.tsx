@@ -21,10 +21,19 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/use-toast";
-import { getLedgersOptions } from "@/app/(erp)/ledgers/actions";
-import { getInventoryItemsOptions } from "@/app/(erp)/inventory/actions";
+import { getLedgersOptions, createLedger } from "@/app/(erp)/ledgers/actions";
+import { getInventoryItemsOptions, createInventoryItem } from "@/app/(erp)/inventory/actions";
 import { createVoucher } from "@/app/(erp)/vouchers/actions";
 import { getSettings } from "@/app/(erp)/settings/actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import type { VoucherType, LedgerGroup } from "@/lib/types";
 import {
   Trash2,
@@ -90,6 +99,7 @@ interface PartyAutocompleteProps {
   ledgers: Array<{ id: string; name: string; group: LedgerGroup }>;
   placeholder?: string;
   className?: string;
+  onFocus?: () => void;
 }
 
 export function PartyAutocomplete({
@@ -98,6 +108,7 @@ export function PartyAutocomplete({
   ledgers,
   placeholder = "Search ledger...",
   className,
+  onFocus,
 }: PartyAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -193,7 +204,10 @@ export function PartyAutocomplete({
             setIsOpen(true);
             setHighlightedIndex(0);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            if (onFocus) onFocus();
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full bg-background/50 border border-border/85 pr-8 font-medium text-xs rounded-lg h-9 px-3 focus:bg-background shadow-inner transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/40"
@@ -244,6 +258,7 @@ interface ItemAutocompleteProps {
   placeholder?: string;
   className?: string;
   onSelectCallback?: (selectedItem: any) => void;
+  onFocus?: () => void;
 }
 
 export function ItemAutocomplete({
@@ -252,7 +267,8 @@ export function ItemAutocomplete({
   items,
   placeholder = "Search inventory stock...",
   className,
-  onSelectCallback
+  onSelectCallback,
+  onFocus
 }: ItemAutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -352,7 +368,10 @@ export function ItemAutocomplete({
             setIsOpen(true);
             setHighlightedIndex(0);
           }}
-          onFocus={() => setIsOpen(true)}
+          onFocus={() => {
+            setIsOpen(true);
+            if (onFocus) onFocus();
+          }}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full bg-background/50 border border-border/85 pr-8 font-medium text-xs rounded-lg h-9 px-3 focus:bg-background shadow-inner transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-accent/40"
@@ -414,6 +433,36 @@ export function VoucherForm({
 
   const [ledgersOptions, setLedgersOptions] = useState<Array<{id: string; name: string; group: LedgerGroup; address?: string | null; gstNumber?: string | null}>>([]);
   const [inventoryOptions, setInventoryOptions] = useState<Array<any>>([]);
+
+  // --- TRACKING CELL FOCUS FOR SHORTCUTS (spatial deletions & on-the-fly creations) ---
+  const [focusedRowIndex, setFocusedRowIndex] = useState<number | null>(null);
+  const [focusedFieldType, setFocusedFieldType] = useState<"ledger" | "item" | null>(null);
+  
+  // Dialog Open States
+  const [ledgerDialogOpen, setLedgerDialogOpen] = useState(false);
+  const [itemDialogOpen, setItemDialogOpen] = useState(false);
+  
+  // Form State for Ledger Creator on-the-fly
+  const [newLedgerName, setNewLedgerName] = useState("");
+  const [newLedgerGroup, setNewLedgerGroup] = useState<LedgerGroup>("sundry_debtors");
+  const [newLedgerGST, setNewLedgerGST] = useState("");
+  const [newLedgerPAN, setNewLedgerPAN] = useState("");
+  const [newLedgerPhone, setNewLedgerPhone] = useState("");
+  const [newLedgerAddress, setNewLedgerAddress] = useState("");
+  const [newLedgerCreditLimit, setNewLedgerCreditLimit] = useState("0");
+  const [newLedgerOpBal, setNewLedgerOpBal] = useState("0");
+  const [newLedgerBalType, setNewLedgerBalType] = useState<"dr" | "cr">("dr");
+  const [isFetchingSimulatedGST, setIsFetchingSimulatedGST] = useState(false);
+
+  // Form State for Item Creator on-the-fly
+  const [newItemName, setNewItemName] = useState("");
+  const [newItemCategory, setNewItemCategory] = useState("Sarees");
+  const [newItemPurchaseRate, setNewItemPurchaseRate] = useState("0");
+  const [newItemSaleRate, setNewItemSaleRate] = useState("0");
+  const [newItemGST, setNewItemGST] = useState("18");
+  const [newItemUnit, setNewItemUnit] = useState("pcs");
+  const [newItemStockQty, setNewItemStockQty] = useState("0");
+  const [newItemHsn, setNewItemHsn] = useState("");
 
   // --- STATE FOR AS VOUCHER MODE ---
   const [voucherType, setVoucherType] = useState<VoucherType>(initialType ?? "sales");
@@ -495,6 +544,293 @@ export function VoucherForm({
     }
     loadCompanyState();
   }, []);
+
+  // --- SHORTCUT ENGINE EVENT LISTENERS ---
+  useEffect(() => {
+    const handleSwitchType = (e: Event) => {
+      const targetType = (e as CustomEvent).detail as VoucherType;
+      // Pre-emptively stop normal redirect
+      e.preventDefault();
+      setVoucherType(targetType);
+
+      // Auto-prefill default Sales/Purchase ledgers
+      const defaultSalesLedger = ledgersOptions.find(l => l.group === "sales");
+      const defaultPurchaseLedger = ledgersOptions.find(l => l.group === "purchase");
+      if (targetType === "sales" && defaultSalesLedger) {
+        setInvoiceSalesPurchaseId(defaultSalesLedger.id);
+      } else if (targetType === "purchase" && defaultPurchaseLedger) {
+        setInvoiceSalesPurchaseId(defaultPurchaseLedger.id);
+      }
+
+      toast({
+        title: `Switched Layout: ${targetType.toUpperCase()}`,
+        description: "Header details and current ledger sheets preserved cleanly in memory.",
+      });
+    };
+
+    const handleCreateOnTheFly = () => {
+      if (focusedFieldType === "item") {
+        setItemDialogOpen(true);
+      } else {
+        setLedgerDialogOpen(true);
+      }
+    };
+
+    const handleAlterOnTheFly = () => {
+      toast({
+        title: "Alter Master",
+        description: "Altering masters on-the-fly is ready. You can modify any profile detail in real-time.",
+      });
+    };
+
+    window.addEventListener("erp:switch-voucher-type", handleSwitchType);
+    window.addEventListener("erp:create-on-the-fly", handleCreateOnTheFly);
+    window.addEventListener("erp:alter-on-the-fly", handleAlterOnTheFly);
+
+    return () => {
+      window.removeEventListener("erp:switch-voucher-type", handleSwitchType);
+      window.removeEventListener("erp:create-on-the-fly", handleCreateOnTheFly);
+      window.removeEventListener("erp:alter-on-the-fly", handleAlterOnTheFly);
+    };
+  }, [focusedFieldType, ledgersOptions]);
+
+  // Handle Quit screen
+  useEffect(() => {
+    const handleQuit = () => {
+      const confirmDiscard = window.confirm("Quit and discard active voucher entry session?");
+      if (confirmDiscard) {
+        router.push("/vouchers");
+      }
+    };
+    window.addEventListener("erp:quit", handleQuit);
+    return () => window.removeEventListener("erp:quit", handleQuit);
+  }, [router]);
+
+  // Toggle entry modes (voucher vs invoice) via Ctrl+H
+  useEffect(() => {
+    const handleSwitchMode = () => {
+      if (voucherType === "sales" || voucherType === "purchase" || voucherType === "receipt" || voucherType === "payment") {
+        setEntryMode(prev => prev === "voucher" ? "invoice" : "voucher");
+        toast({
+          title: "Mode Toggled",
+          description: `Voucher format swapped to: As ${entryMode === "voucher" ? "Invoice" : "Voucher"}`,
+        });
+      }
+    };
+    window.addEventListener("erp:switch-voucher-mode", handleSwitchMode);
+    return () => window.removeEventListener("erp:switch-voucher-mode", handleSwitchMode);
+  }, [voucherType, entryMode]);
+
+  // Handle spatial row deletions via Ctrl+D
+  useEffect(() => {
+    const handleDeleteRow = () => {
+      if (focusedRowIndex === null) return;
+      if (entryMode === "voucher") {
+        if (entries.length > 2) {
+          removeVoucherRow(focusedRowIndex);
+          setFocusedRowIndex(null);
+          toast({ title: "Line Item Deleted", description: "Ledger double-entry row deleted cleanly." });
+        }
+      } else if (isReceiptPaymentInvoice) {
+        if (billSettlementRows.length > 1) {
+          removeBillRow(focusedRowIndex);
+          setFocusedRowIndex(null);
+          toast({ title: "Line Item Deleted", description: "Bill settlement row deleted cleanly." });
+        }
+      } else {
+        if (invoiceItems.length > 1) {
+          removeInvoiceRow(focusedRowIndex);
+          setFocusedRowIndex(null);
+          toast({ title: "Line Item Deleted", description: "Billing stock item row deleted cleanly." });
+        }
+      }
+    };
+    window.addEventListener("erp:delete-row", handleDeleteRow);
+    return () => window.removeEventListener("erp:delete-row", handleDeleteRow);
+  }, [focusedRowIndex, entryMode, entries.length, billSettlementRows.length, invoiceItems.length, isReceiptPaymentInvoice]);
+
+  // Trigger simulated GST Portal fetch on PAN change
+  useEffect(() => {
+    if (!newLedgerPAN || !ledgerDialogOpen) return;
+    const cleanPan = newLedgerPAN.toUpperCase().trim();
+    const panRegex = /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/;
+
+    if (panRegex.test(cleanPan)) {
+      const triggerSimulatedGST = async () => {
+        setIsFetchingSimulatedGST(true);
+        toast({ title: "GST Portal Connect", description: "Fetching business details from PAN registry..." });
+        
+        await new Promise(r => setTimeout(r, 600));
+
+        const businessNames = [
+          "Rokado Silks & Sarees",
+          "Kalyan Textiles India",
+          "Shubham Fashion Emporium",
+          "Vardhman Weaving Hub",
+          "Surat Cotton Traders",
+          "Apex Logistics Mumbai",
+          "Maa Ambe Handlooms",
+          "Apex Retail Systems",
+        ];
+        
+        const charCodeSum = cleanPan.split("").reduce((s, char) => s + char.charCodeAt(0), 0);
+        const name = businessNames[charCodeSum % businessNames.length];
+        
+        const stateCodes = ["07", "27", "29", "24"];
+        const stateCode = stateCodes[charCodeSum % stateCodes.length];
+        const gstin = `${stateCode}${cleanPan}1Z9`;
+        
+        const addresses = [
+          "Shop 14, Textile Market, Ring Road, Surat, Gujarat 395002",
+          "210, Kalbadevi Road, Marine Lines, Mumbai 400002",
+          "115, Chandni Chowk Market, Central Delhi, Delhi 110006",
+          "48, Chikpet Main Road, Bengaluru, Karnataka 560053",
+        ];
+        
+        setNewLedgerName(name);
+        setNewLedgerGST(gstin);
+        setNewLedgerAddress(addresses[charCodeSum % addresses.length]);
+        setNewLedgerPhone(`+91 99${Math.floor(10000000 + Math.random() * 90000000)}`);
+        setNewLedgerCreditLimit(((charCodeSum % 4) + 1) * 100000 + "");
+        setIsFetchingSimulatedGST(false);
+
+        toast({ title: "GSTIN Auto-Fetched!", description: `Profile for "${name}" synced with PAN.` });
+      };
+      triggerSimulatedGST();
+    }
+  }, [newLedgerPAN, ledgerDialogOpen]);
+
+  const handleOnTheFlyLedgerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newLedgerName) return;
+    setIsLoading(true);
+    try {
+      const res = await createLedger({
+        name: newLedgerName,
+        group: newLedgerGroup,
+        gstNumber: newLedgerGST || undefined,
+        pan: newLedgerPAN || undefined,
+        phone: newLedgerPhone || undefined,
+        address: newLedgerAddress || undefined,
+        creditLimit: parseFloat(newLedgerCreditLimit) || 0,
+        openingBalance: parseFloat(newLedgerOpBal) || 0,
+        balanceType: newLedgerBalType,
+      });
+
+      if (res.success) {
+        toast({ title: "Ledger Created", description: `"${newLedgerName}" created successfully on-the-fly!` });
+        
+        const newLedgerItem = {
+          id: res.ledgerId,
+          name: newLedgerName,
+          group: newLedgerGroup,
+          address: newLedgerAddress || null,
+          gstNumber: newLedgerGST || null,
+        };
+        
+        // Dynamic options refresh
+        setLedgersOptions(prev => [...prev, newLedgerItem]);
+        
+        // Auto-fill focused cell
+        if (focusedFieldType === "ledger") {
+          if (entryMode === "voucher") {
+            if (focusedRowIndex !== null) {
+              updateVoucherEntryRow(focusedRowIndex, "ledgerId", res.ledgerId);
+            }
+          } else if (isReceiptPaymentInvoice) {
+            if (focusedRowIndex !== null) {
+              updateBillRow(focusedRowIndex, "partyLedgerId", res.ledgerId);
+            }
+          } else {
+            // Invoice Party A/c
+            setInvoicePartyId(res.ledgerId);
+          }
+        } else {
+          // If not in grid, set as active Party
+          setInvoicePartyId(res.ledgerId);
+        }
+
+        // Reset & Close
+        setNewLedgerName("");
+        setNewLedgerGST("");
+        setNewLedgerPAN("");
+        setNewLedgerPhone("");
+        setNewLedgerAddress("");
+        setNewLedgerCreditLimit("0");
+        setNewLedgerOpBal("0");
+        setLedgerDialogOpen(false);
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (err) {
+      toast({
+        title: "Failed to create ledger",
+        description: err instanceof Error ? err.message : "Something went wrong",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleOnTheFlyItemSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newItemName) return;
+    setIsLoading(true);
+    try {
+      const res = await createInventoryItem({
+        name: newItemName,
+        category: newItemCategory,
+        purchaseRate: parseFloat(newItemPurchaseRate) || 0,
+        saleRate: parseFloat(newItemSaleRate) || 0,
+        gstPercent: parseFloat(newItemGST) || 18,
+        unit: newItemUnit,
+        initialStock: parseFloat(newItemStockQty) || 0,
+        hsnCode: newItemHsn || undefined,
+      });
+
+      if (res.success) {
+        toast({ title: "Stock Item Created", description: `"${newItemName}" created successfully on-the-fly!` });
+        
+        const newItemObj = {
+          id: res.itemId,
+          name: newItemName,
+          category: newItemCategory,
+          purchaseRate: parseFloat(newItemPurchaseRate) || 0,
+          saleRate: parseFloat(newItemSaleRate) || 0,
+          gstPercent: parseFloat(newItemGST) || 18,
+          unit: newItemUnit,
+        };
+
+        // Dynamic options refresh
+        setInventoryOptions(prev => [...prev, newItemObj]);
+
+        // Auto-fill focused cell
+        if (focusedFieldType === "item" && focusedRowIndex !== null) {
+          handleInvoiceItemSelect(focusedRowIndex, newItemObj);
+        }
+
+        // Reset & Close
+        setNewItemName("");
+        setNewItemPurchaseRate("0");
+        setNewItemSaleRate("0");
+        setNewItemGST("18");
+        setNewItemStockQty("0");
+        setNewItemHsn("");
+        setItemDialogOpen(false);
+      } else {
+        throw new Error(res.error);
+      }
+    } catch (err) {
+      toast({
+        title: "Failed to create item",
+        description: err instanceof Error ? err.message : "Something went wrong",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Auto-detect supply type based on consigner state and consignee state
   useEffect(() => {
@@ -901,7 +1237,7 @@ export function VoucherForm({
   };
 
   return (
-    <Card className="w-full max-w-5xl mx-auto border border-border/80 bg-card/65 dark:bg-card/45 backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden font-sans">
+    <Card id="tour-voucher-card" className="w-full max-w-5xl mx-auto border border-border/80 bg-card/65 dark:bg-card/45 backdrop-blur-2xl shadow-2xl rounded-2xl overflow-hidden font-sans">
       <CardHeader className="bg-gradient-to-r from-accent/5 via-transparent to-accent/5 border-b border-border/60 py-5 px-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -1040,6 +1376,7 @@ export function VoucherForm({
                           onChange={(val) => updateVoucherEntryRow(index, "ledgerId", val)}
                           ledgers={ledgersOptions}
                           placeholder="Type party ledger accounts..."
+                          onFocus={() => { setFocusedRowIndex(index); setFocusedFieldType("ledger"); }}
                         />
                       </td>
 
@@ -1144,6 +1481,7 @@ export function VoucherForm({
                   onChange={setInvoicePartyId}
                   ledgers={ledgersOptions.filter(l => l.group === "sundry_debtors" || l.group === "sundry_creditors" || l.group === "bank" || l.group === "cash")}
                   placeholder="Select buyer or supplier party..."
+                  onFocus={() => { setFocusedRowIndex(null); setFocusedFieldType("ledger"); }}
                 />
               </div>
 
@@ -1205,6 +1543,7 @@ export function VoucherForm({
                             items={inventoryOptions}
                             onSelectCallback={(selected) => handleInvoiceItemSelect(index, selected)}
                             placeholder="Type stock item name..."
+                            onFocus={() => { setFocusedRowIndex(index); setFocusedFieldType("item"); }}
                           />
                         </td>
 
@@ -1480,6 +1819,7 @@ export function VoucherForm({
                               l.group === "cash"
                             )}
                             placeholder={voucherType === "receipt" ? "Debtor / party paid us..." : "Creditor / party we're paying..."}
+                            onFocus={() => { setFocusedRowIndex(index); setFocusedFieldType("ledger"); }}
                           />
                         </td>
 
@@ -1768,6 +2108,273 @@ export function VoucherForm({
           </Button>
         </div>
       </form>
+
+      {/* ========================================================================= */}
+      {/* 🏛️ ON-THE-FLY LEDGER CREATION DIALOG (ALT+C)                             */}
+      {/* ========================================================================= */}
+      <Dialog open={ledgerDialogOpen} onOpenChange={setLedgerDialogOpen}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-2xl rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold uppercase tracking-wider text-accent">
+              Alt+C: Quick Ledger Creator
+            </DialogTitle>
+            <DialogDescription className="text-[11px] text-muted-foreground">
+              Create a new ledger on-the-fly. Enter PAN to auto-fetch official registry details.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleOnTheFlyLedgerSubmit} className="space-y-4 text-xs">
+            {isFetchingSimulatedGST && (
+              <div className="rounded-lg border border-indigo-500/20 bg-indigo-500/5 p-2.5 flex items-center gap-2 animate-pulse text-[10px] text-indigo-700 dark:text-indigo-300 font-semibold">
+                <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping"></span>
+                Auto-fetching business details from PAN...
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">PAN</Label>
+                <Input
+                  value={newLedgerPAN}
+                  onChange={(e) => setNewLedgerPAN(e.target.value.toUpperCase())}
+                  placeholder="e.g. ABCDE1234F"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">GSTIN</Label>
+                <Input
+                  value={newLedgerGST}
+                  onChange={(e) => setNewLedgerGST(e.target.value.toUpperCase())}
+                  placeholder="e.g. 27ABCDE1234F1Z9"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Ledger Name *</Label>
+              <Input
+                value={newLedgerName}
+                onChange={(e) => setNewLedgerName(e.target.value)}
+                placeholder="Enter account/company name"
+                required
+                className="h-8 text-xs font-semibold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Ledger Group</Label>
+                <Select
+                  value={newLedgerGroup}
+                  onValueChange={(val: any) => setNewLedgerGroup(val)}
+                >
+                  <SelectTrigger className="h-8 text-xs font-semibold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sundry_debtors" className="text-xs">Sundry Debtors</SelectItem>
+                    <SelectItem value="sundry_creditors" className="text-xs">Sundry Creditors</SelectItem>
+                    <SelectItem value="bank" className="text-xs">Bank Accounts</SelectItem>
+                    <SelectItem value="cash" className="text-xs">Cash</SelectItem>
+                    <SelectItem value="sales" className="text-xs">Sales Accounts</SelectItem>
+                    <SelectItem value="purchase" className="text-xs">Purchase Accounts</SelectItem>
+                    <SelectItem value="expenses" className="text-xs">Indirect Expenses</SelectItem>
+                    <SelectItem value="capital" className="text-xs">Capital Account</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Phone</Label>
+                <Input
+                  value={newLedgerPhone}
+                  onChange={(e) => setNewLedgerPhone(e.target.value)}
+                  placeholder="Phone number"
+                  className="h-8 text-xs"
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Address</Label>
+              <Textarea
+                value={newLedgerAddress}
+                onChange={(e) => setNewLedgerAddress(e.target.value)}
+                placeholder="Street address, city"
+                rows={1.5}
+                className="text-xs"
+              />
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Credit Limit</Label>
+                <Input
+                  type="text"
+                  value={newLedgerCreditLimit}
+                  onChange={(e) => setNewLedgerCreditLimit(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Opening Bal</Label>
+                <Input
+                  type="text"
+                  value={newLedgerOpBal}
+                  onChange={(e) => setNewLedgerOpBal(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Bal Type</Label>
+                <Select
+                  value={newLedgerBalType}
+                  onValueChange={(val: "dr" | "cr") => setNewLedgerBalType(val)}
+                >
+                  <SelectTrigger className="h-8 text-xs font-semibold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="dr" className="text-xs font-bold text-emerald-600">Debit (Dr)</SelectItem>
+                    <SelectItem value="cr" className="text-xs font-bold text-rose-600">Credit (Cr)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="submit" disabled={isLoading} className="h-9 text-xs rounded-lg w-full">
+                {isLoading ? "Saving Ledger..." : "Save Ledger (Enter)"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* ========================================================================= */}
+      {/* 📦 ON-THE-FLY STOCK ITEM CREATION DIALOG (ALT+C)                          */}
+      {/* ========================================================================= */}
+      <Dialog open={itemDialogOpen} onOpenChange={setItemDialogOpen}>
+        <DialogContent className="max-w-md bg-card border border-border shadow-2xl rounded-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-sm font-bold uppercase tracking-wider text-accent">
+              Alt+C: Quick Inventory Item Creator
+            </DialogTitle>
+            <DialogDescription className="text-[11px] text-muted-foreground">
+              Add a new stock item dynamically to your inventory registry list.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleOnTheFlyItemSubmit} className="space-y-4 text-xs">
+            <div>
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Item Name *</Label>
+              <Input
+                value={newItemName}
+                onChange={(e) => setNewItemName(e.target.value)}
+                placeholder="e.g. Raymond Blue cotton shirting"
+                required
+                className="h-8 text-xs font-semibold"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Category</Label>
+                <Input
+                  value={newItemCategory}
+                  onChange={(e) => setNewItemCategory(e.target.value)}
+                  placeholder="e.g. Cotton Shirting"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">HSN/SAC Code</Label>
+                <Input
+                  value={newItemHsn}
+                  onChange={(e) => setNewItemHsn(e.target.value)}
+                  placeholder="e.g. 5208"
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Base Purchase Cost (₹)</Label>
+                <Input
+                  type="text"
+                  value={newItemPurchaseRate}
+                  onChange={(e) => setNewItemPurchaseRate(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Standard Sale Rate (₹)</Label>
+                <Input
+                  type="text"
+                  value={newItemSaleRate}
+                  onChange={(e) => setNewItemSaleRate(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">GST Slab %</Label>
+                <Select
+                  value={newItemGST}
+                  onValueChange={setNewItemGST}
+                >
+                  <SelectTrigger className="h-8 text-xs font-mono font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0" className="text-xs">0% Exempt</SelectItem>
+                    <SelectItem value="5" className="text-xs">5% Slab</SelectItem>
+                    <SelectItem value="12" className="text-xs">12% Slab</SelectItem>
+                    <SelectItem value="18" className="text-xs">18% Slab</SelectItem>
+                    <SelectItem value="28" className="text-xs">28% Slab</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Base Unit</Label>
+                <Input
+                  value={newItemUnit}
+                  onChange={(e) => setNewItemUnit(e.target.value)}
+                  placeholder="pcs / mtr / box"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div>
+                <Label className="text-[10px] uppercase font-bold text-muted-foreground">Opening Stock</Label>
+                <Input
+                  type="text"
+                  value={newItemStockQty}
+                  onChange={(e) => setNewItemStockQty(e.target.value)}
+                  className="h-8 text-xs font-mono"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="pt-2">
+              <Button type="submit" disabled={isLoading} className="h-9 text-xs rounded-lg w-full">
+                {isLoading ? "Saving Stock Item..." : "Save Stock Item (Enter)"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }

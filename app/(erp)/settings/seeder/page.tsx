@@ -116,7 +116,7 @@ export default function SeederPage() {
         {/* Input Parameters Form Panel */}
         <div className="lg:col-span-1">
           <form onSubmit={triggerSeed}>
-            <Card className="rounded-2xl border border-accent/15 bg-card/45 backdrop-blur-md shadow-lg">
+            <Card id="tour-seeder-card" className="rounded-2xl border border-accent/15 bg-card/45 backdrop-blur-md shadow-lg">
               <CardHeader className="border-b border-border/50 pb-4">
                 <CardTitle className="text-xs font-bold text-amber-500 uppercase tracking-wider flex items-center gap-2">
                   <Sparkles className="w-4 h-4" /> Seeder Parameters

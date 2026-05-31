@@ -127,7 +127,12 @@ const NAV_GROUPS = [
         title: "Print Settings",
         href: "/settings/print",
         icon: FileText,
-      },
+      }
+    ]
+  },
+  {
+    group: "Experimental",
+    items: [
       {
         title: "Data Seeder",
         href: "/settings/seeder",
@@ -318,20 +323,15 @@ export function Sidebar() {
 
       <div
         className={cn(
-          "shrink-0 flex flex-col relative transition-all duration-300 ease-in-out select-none",
-          // Desktop styles
-          "lg:static lg:h-[calc(100vh-2rem)] lg:my-4 lg:ml-4 lg:z-30",
-          isCollapsed ? "lg:w-20" : "lg:w-64",
-          // Mobile styles
-          isOpen
-            ? "fixed inset-y-0 left-0 z-50 w-64 h-screen my-0 ml-0"
-            : "max-lg:hidden fixed left-0 w-16 h-[calc(100vh-2rem)] my-4 ml-4 z-30"
+          "shrink-0 flex flex-col relative transition-all duration-300 ease-in-out select-none z-30",
+          isCollapsed ? "w-20" : "w-64",
+          isOpen ? "max-lg:fixed max-lg:inset-y-0 max-lg:left-0 max-lg:w-64 max-lg:z-50" : "max-lg:hidden"
         )}
       >
         {/* Sidebar collapse toggle */}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="hidden lg:flex absolute -right-3 top-16 w-6 h-6 rounded-[var(--radius-sm)] border border-border bg-surface hover:bg-muted text-foreground items-center justify-center cursor-pointer shadow-[var(--shadow-card)] transition-all duration-150 z-50"
+          className="hidden lg:flex absolute -right-3 top-16 w-6 h-6 rounded-[var(--radius-sm)] border border-border bg-surface hover:bg-muted text-foreground items-center justify-center cursor-pointer shadow-sm transition-all duration-150 z-50"
           title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
         >
           {isCollapsed
@@ -340,13 +340,10 @@ export function Sidebar() {
         </button>
 
         <aside
-          className={cn(
-            "w-full h-full flex flex-col surface-card overflow-hidden font-sans text-foreground transition-all duration-300",
-            isOpen ? "max-lg:rounded-none" : "rounded-[var(--radius-card)]"
-          )}
+          className="w-full h-full flex flex-col bg-surface border-r border-border/80 overflow-hidden font-sans text-foreground transition-all duration-300"
         >
           {/* App header */}
-          <div className={cn(
+          <div id="tour-sidebar-logo" className={cn(
             "flex items-center h-14 bg-muted/35 border-b border-border shrink-0 select-none transition-all duration-300",
             isCollapsed ? "justify-center px-2 gap-0" : "px-4 gap-3",
             !isOpen && "max-lg:justify-center max-lg:px-2 max-lg:gap-0"

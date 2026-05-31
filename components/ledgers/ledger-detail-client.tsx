@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { exportTableToExcel } from "@/lib/export-utils";
 import {
   Printer,
   Share2,
@@ -30,6 +31,7 @@ import type { InferSelectModel } from "@/lib/database";
 import type { ledgers as ledgersTable } from "@/lib/database";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
+import { ReportExportButtons } from "@/components/reports/report-export-buttons";
 import {
   Dialog,
   DialogContent,
@@ -64,12 +66,6 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
   const [showConfig, setShowConfig] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const handleExport = () => {
-    toast({
-      title: "Export Completed",
-      description: "Ledger Vouchers printed to Excel sheet.",
-    });
-  };
   
   // Edit & Delete state
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -192,10 +188,10 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
         }
         if ((e.key === "e" || e.key === "E") && e.altKey) {
           e.preventDefault();
-          handleExport();
+          exportTableToExcel("ledger-detail-table", `ledger_${ledger.name.replace(/\s+/g, '_')}`);
         } else if (e.key === "e" || e.key === "E") {
           e.preventDefault();
-          handleExport();
+          exportTableToExcel("ledger-detail-table", `ledger_${ledger.name.replace(/\s+/g, '_')}`);
         }
         if ((e.key === "p" || e.key === "P") && e.altKey) {
           e.preventDefault();
@@ -270,7 +266,7 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
   const closingType = netClosingDebit >= 0 ? "dr" : "cr";
 
   return (
-    <div className="flex h-[calc(100vh-2rem)] select-none glass-card-premium rounded-[32px] overflow-hidden font-mono text-foreground">
+    <div id="ledger-detail-report" className="flex h-[calc(100vh-2rem)] select-none glass-card-premium rounded-[32px] overflow-hidden font-mono text-foreground">
       
       {/* LEFT REPORTING PANEL */}
       <div className="flex-1 flex flex-col min-w-0">
@@ -281,9 +277,7 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
             <button onClick={() => window.print()} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
               <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[9px] text-muted-foreground">P</kbd> Print
             </button>
-            <button onClick={handleExport} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
-              <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px] text-muted-foreground">E</kbd> Export
-            </button>
+            <ReportExportButtons tableId="ledger-detail-table" elementId="ledger-detail-report" filename={`ledger_${ledger.name.replace(/\s+/g, '_')}`} className="h-7 px-2 border-border/60 bg-background hover:bg-muted text-[10px] font-bold rounded" />
             <button onClick={() => toast({ title: "Email Sent", description: "Ledger has been emailed." })} className="hover:text-accent flex items-center gap-1.5 transition-colors cursor-pointer">
               <kbd className="bg-background border border-border px-1.5 py-0.5 rounded font-mono text-[10px] text-muted-foreground">M</kbd> E-Mail
             </button>
@@ -442,7 +436,7 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
 
         {/* LEDGER VOUCHERS HIGH DENSITY SHEET */}
         <div className="flex-1 overflow-auto bg-transparent">
-          <Table className="w-full border-collapse font-mono text-foreground text-xs">
+          <Table id="ledger-detail-table" className="w-full border-collapse font-mono text-foreground text-xs">
             <TableHeader className="sticky top-0 bg-secondary/80 backdrop-blur-md border-b border-border shadow-sm select-none z-10">
               <TableRow className="hover:bg-transparent border-b border-border/40">
                 <TableHead className="text-foreground font-bold py-2.5 w-[110px]">Date</TableHead>
@@ -613,13 +607,9 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
           <span>{showConfig ? "Hide Config" : "Show Config"}</span>
         </button>
 
-        <button
-          onClick={handleExport}
-          className="w-full text-left bg-muted/65 hover:bg-muted/90 hover:border-accent/40 border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold shadow-sm text-foreground cursor-pointer group"
-        >
-          <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5 group-hover:scale-95 transition-transform">Alt+E: Excel</span>
-          <span>Export Ledger</span>
-        </button>
+        <div className="w-full relative">
+          <ReportExportButtons tableId="ledger-detail-table" elementId="ledger-detail-report" filename={`ledger_${ledger.name.replace(/\s+/g, '_')}`} className="w-full text-left justify-start bg-muted/65 hover:bg-muted/90 hover:border-accent/40 border border-border/80 rounded-xl px-3 py-2.5 shadow-sm text-xs font-bold text-foreground cursor-pointer" />
+        </div>
 
         <button
           onClick={() => setIsEditDialogOpen(true)}
@@ -706,16 +696,9 @@ export function LedgerDetailClient({ ledger, entries }: Props) {
                 <span>{showConfig ? "Hide Config" : "Show Config"}</span>
               </button>
 
-              <button
-                onClick={() => {
-                  handleExport();
-                  setIsDrawerOpen(false);
-                }}
-                className="w-full text-left bg-muted/80 hover:bg-muted border border-border/80 rounded-xl px-3 py-2.5 transition-all text-xs font-bold text-foreground cursor-pointer"
-              >
-                <span className="text-accent block font-mono text-[9px] uppercase tracking-wider mb-0.5">Alt+E: Excel</span>
-                <span>Export Ledger</span>
-              </button>
+              <div className="w-full relative">
+                <ReportExportButtons tableId="ledger-detail-table" elementId="ledger-detail-report" filename={`ledger_${ledger.name.replace(/\s+/g, '_')}`} className="w-full text-left justify-start bg-muted/80 hover:bg-muted border border-border/80 rounded-xl px-3 py-2.5 text-xs font-bold text-foreground cursor-pointer" />
+              </div>
 
               <button
                 onClick={() => {

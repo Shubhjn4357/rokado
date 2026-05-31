@@ -17,6 +17,7 @@ export default function BalanceSheetPage() {
   const [date, setDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [balanceSheetData, setBalanceSheetData] = useState<any>(null);
+  const [detailedView, setDetailedView] = useState(false);
 
   // Default to today
   const today = new Date();
@@ -26,6 +27,22 @@ export default function BalanceSheetPage() {
     setDate(todayStr);
     fetchBalanceSheet(todayStr);
   }, []);
+
+  // Listen for global Alt+F1 detailed view broadcast
+  useEffect(() => {
+    const handleDetailedToggle = () => {
+      setDetailedView(prev => !prev);
+    };
+    window.addEventListener("erp:detailed-view", handleDetailedToggle);
+    return () => window.removeEventListener("erp:detailed-view", handleDetailedToggle);
+  }, []);
+
+  // Pre-calculate custom sub-group totals
+  const loansGroup = balanceSheetData?.groups?.other?.filter((l: any) => l.name.toLowerCase().includes('loan') || l.name.toLowerCase().includes('borrow')) || [];
+  const loansTotal = loansGroup.reduce((sum: number, l: any) => sum + (l.closingBalance || 0), 0);
+
+  const otherAssetsGroup = balanceSheetData?.groups?.other?.filter((l: any) => !l.name.toLowerCase().includes('loan') && !l.name.toLowerCase().includes('borrow')) || [];
+  const otherAssetsTotal = otherAssetsGroup.reduce((sum: number, l: any) => sum + (l.closingBalance || 0), 0);
 
   const fetchBalanceSheet = async (selectedDate = date) => {
     setLoading(true);
@@ -64,11 +81,15 @@ export default function BalanceSheetPage() {
               />
             </div>
           </div>
+          <Button id="tour-detailed-btn" onClick={() => setDetailedView(p => !p)} variant="outline" className="h-10 border-border/80 gap-1.5 font-bold cursor-pointer hover:bg-muted select-none">
+            <span className="bg-muted px-1.5 py-0.5 rounded text-[10px] font-mono font-black border border-border">Alt+F1</span>
+            {detailedView ? "Summary" : "Detailed"}
+          </Button>
           <Button onClick={() => fetchBalanceSheet()} className="h-10 cursor-pointer">
             Refresh
           </Button>
           <ReportExportButtons
-            tableId=""
+            tableId="balance-sheet-report-table"
             elementId="balance-sheet-report"
             filename={`balance-sheet_${date}`}
             className="sm:mt-0"
@@ -107,83 +128,98 @@ export default function BalanceSheetPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {/* Capital */}
-                          {balanceSheetData.groups.capital.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.capital.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No capital ledgers
-                              </td>
-                            </tr>
-                          )}
+                          {detailedView ? (
+                            <>
+                              {/* --- CAPITAL ACCOUNT --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Capital Account</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.capital)}</td>
+                              </tr>
+                              {balanceSheetData.groups.capital.map((ledger: any, idx: number) => (
+                                <tr key={`cap-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.capital.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No capital accounts</td></tr>
+                              )}
 
-                          {/* Sundry Creditors */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Sundry Creditors</td>
-                          </tr>
-                          {balanceSheetData.groups.sundryCreditors.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.sundryCreditors.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No sundry creditors
-                              </td>
-                            </tr>
-                          )}
+                              {/* --- LOANS --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Loans (Liabilities)</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(loansTotal)}</td>
+                              </tr>
+                              {loansGroup.map((ledger: any, idx: number) => (
+                                <tr key={`loan-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!loansGroup.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No active borrowings</td></tr>
+                              )}
 
-                          {/* Duties & Taxes */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Duties & Taxes</td>
-                          </tr>
-                          {balanceSheetData.groups.dutiesTaxes.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.dutiesTaxes.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No duties & taxes
-                              </td>
-                            </tr>
-                          )}
+                              {/* --- SUNDRY CREDITORS --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Sundry Creditors</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.sundryCreditors)}</td>
+                              </tr>
+                              {balanceSheetData.groups.sundryCreditors.map((ledger: any, idx: number) => (
+                                <tr key={`cred-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.sundryCreditors.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No sundry creditors</td></tr>
+                              )}
 
-                          {/* Loans (if any) - could be in other group or create specific group */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Loans</td>
-                          </tr>
-                          {balanceSheetData.groups.other.filter((l: any) => l.name.toLowerCase().includes('loan') || l.name.toLowerCase().includes('borrow')).map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.other.filter((l: any) => l.name.toLowerCase().includes('loan') || l.name.toLowerCase().includes('borrow')).length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No loans
-                              </td>
-                            </tr>
+                              {/* --- DUTIES & TAXES --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Duties & Taxes</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.dutiesTaxes)}</td>
+                              </tr>
+                              {balanceSheetData.groups.dutiesTaxes.map((ledger: any, idx: number) => (
+                                <tr key={`tax-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.dutiesTaxes.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No duties & taxes</td></tr>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Capital Account</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.capital)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Loans (Liabilities)</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(loansTotal)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Sundry Creditors</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.sundryCreditors)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Duties & Taxes</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.dutiesTaxes)}</td>
+                              </tr>
+                            </>
                           )}
 
                           {/* Total Liabilities */}
-                          <tr className="border-t font-bold">
-                            <td className="px-6 py-4 text-left font-bold">TOTAL LIABILITIES</td>
-                            <td className="px-6 py-4 text-right text-sm font-bold">
+                          <tr className="border-t-2 border-double border-border bg-muted/30 font-extrabold text-sm text-foreground">
+                            <td className="px-6 py-4 text-left uppercase tracking-wider font-black">TOTAL LIABILITIES</td>
+                            <td className="px-6 py-4 text-right font-black">
                               {formatCurrency(
                                 balanceSheetData.totals.capital +
                                 balanceSheetData.totals.sundryCreditors +
-                                balanceSheetData.totals.dutiesTaxes
+                                balanceSheetData.totals.dutiesTaxes +
+                                loansTotal
                               )}
                             </td>
                           </tr>
@@ -208,127 +244,138 @@ export default function BalanceSheetPage() {
                           </tr>
                         </thead>
                         <tbody className="divide-y">
-                          {/* Fixed Assets */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Fixed Assets</td>
-                          </tr>
-                          {balanceSheetData.groups.fixedAssets.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.fixedAssets.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No fixed assets
-                              </td>
-                            </tr>
-                          )}
-
-                          {/* Sundry Debtors */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Sundry Debtors</td>
-                          </tr>
-                          {balanceSheetData.groups.sundryDebtors.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.sundryDebtors.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No sundry debtors
-                              </td>
-                            </tr>
-                          )}
-
-                          {/* Stock / Inventory */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Stock-in-Trade</td>
-                          </tr>
-                          {balanceSheetData.groups.stock.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.stock.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No stock
-                              </td>
-                            </tr>
-                          )}
-
-                          {/* Bank */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Bank Accounts</td>
-                          </tr>
-                          {balanceSheetData.groups.bank.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.bank.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No bank accounts
-                              </td>
-                            </tr>
-                          )}
-
-                          {/* Cash */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Cash-in-Hand</td>
-                          </tr>
-                          {balanceSheetData.groups.cash.map((ledger: any, index: number) => (
-                            <tr key={index}>
-                              <td className="px-6 py-4 text-left">{ledger.name}</td>
-                              <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
-                            </tr>
-                          ))}
-                          {!balanceSheetData.groups.cash.length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No cash
-                              </td>
-                            </tr>
-                          )}
-
-                          {/* Other Current Assets */}
-                          <tr className="border-t border-b font-semibold">
-                            <td colSpan={2} className="px-6 py-4">Other Current Assets</td>
-                          </tr>
-                          {balanceSheetData.groups.other
-                            .filter((l: any) => !l.name.toLowerCase().includes('loan') && !l.name.toLowerCase().includes('borrow'))
-                            .map((ledger: any, index: number) => (
-                              <tr key={index}>
-                                <td className="px-6 py-4 text-left">{ledger.name}</td>
-                                <td className="px-6 py-4 text-right text-sm">{formatCurrency(ledger.closingBalance)}</td>
+                          {detailedView ? (
+                            <>
+                              {/* --- FIXED ASSETS --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Fixed Assets</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.fixedAssets)}</td>
                               </tr>
-                          ))}
-                          {!balanceSheetData.groups.other
-                            .filter((l: any) => !l.name.toLowerCase().includes('loan') && !l.name.toLowerCase().includes('borrow')).length && (
-                            <tr>
-                              <td colSpan={2} className="px-6 py-4 text-center text-muted-foreground">
-                                No other current assets
-                              </td>
-                            </tr>
+                              {balanceSheetData.groups.fixedAssets.map((ledger: any, idx: number) => (
+                                <tr key={`fa-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.fixedAssets.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No fixed assets</td></tr>
+                              )}
+
+                              {/* --- SUNDRY DEBTORS --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Sundry Debtors</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.sundryDebtors)}</td>
+                              </tr>
+                              {balanceSheetData.groups.sundryDebtors.map((ledger: any, idx: number) => (
+                                <tr key={`deb-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.sundryDebtors.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No sundry debtors</td></tr>
+                              )}
+
+                              {/* --- STOCK IN TRADE --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Stock-in-Trade</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.stock)}</td>
+                              </tr>
+                              {balanceSheetData.groups.stock.map((ledger: any, idx: number) => (
+                                <tr key={`stock-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.stock.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No registered stock</td></tr>
+                              )}
+
+                              {/* --- BANK ACCOUNTS --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Bank Accounts</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.bank)}</td>
+                              </tr>
+                              {balanceSheetData.groups.bank.map((ledger: any, idx: number) => (
+                                <tr key={`bank-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.bank.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No active bank accounts</td></tr>
+                              )}
+
+                              {/* --- CASH IN HAND --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Cash-in-Hand</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(balanceSheetData.totals.cash)}</td>
+                              </tr>
+                              {balanceSheetData.groups.cash.map((ledger: any, idx: number) => (
+                                <tr key={`cash-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!balanceSheetData.groups.cash.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No cash ledger</td></tr>
+                              )}
+
+                              {/* --- OTHER CURRENT ASSETS --- */}
+                              <tr className="bg-muted/15 font-bold">
+                                <td className="px-6 py-2.5 text-left text-xs uppercase tracking-wide">Other Current Assets</td>
+                                <td className="px-6 py-2.5 text-right font-bold text-xs">{formatCurrency(otherAssetsTotal)}</td>
+                              </tr>
+                              {otherAssetsGroup.map((ledger: any, idx: number) => (
+                                <tr key={`other-${idx}`} className="hover:bg-muted/5 font-medium text-xs text-muted-foreground">
+                                  <td className="px-10 py-2 text-left">{ledger.name}</td>
+                                  <td className="px-6 py-2 text-right">{formatCurrency(ledger.closingBalance)}</td>
+                                </tr>
+                              ))}
+                              {!otherAssetsGroup.length && (
+                                <tr className="text-xs text-muted-foreground"><td colSpan={2} className="px-10 py-2 text-left">No other current assets</td></tr>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Fixed Assets</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.fixedAssets)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Sundry Debtors</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.sundryDebtors)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Stock-in-Trade</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.stock)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Bank Accounts</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.bank)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Cash-in-Hand</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(balanceSheetData.totals.cash)}</td>
+                              </tr>
+                              <tr className="hover:bg-muted/5 font-bold text-xs">
+                                <td className="px-6 py-3.5 text-left">Other Current Assets</td>
+                                <td className="px-6 py-3.5 text-right">{formatCurrency(otherAssetsTotal)}</td>
+                              </tr>
+                            </>
                           )}
 
                           {/* Total Assets */}
-                          <tr className="border-t font-bold">
-                            <td className="px-6 py-4 text-left font-bold">TOTAL ASSETS</td>
-                            <td className="px-6 py-4 text-right text-sm font-bold">
+                          <tr className="border-t-2 border-double border-border bg-muted/30 font-extrabold text-sm text-foreground">
+                            <td className="px-6 py-4 text-left uppercase tracking-wider font-black">TOTAL ASSETS</td>
+                            <td className="px-6 py-4 text-right font-black">
                               {formatCurrency(
                                 balanceSheetData.totals.fixedAssets +
                                 balanceSheetData.totals.sundryDebtors +
                                 balanceSheetData.totals.stock +
                                 balanceSheetData.totals.bank +
-                                balanceSheetData.totals.cash
+                                balanceSheetData.totals.cash +
+                                otherAssetsTotal
                               )}
                             </td>
                           </tr>
@@ -346,41 +393,45 @@ export default function BalanceSheetPage() {
                     </CardHeader>
                     <CardContent>
                       <Table>
-                        <tbody className="divide-y">
+                        <tbody className="divide-y font-bold text-xs text-foreground">
                           <tr>
                             <td className="px-6 py-4 text-left">Total Liabilities</td>
-                            <td className="px-6 py-4 text-right text-sm font-bold">
+                            <td className="px-6 py-4 text-right font-extrabold text-sm">
                               {formatCurrency(
                                 balanceSheetData.totals.capital +
                                 balanceSheetData.totals.sundryCreditors +
-                                balanceSheetData.totals.dutiesTaxes
+                                balanceSheetData.totals.dutiesTaxes +
+                                loansTotal
                               )}
                             </td>
                           </tr>
                           <tr>
                             <td className="px-6 py-4 text-left">Total Assets</td>
-                            <td className="px-6 py-4 text-right text-sm font-bold">
+                            <td className="px-6 py-4 text-right font-extrabold text-sm">
                               {formatCurrency(
                                 balanceSheetData.totals.fixedAssets +
                                 balanceSheetData.totals.sundryDebtors +
                                 balanceSheetData.totals.stock +
                                 balanceSheetData.totals.bank +
-                                balanceSheetData.totals.cash
+                                balanceSheetData.totals.cash +
+                                otherAssetsTotal
                               )}
                             </td>
                           </tr>
-                          <tr className="border-t font-bold">
-                            <td className="px-6 py-4 text-left">Difference (Should be 0)</td>
-                            <td className="px-6 py-4 text-right text-sm font-bold">
+                          <tr className="border-t-2 border-double border-border bg-muted/20 font-black">
+                            <td className="px-6 py-4 text-left uppercase">Difference (Should be 0)</td>
+                            <td className="px-6 py-4 text-right text-sm font-black">
                               {formatCurrency(
                                 (balanceSheetData.totals.capital +
                                  balanceSheetData.totals.sundryCreditors +
-                                 balanceSheetData.totals.dutiesTaxes) -
+                                 balanceSheetData.totals.dutiesTaxes +
+                                 loansTotal) -
                                 (balanceSheetData.totals.fixedAssets +
                                  balanceSheetData.totals.sundryDebtors +
                                  balanceSheetData.totals.stock +
                                  balanceSheetData.totals.bank +
-                                 balanceSheetData.totals.cash)
+                                 balanceSheetData.totals.cash +
+                                 otherAssetsTotal)
                               )}
                             </td>
                           </tr>

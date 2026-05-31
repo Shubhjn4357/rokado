@@ -136,7 +136,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         </Badge>
       </header>
 
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+      <div id="tour-overview-stats" className="grid grid-cols-1 gap-3 md:grid-cols-3">
         <StatPanel
           title="Sales today"
           value={data.todaySalesCount}

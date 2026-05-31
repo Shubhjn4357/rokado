@@ -30,12 +30,28 @@ export function ShortcutSidebar() {
   };
 
   return (
-    <div
-      className={cn(
-        "relative h-screen border-l border-border bg-surface shrink-0 transition-all duration-300 ease-in-out flex flex-col font-sans select-none z-40 lg:flex hidden",
-        isOpen ? "w-64" : "w-12"
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          onClick={() => setIsOpen(false)}
+          className="fixed inset-0 bg-foreground/40 backdrop-blur-sm z-40 lg:hidden cursor-pointer animate-in fade-in duration-200"
+        />
       )}
-    >
+
+      <div
+        id="tour-shortcut-sidebar"
+        className={cn(
+          "relative h-screen border-l border-border bg-surface shrink-0 transition-all duration-300 ease-in-out flex flex-col font-sans select-none z-40",
+          // Desktop
+          "lg:flex",
+          isOpen ? "lg:w-64" : "lg:w-12",
+          // Mobile / Tablet touch screens
+          isOpen
+            ? "fixed inset-y-0 right-0 z-50 w-64 h-screen shadow-2xl border-l-0"
+            : "max-lg:hidden w-0 border-l-0 overflow-hidden"
+        )}
+      >
       {/* Sidebar toggle */}
       <button
         onClick={() => setIsOpen(!isOpen)}
@@ -133,5 +149,6 @@ export function ShortcutSidebar() {
         </div>
       )}
     </div>
+    </>
   );
 }
